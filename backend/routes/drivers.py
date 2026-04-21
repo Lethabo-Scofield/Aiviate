@@ -1,5 +1,7 @@
+# filepath: c:\Users\ADMIN\Documents\PROJECT\Aviate_Admin\backend\routes\drivers.py
 import uuid
 import traceback
+import os
 
 import bcrypt
 from services.email_service import send_email
@@ -80,24 +82,36 @@ def add_driver():
         result = driver.to_dict()
         result["generated_password"] = password
 
-        # Send beautiful welcome email with emojis
+        # Send welcome email with app download link and PDF manual
         try:
+            _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            _manual_path = os.path.join(_project_root, "docs", "Aviate_User_Manual.pdf")
+            _app_link = "https://expo.dev/artifacts/eas/4uEQdzphj6Xfc4eqpKmFxK.apk"
+
             subject = "🎉 Welcome to Aviate! Your Driver Account 🚚"
             html = f"""
-                <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto; border: 1px solid #eee; border-radius: 8px; padding: 24px; background: #f9f9f9;'>
+                <div style='font-family: Arial, sans-serif; max-width: 520px; margin: auto; border: 1px solid #eee; border-radius: 8px; padding: 24px; background: #f9f9f9;'>
                     <h2 style='color: #2b7cff;'>Welcome, {name}! 👋</h2>
                     <p style='font-size: 1.1em;'>
                         Your driver account has been <b>successfully created</b>.<br>
                         You can now log in to the <b>Aviate</b> app and start your journey with us!
                     </p>
                     <div style='background: #fff; border-radius: 6px; padding: 16px; margin: 18px 0; border: 1px solid #e0e0e0;'>
-                        <b>🚀 Login Details:</b><br>
+                        <b>🚀 Login Details:</b><br><br>
                         <b>Email:</b> {email}<br>
                         <b>Password:</b> {password}
                     </div>
+                    <p style='margin: 18px 0 8px; color: #333;'><b>📱 Download the Aviate App:</b></p>
+                    <a href='{_app_link}' style='display:inline-block;background:#2b7cff;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:bold;'>
+                        Download Aviate App ⬇️
+                    </a>
+                    <p style='margin: 10px 0 18px; word-break: break-all;'>
+                        <a href='{_app_link}' style='color:#2b7cff;'>{_app_link}</a>
+                    </p>
                     <p style='color: #555;'>
+                        📄 The <b>Aviate User Manual</b> is attached as a PDF.<br>
                         Please <b>change your password</b> after logging in for the first time.<br>
-                        If you have any questions, reply to this email or contact your dispatcher.
+                        If you have any questions, contact your dispatcher.
                     </p>
                     <p style='margin-top: 24px; color: #2b7cff;'>
                         Welcome aboard!<br>
@@ -105,9 +119,14 @@ def add_driver():
                     </p>
                 </div>
             """
-            send_email(email, subject, html)
+            _attachments = [_manual_path] if os.path.exists(_manual_path) else None
+            send_email(email, subject, html, attachments=_attachments)
+            result["welcome_email_sent"] = True
+            print(f"[INFO] Welcome email sent to {email}")
         except Exception as e:
-            print(f"Failed to send welcome email: {e}")
+            traceback.print_exc()
+            result["welcome_email_sent"] = False
+            print(f"[ERROR] Failed to send welcome email: {e}")
 
         return jsonify({"success": True, "driver": result}), 201
     except Exception:
@@ -129,7 +148,6 @@ def get_driver_detail(driver_id):
             return jsonify({"error": "Driver not found"}), 404
 
         driver_jobs = db.query(Job).filter(Job.driver_id == driver_id, Job.company_id == g.company_id).all()
-
         completed_jobs = [j for j in driver_jobs if j.status == "completed"]
         active_jobs = [j for j in driver_jobs if j.status in ("assigned",)]
 
@@ -167,7 +185,6 @@ def toggle_block_driver(driver_id):
         driver.blocked = not (driver.blocked or False)
         db.commit()
 
-        # Send block/unblock email with improved formatting and emojis
         try:
             if driver.blocked:
                 subject = "🚫 Aviate Account Blocked"
@@ -186,7 +203,7 @@ def toggle_block_driver(driver_id):
                     <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto; border: 1px solid #eee; border-radius: 8px; padding: 24px; background: #f6fff6;'>
                         <h2 style='color: #388e3c;'>Account Unblocked ✅</h2>
                         <p>Dear {driver.name},</p>
-                        <p>Your driver account has been <b>unblocked</b> and your access to the Aviate platform has been restored.<br>
+                        <p>Your driver account has been <b>unblocked</b> and your access has been restored.<br>
                         You may now log in again and continue your work.</p>
                         <p style='color: #388e3c; margin-top: 24px;'>Aviate Support Team 🛫</p>
                     </div>
@@ -194,6 +211,7 @@ def toggle_block_driver(driver_id):
             send_email(driver.email, subject, html)
         except Exception as e:
             print(f"Failed to send block/unblock email: {e}")
+
         return jsonify({"success": True, "blocked": driver.blocked, "driver": driver.to_dict()})
     except Exception:
         db.rollback()
@@ -202,7 +220,7 @@ def toggle_block_driver(driver_id):
     finally:
         db.close()
 
-# Send notification email when driver is deleted
+
 @drivers_bp.route("/api/drivers/<driver_id>", methods=["DELETE"])
 @require_auth
 @require_admin
@@ -212,11 +230,27 @@ def delete_driver(driver_id):
         driver = db.query(Driver).filter(Driver.id == driver_id, Driver.company_id == g.company_id).first()
         if not driver:
             return jsonify({"error": "Driver not found"}), 404
+
         email = driver.email
         name = driver.name
+
+        # unassign jobs
+        jobs = db.query(Job).filter(Job.driver_id == driver_id, Job.company_id == g.company_id).all()
+        for job in jobs:
+            job.status = "unassigned"
+            job.driver_id = None
+            job.driver_name = None
+
+        # delete linked user
+        if driver.user_id:
+            user = db.query(User).filter(User.id == driver.user_id).first()
+            if user:
+                db.delete(user)
+
         db.delete(driver)
         db.commit()
-        # Send account deletion email
+
+        # Send deletion email
         try:
             subject = "Account Deleted from Aviate"
             html = f"""
@@ -231,6 +265,7 @@ def delete_driver(driver_id):
             send_email(email, subject, html)
         except Exception as e:
             print(f"Failed to send deletion email: {e}")
+
         return jsonify({"success": True, "message": "Driver deleted"})
     except Exception:
         db.rollback()
@@ -300,38 +335,6 @@ def get_driver_deliveries(driver_id):
         db.close()
 
 
-@drivers_bp.route("/api/drivers/<driver_id>", methods=["DELETE"])
-@require_auth
-@require_admin
-def remove_driver(driver_id):
-    db = get_db_session()
-    try:
-        driver = db.query(Driver).filter(Driver.id == driver_id, Driver.company_id == g.company_id).first()
-        if not driver:
-            return jsonify({"error": "Driver not found"}), 404
-
-        jobs = db.query(Job).filter(Job.driver_id == driver_id, Job.company_id == g.company_id).all()
-        for job in jobs:
-            job.status = "unassigned"
-            job.driver_id = None
-            job.driver_name = None
-
-        if driver.user_id:
-            user = db.query(User).filter(User.id == driver.user_id).first()
-            if user:
-                db.delete(user)
-
-        db.delete(driver)
-        db.commit()
-        return jsonify({"success": True})
-    except Exception:
-        db.rollback()
-        traceback.print_exc()
-        return jsonify({"error": "Failed to remove driver"}), 500
-    finally:
-        db.close()
-
-
 @drivers_bp.route("/api/my-jobs", methods=["GET"])
 @require_auth
 def get_my_jobs():
@@ -367,7 +370,6 @@ def get_my_jobs():
 @drivers_bp.route("/api/my-jobs/<job_id>/complete/<stop_id>", methods=["POST"])
 @require_auth
 def complete_my_stop(job_id, stop_id):
-    from models import Stop
     from datetime import datetime, timezone
 
     db = get_db_session()
@@ -436,7 +438,6 @@ def get_driver_jobs(driver_id):
 @drivers_bp.route("/api/driver/<driver_id>/complete/<job_id>/<stop_id>", methods=["POST"])
 @require_auth
 def complete_stop(driver_id, job_id, stop_id):
-    from models import Stop
     from datetime import datetime, timezone
 
     db = get_db_session()
