@@ -148,7 +148,46 @@ export async function completeStop(driverId, jobId, stopId) {
   });
   return handleResponse(res);
 }
+// Stop status update (arrived | completed | failed | pending)
+export async function updateStopStatus(stopId, status, reason = "") {
+  const res = await fetch(`${API_BASE}/stops/${stopId}/status`, {
+    method: 'PATCH',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({ status, reason }),
+  });
+  return handleResponse(res);
+}
 
+// Driver GPS location ingestion
+export async function updateDriverLocation(driverId, lat, lng) {
+  const res = await fetch(`${API_BASE}/drivers/${driverId}/location`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({ lat, lng }),
+  });
+  return handleResponse(res);
+}
+
+export async function getDriverLocation(driverId) {
+  const res = await fetch(`${API_BASE}/drivers/${driverId}/location`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+// Route progress retrieval
+export async function getJobProgress(jobId) {
+  const res = await fetch(`${API_BASE}/jobs/${jobId}/progress`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+// Reassign a job to a different driver with re-optimisation
+export async function reassignDriver(jobId, driverId) {
+  const res = await fetch(`${API_BASE}/jobs/${jobId}/reassign`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({ driver_id: driverId }),
+  });
+  return handleResponse(res);
+}
 export async function loadTestData() {
   const res = await fetch(`${API_BASE}/test-data`, {
     method: 'POST',

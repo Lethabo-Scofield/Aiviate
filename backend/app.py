@@ -53,11 +53,18 @@ def _run_migrations():
 
         add_col_if_missing("jobs", "route_geometry", "TEXT")
         add_col_if_missing("jobs", "company_id", "VARCHAR REFERENCES companies(id)")
+        add_col_if_missing("jobs", "started_at", "TIMESTAMP WITH TIME ZONE")
         add_col_if_missing("stops", "company_id", "VARCHAR REFERENCES companies(id)")
+        add_col_if_missing("stops", "status", "VARCHAR DEFAULT 'pending'")
+        add_col_if_missing("stops", "failed_reason", "TEXT")
+        add_col_if_missing("stops", "arrived_at", "TIMESTAMP WITH TIME ZONE")
         add_col_if_missing("drivers", "company_id", "VARCHAR REFERENCES companies(id)")
         add_col_if_missing("drivers", "user_id", "VARCHAR")
         add_col_if_missing("drivers", "blocked", "BOOLEAN DEFAULT FALSE")
         add_col_if_missing("drivers", "last_generated_password", "VARCHAR")
+        add_col_if_missing("drivers", "current_lat", "DOUBLE PRECISION")
+        add_col_if_missing("drivers", "current_lng", "DOUBLE PRECISION")
+        add_col_if_missing("drivers", "last_location_at", "TIMESTAMP WITH TIME ZONE")
         add_col_if_missing("users", "driver_id", "VARCHAR")
 
 

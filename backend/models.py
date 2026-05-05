@@ -93,6 +93,9 @@ class Driver(Base):
     last_generated_password = Column(String, nullable=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
     user_id = Column(String, nullable=True)
+    current_lat = Column(Float, nullable=True)
+    current_lng = Column(Float, nullable=True)
+    last_location_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     def to_dict(self):
@@ -104,6 +107,9 @@ class Driver(Base):
             "status": self.status,
             "blocked": self.blocked or False,
             "has_account": bool(self.user_id),
+            "current_lat": self.current_lat,
+            "current_lng": self.current_lng,
+            "last_location_at": self.last_location_at.isoformat() if self.last_location_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -127,6 +133,9 @@ class Stop(Base):
     stop_number = Column(Integer, default=0)
     completed = Column(Boolean, default=False)
     completed_at = Column(DateTime, nullable=True)
+    status = Column(String, default="pending")  # pending | arrived | completed | failed
+    failed_reason = Column(Text, nullable=True)
+    arrived_at = Column(DateTime, nullable=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
@@ -148,6 +157,9 @@ class Stop(Base):
             "stop_number": self.stop_number,
             "completed": self.completed,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "status": self.status or "pending",
+            "failed_reason": self.failed_reason,
+            "arrived_at": self.arrived_at.isoformat() if self.arrived_at else None,
         }
 
 
@@ -166,6 +178,7 @@ class Job(Base):
     driver_id = Column(String, ForeignKey("drivers.id"), nullable=True)
     driver_name = Column(String, nullable=True)
     assigned_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     route_geometry = Column(Text, nullable=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
@@ -189,6 +202,7 @@ class Job(Base):
             "driver_name": self.driver_name,
             "route_geometry": self.route_geometry,
             "assigned_at": self.assigned_at.isoformat() if self.assigned_at else None,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

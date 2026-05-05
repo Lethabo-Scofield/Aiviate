@@ -1,5 +1,6 @@
 import uuid
 import traceback
+from datetime import datetime, timezone
 
 import bcrypt
 from flask import request, jsonify, g
@@ -372,5 +373,83 @@ def complete_stop(driver_id, job_id, stop_id):
     except Exception:
         db.rollback()
         return jsonify({"error": "Failed to complete stop"}), 500
+    finally:
+        db.close()
+
+
+@drivers_bp.route("/api/drivers/<driver_id>/location", methods=["POST"])
+@require_auth
+def update_driver_location(driver_id):
+    """Ingest a driver's GPS coordinates. Driver can update own location; admin can update any."""
+    data = request.get_json() or {}
+    lat = data.get("lat")
+    lng = data.get("lng")
+
+    if lat is None or lng is None:
+        return jsonify({"error": "lat and lng are required"}), 400
+
+    try:
+        lat = float(lat)
+        lng = float(lng)
+    except (ValueError, TypeError):
+        return jsonify({"error": "lat and lng must be numeric"}), 400
+
+    if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+        return jsonify({"error": "lat/lng out of valid range"}), 400
+
+    db = get_db_session()
+    try:
+        driver = db.query(Driver).filter(
+            Driver.id == driver_id,
+            Driver.company_id == g.company_id,
+        ).first()
+        if not driver:
+            return jsonify({"error": "Driver not found"}), 404
+
+        # Drivers can only update their own location
+        if g.user_role == "driver" and g.driver_id != driver_id:
+            return jsonify({"error": "Not authorized to update this driver's location"}), 403
+
+        driver.current_lat = lat
+        driver.current_lng = lng
+        driver.last_location_at = datetime.now(timezone.utc)
+        db.commit()
+
+        return jsonify({
+            "success": True,
+            "driver_id": driver_id,
+            "lat": lat,
+            "lng": lng,
+            "last_location_at": driver.last_location_at.isoformat(),
+        })
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to update location"}), 500
+    finally:
+        db.close()
+
+
+@drivers_bp.route("/api/drivers/<driver_id>/location", methods=["GET"])
+@require_auth
+@require_admin
+def get_driver_location(driver_id):
+    """Get a driver's last known GPS location."""
+    db = get_db_session()
+    try:
+        driver = db.query(Driver).filter(
+            Driver.id == driver_id,
+            Driver.company_id == g.company_id,
+        ).first()
+        if not driver:
+            return jsonify({"error": "Driver not found"}), 404
+
+        return jsonify({
+            "driver_id": driver_id,
+            "name": driver.name,
+            "lat": driver.current_lat,
+            "lng": driver.current_lng,
+            "last_location_at": driver.last_location_at.isoformat() if driver.last_location_at else None,
+        })
     finally:
         db.close()
