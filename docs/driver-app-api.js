@@ -10,7 +10,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BASE_URL = "https://YOUR_BACKEND_URL"; // ← change this
+const BASE_URL = "http://192.168.128.13:8000";
 
 const TOKEN_KEY = "aiviate_token";
 const USER_KEY  = "aiviate_user";

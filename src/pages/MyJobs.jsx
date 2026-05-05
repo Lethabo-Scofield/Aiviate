@@ -229,7 +229,8 @@ export default function MyJobs() {
                               )}
                             </div>
                           </div>
-                        )})
+                        )
+                        })}
                     </div>
                   </div>
                 )}
