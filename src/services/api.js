@@ -205,3 +205,11 @@ export async function getStats() {
   const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }
+
+export async function loadDemo() {
+  const res = await fetch(`${API_BASE}/demo`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}

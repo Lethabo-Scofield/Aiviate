@@ -231,7 +231,100 @@ def load_test_data():
     })
 
 
-@optimization_bp.route("/api/optimize", methods=["POST"])
+@optimization_bp.route("/api/demo", methods=["POST"])
+@require_auth
+@require_admin
+def load_demo():
+    """One-click: create pre-geocoded demo stops → optimise into 1 job → assign to first driver.
+    This makes the live dashboard testable immediately without uploading a spreadsheet."""
+    from models import Driver
+    from datetime import datetime, timezone
+
+    company_id = g.company_id
+    db = get_db_session()
+    try:
+        # Pre-geocoded demo stops (Sandton area, Johannesburg)
+        demo_stops_raw = [
+            {"address": "Sandton City Mall", "lat": -26.1073, "lng": 28.0566, "customer_name": "Sandton Hub", "order_id": "DEMO-001"},
+            {"address": "Rosebank Mall",      "lat": -26.1465, "lng": 28.0436, "customer_name": "Lerato Dlamini",  "order_id": "DEMO-002"},
+            {"address": "Hyde Park Corner",   "lat": -26.1303, "lng": 28.0345, "customer_name": "Thabo Mokoena",   "order_id": "DEMO-003"},
+            {"address": "Melrose Arch",       "lat": -26.1351, "lng": 28.0668, "customer_name": "Nomsa Khumalo",   "order_id": "DEMO-004"},
+            {"address": "Illovo Boulevard",   "lat": -26.1276, "lng": 28.0521, "customer_name": "Acme Legal",      "order_id": "DEMO-005"},
+            {"address": "Nelson Mandela Sq",  "lat": -26.1078, "lng": 28.0573, "customer_name": "Pick n Pay",      "order_id": "DEMO-006"},
+        ]
+
+        # Remove previous demo data
+        db.query(Stop).filter(Stop.order_id.like("DEMO-%"), Stop.company_id == company_id).delete(synchronize_session=False)
+        demo_jobs = db.query(Job).filter(Job.area == "Demo Route", Job.company_id == company_id).all()
+        for dj in demo_jobs:
+            db.delete(dj)
+        db.flush()
+
+        # Create stops
+        stop_ids = []
+        for s in demo_stops_raw:
+            sid = f"DEMO-{uuid.uuid4().hex[:8]}"
+            stop_ids.append(sid)
+            db.add(Stop(
+                id=sid, order_id=s["order_id"], customer_name=s["customer_name"],
+                address=s["address"], lat=s["lat"], lng=s["lng"],
+                demand=1, service_time=10, phone="", notes="",
+                time_window_start="", time_window_end="",
+                company_id=company_id, status="pending", completed=False,
+            ))
+        db.flush()
+
+        # Create job
+        job_id = f"JOB-DEMO-{uuid.uuid4().hex[:4].upper()}"
+        now = datetime.now(timezone.utc)
+        job = Job(
+            id=job_id, area="Demo Route",
+            total_stops=len(demo_stops_raw),
+            total_distance_km=12.5,
+            estimated_time_min=45,
+            estimated_cost=200.0,
+            center_lat=-26.133, center_lng=28.050,
+            status="unassigned",
+            company_id=company_id,
+            created_at=now,
+        )
+        db.add(job)
+        db.flush()
+
+        # Link stops to job in order
+        for i, sid in enumerate(stop_ids):
+            stop = db.query(Stop).filter(Stop.id == sid).first()
+            if stop:
+                stop.job_id = job_id
+                stop.stop_number = i + 1
+
+        # Auto-assign to first available driver
+        driver = db.query(Driver).filter(
+            Driver.company_id == company_id,
+            Driver.blocked == False,
+        ).first()
+        assigned_driver = None
+        if driver:
+            job.status = "assigned"
+            job.driver_id = driver.id
+            job.driver_name = driver.name
+            job.assigned_at = now
+            assigned_driver = driver.to_dict()
+
+        db.commit()
+        return jsonify({
+            "success": True,
+            "job_id": job_id,
+            "total_stops": len(demo_stops_raw),
+            "assigned_to": assigned_driver,
+            "message": "Demo route created" + (f" and assigned to {driver.name}" if driver else " (no drivers found — add a driver and assign manually)"),
+        })
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to create demo data"}), 500
+    finally:
+        db.close()
 @require_auth
 @require_admin
 def optimize():
@@ -356,10 +449,10 @@ def _create_jobs_from_clusters(db, clusters, company_id):
             company_id=company_id,
         )
         db.add(job)
+        db.flush()  # persist job row before linking stops (avoids FK ordering issues)
 
         for i, stop_data in enumerate(ordered_stops):
-            with db.no_autoflush:
-                stop = db.query(Stop).filter(Stop.id == stop_data["id"], Stop.company_id == company_id).first()
+            stop = db.query(Stop).filter(Stop.id == stop_data["id"], Stop.company_id == company_id).first()
             if stop:
                 stop.job_id = job_id
                 stop.stop_number = i + 1

@@ -119,7 +119,9 @@ def get_job_progress(job_id):
         # Determine timing status: delayed if assigned >120% of estimated time without completion
         timing_status = "on_time"
         if job.assigned_at and job.status not in ("completed", "unassigned"):
-            elapsed_min = (datetime.now(timezone.utc) - job.assigned_at.replace(tzinfo=timezone.utc)).total_seconds() / 60
+            # Ensure assigned_at is timezone-aware before comparing
+            assigned_at_utc = job.assigned_at if job.assigned_at.tzinfo else job.assigned_at.replace(tzinfo=timezone.utc)
+            elapsed_min = (datetime.now(timezone.utc) - assigned_at_utc).total_seconds() / 60
             est_min = job.estimated_time_min or 0
             if est_min > 0 and elapsed_min > est_min * 1.2 and progress_pct < 80:
                 timing_status = "delayed"

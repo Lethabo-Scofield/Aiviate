@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, UserPlus, ChevronDown, ChevronUp, X, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Package, UserPlus, ChevronDown, ChevronUp, X, RefreshCw, AlertTriangle, CheckCircle2, Navigation } from "lucide-react";
 import { SkeletonList } from "../components/Loader";
 import { getJobs, getDrivers, assignDriver, unassignDriver, reassignDriver, getJobProgress } from "../services/api";
 import { useNavigate } from "react-router-dom";
@@ -54,7 +54,24 @@ export default function Jobs() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    let interval = setInterval(loadData, 2000);
+    // Pause polling while tab is hidden, resume immediately when tab becomes visible.
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        loadData();
+        interval = setInterval(loadData, 2000);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   const handleAssign = async (jobId, driver) => {
     try {
@@ -96,7 +113,9 @@ export default function Jobs() {
   }
 
   const unassigned = jobs.filter(j => j.status === "unassigned");
-  const assigned = jobs.filter(j => j.status !== "unassigned");
+  const accepted  = jobs.filter(j => j.status === "assigned");
+  const inProgress = jobs.filter(j => j.status === "in_progress");
+  const assigned = jobs.filter(j => j.status !== "unassigned"); // kept for render
 
   return (
     <div className="animate-fade-in">
@@ -153,13 +172,44 @@ export default function Jobs() {
             </div>
           )}
 
-          {assigned.length > 0 && (
+          {inProgress.length > 0 && (
             <div>
-              <h2 className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider mb-3">
-                Assigned ({assigned.length})
+              <h2 className="text-[12px] font-semibold text-[#007aff] uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007aff] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007aff]"></span>
+                </span>
+                Trip in Progress ({inProgress.length})
               </h2>
               <div className="space-y-2">
-                {assigned.map((job) => (
+                {inProgress.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    drivers={drivers}
+                    progress={progressMap[job.id]}
+                    expanded={expandedJob === job.id}
+                    assigning={assigningJob === job.id}
+                    reassigning={reassigningJob === job.id}
+                    onToggle={() => setExpandedJob(expandedJob === job.id ? null : job.id)}
+                    onAssignToggle={() => setAssigningJob(assigningJob === job.id ? null : job.id)}
+                    onReassignToggle={() => setReassigningJob(reassigningJob === job.id ? null : job.id)}
+                    onAssign={(d) => handleAssign(job.id, d)}
+                    onReassign={(d) => handleReassign(job.id, d)}
+                    onUnassign={() => handleUnassign(job.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {accepted.length > 0 && (
+            <div>
+              <h2 className="text-[12px] font-semibold text-[#008080] uppercase tracking-wider mb-3">
+                Route Accepted ({accepted.length})
+              </h2>
+              <div className="space-y-2">
+                {accepted.map((job) => (
                   <JobRow
                     key={job.id}
                     job={job}
@@ -198,9 +248,15 @@ function JobRow({ job, drivers, progress, expanded, assigning, reassigning, onTo
       completed:   "bg-[#34c759]/10 text-[#34c759]",
       unassigned:  "bg-[#ff9500]/10 text-[#ff9500]",
     };
+    const labels = {
+      assigned:    "Route Accepted",
+      in_progress: "Trip in Progress",
+      completed:   "Completed",
+      unassigned:  "Needs Driver",
+    };
     return (
       <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold ${map[job.status] || "bg-[#f5f5f7] text-[#86868b]"}`}>
-        {job.status.replace("_", " ")}
+        {labels[job.status] || job.status.replace("_", " ")}
       </span>
     );
   };

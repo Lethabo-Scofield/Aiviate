@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { Package, Truck, MapPin, ArrowRight, Upload, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Package, Truck, MapPin, ArrowRight, Upload, Clock, CheckCircle2, AlertTriangle, Zap, Activity, Navigation } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getStats, getJobs, getDrivers, getJobProgress } from "../services/api";
+import { getStats, getJobs, getDrivers, getJobProgress, loadDemo } from "../services/api";
 
-const POLL_INTERVAL_MS = 30000;
+const POLL_INTERVAL_MS = 2000;
 
 function timingBadge(timing) {
   if (timing === "delayed")
@@ -18,9 +18,15 @@ function statusChip(status) {
     completed:   "bg-[#34c759]/10 text-[#34c759]",
     unassigned:  "bg-[#ff9500]/10 text-[#ff9500]",
   };
+  const labels = {
+    assigned:    "Route Accepted",
+    in_progress: "Trip in Progress",
+    completed:   "Completed",
+    unassigned:  "Unassigned",
+  };
   return (
     <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold ${map[status] || "bg-[#f5f5f7] text-[#86868b]"}`}>
-      {status.replace("_", " ")}
+      {labels[status] || status.replace("_", " ")}
     </span>
   );
 }
@@ -32,7 +38,23 @@ export default function Dashboard() {
   const [progressMap, setProgressMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [activityFeed, setActivityFeed] = useState([]);
+  const prevJobsRef = useRef({}); // map of jobId -> status from last poll
   const navigate = useNavigate();
+
+  const handleDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const res = await loadDemo();
+      alert(res.message || "Demo route created!");
+      load();
+    } catch (e) {
+      alert("Demo failed: " + e.message);
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const loadProgress = useCallback(async (activeJobs) => {
     const results = await Promise.allSettled(
@@ -53,6 +75,35 @@ export default function Dashboard() {
       setJobs(allJobs);
       setDrivers(d.drivers || []);
       setError("");
+
+      // ── Detect status transitions and push to activity feed ──────────────
+      const prev = prevJobsRef.current;
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const newEvents = [];
+      allJobs.forEach((job) => {
+        const oldStatus = prev[job.id];
+        if (!oldStatus) return; // first load — don't emit
+        if (oldStatus === job.status) return; // no change
+        const driver = job.driver_name || "Driver";
+        const route = job.area || job.id;
+        if (oldStatus === "unassigned" && job.status === "assigned") {
+          newEvents.push({ id: `${job.id}-${now.getTime()}`, time: timeStr, type: "accepted", text: `${driver} accepted route — ${route}`, jobId: job.id });
+        } else if (job.status === "in_progress") {
+          newEvents.push({ id: `${job.id}-${now.getTime()}`, time: timeStr, type: "started", text: `${driver} started trip — ${route}`, jobId: job.id });
+        } else if (job.status === "completed") {
+          newEvents.push({ id: `${job.id}-${now.getTime()}`, time: timeStr, type: "completed", text: `${driver} completed route — ${route}`, jobId: job.id });
+        }
+      });
+      if (newEvents.length > 0) {
+        setActivityFeed((prev) => [...newEvents, ...prev].slice(0, 20));
+      }
+      // Update prev snapshot
+      const snapshot = {};
+      allJobs.forEach((job) => { snapshot[job.id] = job.status; });
+      prevJobsRef.current = snapshot;
+      // ─────────────────────────────────────────────────────────────────────
+
       const activeJobs = allJobs.filter((j) => ["assigned", "in_progress"].includes(j.status));
       if (activeJobs.length > 0) loadProgress(activeJobs);
     } catch (e) {
@@ -65,8 +116,21 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    let interval = setInterval(load, POLL_INTERVAL_MS);
+    // Pause polling while tab is hidden, resume immediately when tab becomes visible.
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        load();
+        interval = setInterval(load, POLL_INTERVAL_MS);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [load]);
 
   if (loading) {
@@ -119,6 +183,9 @@ export default function Dashboard() {
             </p>
             <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-primary">
               Upload Deliveries <ArrowRight size={16} />
+            </button>
+            <button onClick={handleDemo} disabled={demoLoading} className="apple-btn apple-btn-secondary mt-3">
+              <Zap size={16} /> {demoLoading ? "Creating…" : "Quick demo — auto-create route"}
             </button>
           </div>
 
@@ -218,9 +285,51 @@ export default function Dashboard() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      {p && p.driver_name && (
-                        <p className="text-[11px] text-[#aeaeb2] mt-0.5">{p.driver_name}</p>
+                      {p && (
+                        <div className="flex items-center gap-3 mt-1">
+                          {p.driver_name && <p className="text-[11px] text-[#aeaeb2]">{p.driver_name}</p>}
+                          {p.arrived_stops > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#008080]/10 text-[#008080] font-semibold">
+                              {p.arrived_stops} arrived
+                            </span>
+                          )}
+                          {p.failed_stops > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#ff3b30]/10 text-[#ff3b30] font-semibold">
+                              {p.failed_stops} failed
+                            </span>
+                          )}
+                        </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Live Activity Feed */}
+          {activityFeed.length > 0 && (
+            <div className="apple-card p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007aff] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007aff]"></span>
+                </span>
+                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Live Activity</h2>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {activityFeed.map((event) => {
+                  const colors = {
+                    accepted:  { bg: "bg-[#008080]/8",  dot: "bg-[#008080]",  text: "text-[#008080]"  },
+                    started:   { bg: "bg-[#007aff]/8",  dot: "bg-[#007aff]",  text: "text-[#007aff]"  },
+                    completed: { bg: "bg-[#34c759]/8",  dot: "bg-[#34c759]",  text: "text-[#34c759]"  },
+                  };
+                  const c = colors[event.type] || { bg: "bg-[#f5f5f7]", dot: "bg-[#aeaeb2]", text: "text-[#86868b]" };
+                  return (
+                    <div key={event.id} className={`flex items-center gap-3 px-3 py-2 rounded-xl ${c.bg} animate-fade-in`}>
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
+                      <span className={`text-[12px] font-medium flex-1 ${c.text}`}>{event.text}</span>
+                      <span className="text-[10px] text-[#aeaeb2] shrink-0">{event.time}</span>
                     </div>
                   );
                 })}
@@ -247,6 +356,7 @@ export default function Dashboard() {
                         <p className="text-[11px] text-[#aeaeb2]">
                           {job.total_stops} stops | {job.total_distance_km} km
                           {p && ` | ${p.completed_stops}/${p.total_stops} done`}
+                          {p && p.arrived_stops > 0 && ` | ${p.arrived_stops} arrived`}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -299,6 +409,9 @@ export default function Dashboard() {
 
           <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-secondary text-[13px]">
             <Upload size={14} /> Upload new deliveries
+          </button>
+          <button onClick={handleDemo} disabled={demoLoading} className="apple-btn apple-btn-secondary text-[13px]">
+            <Zap size={14} /> {demoLoading ? "Creating…" : "Load demo route"}
           </button>
         </div>
       )}

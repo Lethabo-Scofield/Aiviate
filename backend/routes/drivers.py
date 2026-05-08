@@ -258,15 +258,108 @@ def get_my_jobs():
         if not driver:
             return jsonify({"jobs": [], "driver": None})
 
+        # Jobs already assigned to this driver
         my_jobs = db.query(Job).filter(
             Job.driver_id == driver.id,
             Job.company_id == g.company_id,
         ).all()
+        my_job_ids = {j.id for j in my_jobs}
+
+        # Unassigned jobs (available for any driver to pick up)
+        unassigned_jobs = db.query(Job).filter(
+            Job.status == "unassigned",
+            Job.company_id == g.company_id,
+        ).all()
+
+        all_jobs = list(my_jobs) + [j for j in unassigned_jobs if j.id not in my_job_ids]
 
         return jsonify({
             "driver": driver.to_dict(),
-            "jobs": [j.to_dict() for j in my_jobs],
+            "jobs": [j.to_dict() for j in all_jobs],
         })
+    finally:
+        db.close()
+
+
+@drivers_bp.route("/api/jobs/<job_id>/accept", methods=["POST"])
+@require_auth
+def accept_job(job_id):
+    """Driver self-assigns to an unassigned job."""
+    db = get_db_session()
+    try:
+        driver = db.query(Driver).filter(
+            Driver.user_id == g.user_id,
+            Driver.company_id == g.company_id,
+        ).first()
+        if not driver:
+            driver = db.query(Driver).filter(
+                Driver.email == g.user_email,
+                Driver.company_id == g.company_id,
+            ).first()
+        if not driver:
+            return jsonify({"error": "Driver profile not found"}), 403
+
+        job = db.query(Job).filter(
+            Job.id == job_id,
+            Job.company_id == g.company_id,
+        ).first()
+        if not job:
+            return jsonify({"error": "Job not found"}), 404
+        if job.status not in ("unassigned", "assigned") and job.driver_id != driver.id:
+            return jsonify({"error": "Job is not available"}), 409
+
+        from datetime import datetime, timezone
+        job.driver_id = driver.id
+        job.driver_name = driver.name
+        job.status = "assigned"
+        job.assigned_at = datetime.now(timezone.utc)
+        db.commit()
+        return jsonify({"success": True, "job": job.to_dict()})
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to accept job"}), 500
+    finally:
+        db.close()
+
+
+@drivers_bp.route("/api/jobs/<job_id>/start", methods=["POST"])
+@require_auth
+def start_job(job_id):
+    """Driver marks a job as in_progress (trip started)."""
+    db = get_db_session()
+    try:
+        driver = db.query(Driver).filter(
+            Driver.user_id == g.user_id,
+            Driver.company_id == g.company_id,
+        ).first()
+        if not driver:
+            driver = db.query(Driver).filter(
+                Driver.email == g.user_email,
+                Driver.company_id == g.company_id,
+            ).first()
+        if not driver:
+            return jsonify({"error": "Driver profile not found"}), 403
+
+        job = db.query(Job).filter(
+            Job.id == job_id,
+            Job.driver_id == driver.id,
+            Job.company_id == g.company_id,
+        ).first()
+        if not job:
+            return jsonify({"error": "Job not found or not assigned to you"}), 404
+
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        job.status = "in_progress"
+        if not job.started_at:
+            job.started_at = now
+        db.commit()
+        return jsonify({"success": True, "job": job.to_dict()})
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to start job"}), 500
     finally:
         db.close()
 
