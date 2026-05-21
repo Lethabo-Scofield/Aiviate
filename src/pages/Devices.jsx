@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Smartphone,
   Battery,
@@ -290,33 +291,41 @@ export default function Devices() {
         </div>
       )}
 
-      {showAdd && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-[18px] font-semibold text-[#1d1d1f]">Add device</h2>
-              <button onClick={() => setShowAdd(false)} className="w-8 h-8 rounded-lg hover:bg-black/[0.04] flex items-center justify-center">
-                <X size={16} className="text-[#86868b]" />
-              </button>
-            </div>
-            <form onSubmit={handleAdd} className="space-y-3">
-              <div>
-                <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Device name</label>
-                <input className="apple-input" placeholder="e.g. Cab tablet #4" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
-              </div>
-              <div>
-                <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Model</label>
-                <input className="apple-input" value={newModel} onChange={(e) => setNewModel(e.target.value)} />
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <button type="button" onClick={() => setShowAdd(false)} className="apple-btn apple-btn-secondary">Cancel</button>
-                <button type="submit" disabled={busy} className="apple-btn apple-btn-primary">
-                  {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add
+      {showAdd && createPortal(
+        <>
+          <div className="ios-scrim" onClick={() => setShowAdd(false)} />
+          <div className="ios-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="ios-sheet-handle sm:hidden" />
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">Add device</h2>
+                <button
+                  onClick={() => setShowAdd(false)}
+                  className="w-8 h-8 rounded-full bg-[#f0f0f0] hover:bg-[#e5e5e7] flex items-center justify-center tap"
+                >
+                  <X size={14} className="text-[#86868b]" />
                 </button>
               </div>
-            </form>
+              <form onSubmit={handleAdd} className="space-y-3">
+                <div>
+                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Device name</label>
+                  <input className="apple-input" placeholder="e.g. Cab tablet #4" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Model</label>
+                  <input className="apple-input" value={newModel} onChange={(e) => setNewModel(e.target.value)} />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <button type="button" onClick={() => setShowAdd(false)} className="apple-btn apple-btn-secondary">Cancel</button>
+                  <button type="submit" disabled={busy} className="apple-btn apple-btn-primary">
+                    {busy ? <span className="ios-spinner ios-spinner-inverse" /> : <Plus size={14} />} Add
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </>,
+        document.body
       )}
     </div>
   );

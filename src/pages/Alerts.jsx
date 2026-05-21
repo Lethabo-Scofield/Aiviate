@@ -113,20 +113,16 @@ export default function Alerts() {
         </button>
       </div>
 
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="ios-seg mb-5">
         {[
           { key: "all", label: "All" },
-          { key: "unread", label: `Unread (${unread})` },
+          { key: "unread", label: `Unread${unread ? ` · ${unread}` : ""}` },
           { key: "critical", label: "Critical" },
         ].map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-colors ${
-              filter === f.key
-                ? "bg-[#1d1d1f] text-white"
-                : "bg-[#f0f0f0] text-[#3a3a3c] hover:bg-[#e5e5e7]"
-            }`}
+            className={filter === f.key ? "active" : ""}
           >
             {f.label}
           </button>
