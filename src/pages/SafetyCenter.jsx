@@ -2,60 +2,54 @@ import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
-  Shield,
-  AlertTriangle,
   Eye,
+  AlertTriangle,
   Gauge,
   Smartphone,
   CornerUpRight,
-  TrendingUp,
+  Shield,
   TrendingDown,
+  Camera,
 } from "lucide-react";
 import { getSafetyOverview, getSafetyEvents } from "../services/api";
 
 const EVENT_META = {
-  harsh_brake: { label: "Harsh braking", icon: AlertTriangle, color: "#ff9500" },
-  speeding: { label: "Speeding", icon: Gauge, color: "#ff3b30" },
-  fatigue: { label: "Fatigue", icon: Eye, color: "#bf5af2" },
-  phone_use: { label: "Phone use", icon: Smartphone, color: "#0a84ff" },
-  sharp_turn: { label: "Sharp turn", icon: CornerUpRight, color: "#5e5ce6" },
+  fatigue: { label: "Drowsiness", icon: Eye, color: "#ff3b30" },
+  harsh_brake: { label: "Harsh brake", icon: AlertTriangle, color: "#ff9500" },
+  speeding: { label: "Speeding", icon: Gauge, color: "#ff9500" },
+  phone_use: { label: "Phone use", icon: Smartphone, color: "#86868b" },
+  sharp_turn: { label: "Sharp turn", icon: CornerUpRight, color: "#86868b" },
 };
 
-function scoreColor(score) {
-  if (score >= 90) return { text: "text-[#34c759]", ring: "#34c759", label: "Excellent" };
-  if (score >= 75) return { text: "text-[#30b0c7]", ring: "#30b0c7", label: "Good" };
-  if (score >= 60) return { text: "text-[#ff9500]", ring: "#ff9500", label: "Fair" };
-  return { text: "text-[#ff3b30]", ring: "#ff3b30", label: "At risk" };
+function isToday(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  const n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
 
-function ScoreRing({ score, size = 96 }) {
-  const c = scoreColor(score);
-  const radius = (size - 12) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#f0f0f0" strokeWidth={6} fill="none" />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={c.ring}
-          strokeWidth={6}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.6s ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-[22px] font-semibold ${c.text} tracking-tight`}>{score}</span>
-        <span className="text-[10px] text-[#86868b] font-medium uppercase tracking-wider">{c.label}</span>
-      </div>
-    </div>
-  );
+function timeAgo(iso) {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function alertnessFromDriver(d) {
+  // Drowsiness-weighted alertness: penalise fatigue events the hardest.
+  const fatiguePenalty = (d.fatigue || 0) * 9;
+  const otherPenalty = ((d.total_events || 0) - (d.fatigue || 0)) * 2;
+  return Math.max(0, Math.min(100, 100 - fatiguePenalty - otherPenalty));
+}
+
+function tier(score) {
+  if (score >= 85) return { label: "Alert", color: "#34c759" };
+  if (score >= 65) return { label: "Watch", color: "#ff9500" };
+  return { label: "At risk", color: "#ff3b30" };
 }
 
 export default function SafetyCenter() {
@@ -74,16 +68,32 @@ export default function SafetyCenter() {
       }
     };
     load();
+    const id = setInterval(load, 20000);
+    return () => clearInterval(id);
   }, []);
 
-  const fleetScore = overview?.fleet_safety_score ?? 100;
-  const fleetColor = scoreColor(fleetScore);
-  const eventCounts = overview?.event_type_counts || {};
-  const heatmap = overview?.heatmap || [];
+  const drivers = overview?.drivers || [];
+  const fatigueEvents = useMemo(() => events.filter((e) => e.event_type === "fatigue"), [events]);
+  const fatigueToday = useMemo(() => fatigueEvents.filter((e) => isToday(e.created_at)), [fatigueEvents]);
+  const severeNow = useMemo(
+    () => fatigueEvents.filter((e) => e.severity >= 4 && Date.now() - new Date(e.created_at).getTime() < 60 * 60 * 1000),
+    [fatigueEvents]
+  );
 
-  const sortedDrivers = useMemo(() => overview?.drivers || [], [overview]);
-  const topDriver = sortedDrivers[0];
-  const bottomDriver = sortedDrivers[sortedDrivers.length - 1];
+  const driversByAlertness = useMemo(() => {
+    return [...drivers]
+      .map((d) => ({ ...d, alertness: alertnessFromDriver(d) }))
+      .sort((a, b) => a.alertness - b.alertness);
+  }, [drivers]);
+
+  const atRiskNow = driversByAlertness.filter((d) => d.alertness < 65);
+  const fatigueHeatmap = useMemo(
+    () =>
+      fatigueEvents
+        .filter((e) => e.lat != null && e.lng != null)
+        .map((e) => ({ lat: e.lat, lng: e.lng, severity: e.severity })),
+    [fatigueEvents]
+  );
 
   if (loading) {
     return (
@@ -104,113 +114,109 @@ export default function SafetyCenter() {
   return (
     <div className="animate-fade-in">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Safety Center</h1>
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Safety</h1>
         <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-          Driver safety scores, behaviour trends and risk hotspots across Johannesburg
+          Live fatigue picture across your fleet — driven by your Guardian cameras.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-        <div className="apple-card p-6 flex items-center gap-5">
-          <ScoreRing score={fleetScore} size={104} />
+      {/* Critical band — drowsy now */}
+      {severeNow.length > 0 ? (
+        <div
+          className="rounded-2xl p-5 mb-5 flex items-start gap-4"
+          style={{ background: "linear-gradient(135deg, #ff3b30 0%, #ff6b3d 100%)", color: "white" }}
+        >
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <AlertTriangle size={20} />
+          </div>
+          <div className="flex-1">
+            <p className="text-[11px] uppercase tracking-wider font-semibold opacity-90">Critical · drowsiness detected</p>
+            <p className="text-[18px] font-semibold mt-0.5">
+              {severeNow.length} driver{severeNow.length > 1 ? "s" : ""} showing severe signs of fatigue right now
+            </p>
+            <p className="text-[12px] opacity-90 mt-1">
+              {severeNow.slice(0, 3).map((e) => e.driver_name).join(" · ")}
+              {severeNow.length > 3 ? ` +${severeNow.length - 3} more` : ""}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl p-4 mb-5 flex items-center gap-3 bg-[#34c759]/[0.08] border border-[#34c759]/20">
+          <div className="w-9 h-9 rounded-xl bg-[#34c759]/15 flex items-center justify-center">
+            <Shield size={16} className="text-[#34c759]" />
+          </div>
           <div>
-            <p className="text-[12px] text-[#86868b] uppercase tracking-wide font-semibold mb-1">Fleet safety score</p>
-            <p className={`text-[14px] font-semibold ${fleetColor.text}`}>{fleetColor.label}</p>
-            <p className="text-[12px] text-[#aeaeb2] mt-1">{overview?.total_events || 0} events tracked</p>
+            <p className="text-[13px] font-semibold text-[#1d1d1f]">All clear right now</p>
+            <p className="text-[12px] text-[#86868b]">No severe drowsiness in the last hour</p>
           </div>
         </div>
+      )}
 
-        <div className="apple-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[12px] text-[#86868b] uppercase tracking-wide font-semibold">Top performer</p>
-            <TrendingUp size={16} className="text-[#34c759]" />
-          </div>
-          {topDriver ? (
-            <>
-              <p className="text-[18px] font-semibold text-[#1d1d1f] truncate">{topDriver.driver_name}</p>
-              <p className="text-[12px] text-[#86868b] mt-1">{topDriver.total_events} events</p>
-              <div className="mt-3 h-1.5 rounded-full bg-[#f0f0f0] overflow-hidden">
-                <div className="h-full bg-[#34c759]" style={{ width: `${topDriver.safety_score}%` }} />
-              </div>
-              <p className={`text-[13px] font-semibold mt-2 ${scoreColor(topDriver.safety_score).text}`}>
-                Score: {topDriver.safety_score}
-              </p>
-            </>
-          ) : (
-            <p className="text-[13px] text-[#aeaeb2]">No drivers yet</p>
-          )}
+      {/* Headline stats — fatigue-first */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div className="stat-card">
+          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Drowsy now</p>
+          <p className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: severeNow.length > 0 ? "#ff3b30" : "#34c759" }}>
+            {severeNow.length}
+          </p>
+          <p className="text-[11px] text-[#aeaeb2] mt-2">drivers in last hour</p>
         </div>
-
-        <div className="apple-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[12px] text-[#86868b] uppercase tracking-wide font-semibold">Needs coaching</p>
-            <TrendingDown size={16} className="text-[#ff3b30]" />
-          </div>
-          {bottomDriver && bottomDriver.driver_id !== topDriver?.driver_id ? (
-            <>
-              <p className="text-[18px] font-semibold text-[#1d1d1f] truncate">{bottomDriver.driver_name}</p>
-              <p className="text-[12px] text-[#86868b] mt-1">{bottomDriver.total_events} events</p>
-              <div className="mt-3 h-1.5 rounded-full bg-[#f0f0f0] overflow-hidden">
-                <div className="h-full bg-[#ff9500]" style={{ width: `${bottomDriver.safety_score}%` }} />
-              </div>
-              <p className={`text-[13px] font-semibold mt-2 ${scoreColor(bottomDriver.safety_score).text}`}>
-                Score: {bottomDriver.safety_score}
-              </p>
-            </>
-          ) : (
-            <p className="text-[13px] text-[#aeaeb2]">Not enough data</p>
-          )}
+        <div className="stat-card">
+          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Caught today</p>
+          <p className="text-[28px] font-semibold tracking-tight leading-none text-[#1d1d1f]">{fatigueToday.length}</p>
+          <p className="text-[11px] text-[#aeaeb2] mt-2">drowsiness events</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Cameras watching</p>
+          <p className="text-[28px] font-semibold tracking-tight leading-none text-[#008080]">{drivers.length}</p>
+          <p className="text-[11px] text-[#aeaeb2] mt-2">drivers protected</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">At-risk drivers</p>
+          <p className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: atRiskNow.length > 0 ? "#ff9500" : "#34c759" }}>
+            {atRiskNow.length}
+          </p>
+          <p className="text-[11px] text-[#aeaeb2] mt-2">risk score below 65</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-        {Object.entries(EVENT_META).map(([key, meta]) => {
-          const Icon = meta.icon;
-          const count = eventCounts[key] || 0;
-          return (
-            <div key={key} className="apple-card p-4">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
-                style={{ background: `${meta.color}1A`, color: meta.color }}
-              >
-                <Icon size={16} strokeWidth={1.8} />
-              </div>
-              <p className="text-[22px] font-semibold text-[#1d1d1f] tracking-tight leading-none">{count}</p>
-              <p className="text-[11px] text-[#86868b] font-medium mt-1.5">{meta.label}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-        <div className="apple-card p-5">
+      {/* Driver alertness list + fatigue map */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-5">
+        <div className="apple-card p-5 lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Driver leaderboard</h2>
-            <Shield size={16} className="text-[#86868b]" />
+            <div>
+              <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Driver risk</h2>
+              <p className="text-[11px] text-[#aeaeb2] mt-0.5">Weighted by recent drowsiness events</p>
+            </div>
+            <Eye size={16} className="text-[#86868b]" />
           </div>
-          {sortedDrivers.length === 0 ? (
+          {driversByAlertness.length === 0 ? (
             <p className="text-[13px] text-[#aeaeb2] py-8 text-center">No drivers yet</p>
           ) : (
-            <div className="space-y-2">
-              {sortedDrivers.map((d, idx) => {
-                const c = scoreColor(d.safety_score);
+            <div className="space-y-1.5">
+              {driversByAlertness.map((d) => {
+                const t = tier(d.alertness);
                 return (
-                  <div
-                    key={d.driver_id}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f5f5f7] transition-colors"
-                  >
-                    <span className="w-6 text-[12px] font-semibold text-[#aeaeb2] text-center">{idx + 1}</span>
+                  <div key={d.driver_id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f5f5f7] transition-colors">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${t.color}1A`, color: t.color }}>
+                      <Eye size={14} strokeWidth={1.8} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-[#1d1d1f] truncate">{d.driver_name}</p>
                       <p className="text-[11px] text-[#aeaeb2]">
-                        {d.total_events} events • {d.harsh_brake} brake • {d.speeding} speed
+                        {d.fatigue || 0} drowsy · {d.total_events || 0} total events
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 h-1.5 rounded-full bg-[#f0f0f0] overflow-hidden">
-                        <div className="h-full" style={{ width: `${d.safety_score}%`, background: c.ring }} />
+                      <div className="w-24 h-1.5 rounded-full bg-[#f0f0f0] overflow-hidden">
+                        <div className="h-full" style={{ width: `${d.alertness}%`, background: t.color }} />
                       </div>
-                      <span className={`text-[13px] font-semibold ${c.text} w-8 text-right`}>{d.safety_score}</span>
+                      <span className="text-[13px] font-semibold w-8 text-right" style={{ color: t.color }}>
+                        {d.alertness}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider w-12 text-right" style={{ color: t.color }}>
+                        {t.label}
+                      </span>
                     </div>
                   </div>
                 );
@@ -219,35 +225,30 @@ export default function SafetyCenter() {
           )}
         </div>
 
-        <div className="apple-card p-5">
+        <div className="apple-card p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Risk heatmap (Johannesburg)</h2>
-            <span className="text-[11px] text-[#aeaeb2]">{heatmap.length} hotspots</span>
+            <div>
+              <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Where they nod off</h2>
+              <p className="text-[11px] text-[#aeaeb2] mt-0.5">Drowsiness hotspots</p>
+            </div>
+            <span className="text-[11px] text-[#aeaeb2]">{fatigueHeatmap.length} events</span>
           </div>
-          <div className="rounded-xl overflow-hidden h-[320px]">
-            <MapContainer
-              center={[-26.2041, 28.0473]}
-              zoom={10}
-              style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap'
-              />
-              {heatmap.map((p, i) => (
+          <div className="rounded-xl overflow-hidden h-[280px]">
+            <MapContainer center={[-26.2041, 28.0473]} zoom={10} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+              {fatigueHeatmap.map((p, i) => (
                 <CircleMarker
                   key={i}
                   center={[p.lat, p.lng]}
-                  radius={6 + p.weight * 2}
+                  radius={6 + p.severity * 2}
                   pathOptions={{
                     color: "#ff3b30",
                     fillColor: "#ff3b30",
-                    fillOpacity: 0.25 + Math.min(0.4, p.weight * 0.08),
+                    fillOpacity: 0.3 + Math.min(0.5, p.severity * 0.1),
                     weight: 1,
                   }}
                 >
-                  <Tooltip>Severity {p.weight}</Tooltip>
+                  <Tooltip>Severity {p.severity}</Tooltip>
                 </CircleMarker>
               ))}
             </MapContainer>
@@ -255,37 +256,63 @@ export default function SafetyCenter() {
         </div>
       </div>
 
-      <div className="apple-card p-5">
-        <h2 className="text-[14px] font-semibold text-[#1d1d1f] mb-4">Recent safety events</h2>
-        {events.length === 0 ? (
-          <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No events recorded</p>
+      {/* Recent drowsiness events */}
+      <div className="apple-card p-5 mb-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Recent drowsiness catches</h2>
+          <Camera size={14} className="text-[#86868b]" />
+        </div>
+        {fatigueEvents.length === 0 ? (
+          <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No drowsiness detected yet — your drivers are wide awake.</p>
         ) : (
           <div className="space-y-1.5 max-h-[360px] overflow-y-auto">
-            {events.slice(0, 30).map((e) => {
-              const meta = EVENT_META[e.event_type] || EVENT_META.harsh_brake;
+            {fatigueEvents.slice(0, 25).map((e) => (
+              <div key={e.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f5f5f7]">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#ff3b30]/10 text-[#ff3b30]">
+                  <Eye size={14} strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-[#1d1d1f]">
+                    {e.driver_name}
+                    <span className="text-[#86868b] font-normal"> — eye closure / yawn detected</span>
+                  </p>
+                  <p className="text-[11px] text-[#aeaeb2]">severity {e.severity}/5 · {timeAgo(e.created_at)}</p>
+                </div>
+                {e.severity >= 4 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ff3b30] text-white font-semibold">CRITICAL</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* De-emphasized: other safety signals */}
+      <div className="apple-card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-[13px] font-semibold text-[#1d1d1f]">Other safety signals</h2>
+            <p className="text-[11px] text-[#aeaeb2] mt-0.5">Secondary telemetry — fatigue is what we hunt</p>
+          </div>
+          <TrendingDown size={14} className="text-[#aeaeb2]" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {Object.entries(EVENT_META)
+            .filter(([key]) => key !== "fatigue")
+            .map(([key, meta]) => {
               const Icon = meta.icon;
+              const count = overview?.event_type_counts?.[key] || 0;
               return (
-                <div key={e.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f5f5f7]">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: `${meta.color}1A`, color: meta.color }}
-                  >
-                    <Icon size={14} strokeWidth={1.8} />
+                <div key={key} className="rounded-xl bg-[#f5f5f7] p-3 flex items-center gap-3">
+                  <Icon size={14} className="text-[#86868b]" />
+                  <div className="min-w-0">
+                    <p className="text-[16px] font-semibold text-[#1d1d1f] leading-none">{count}</p>
+                    <p className="text-[10px] text-[#86868b] mt-1">{meta.label}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[#1d1d1f]">{meta.label}</p>
-                    <p className="text-[11px] text-[#86868b]">
-                      {e.driver_name} • severity {e.severity}/5
-                    </p>
-                  </div>
-                  <span className="text-[11px] text-[#aeaeb2]">
-                    {new Date(e.created_at).toLocaleString()}
-                  </span>
                 </div>
               );
             })}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

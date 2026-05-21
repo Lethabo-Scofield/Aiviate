@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Eye,
   Radio,
   Package,
   Map,
@@ -8,7 +8,7 @@ import {
   Menu,
   X,
   Shield,
-  Smartphone,
+  Camera,
   Bell,
   Activity,
 } from "lucide-react";
@@ -17,16 +17,18 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getAlerts } from "../services/api";
 
-const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/live-ops", icon: Activity, label: "Live Ops" },
+const primaryNav = [
+  { to: "/", icon: Shield, label: "Safety" },
+  { to: "/live", icon: Activity, label: "Live" },
+  { to: "/guardians", icon: Camera, label: "Guardians" },
+  { to: "/drivers", icon: Truck, label: "Drivers" },
+  { to: "/events", icon: Bell, label: "Events", badgeKey: "alerts" },
+];
+
+const secondaryNav = [
   { to: "/dispatch", icon: Radio, label: "Dispatch" },
   { to: "/jobs", icon: Package, label: "Jobs" },
   { to: "/map", icon: Map, label: "Map" },
-  { to: "/safety", icon: Shield, label: "Safety" },
-  { to: "/drivers", icon: Truck, label: "Drivers" },
-  { to: "/devices", icon: Smartphone, label: "Devices" },
-  { to: "/alerts", icon: Bell, label: "Alerts", badgeKey: "alerts" },
 ];
 
 function UserAvatar({ size = 32 }) {
@@ -69,7 +71,7 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
-    if (location.pathname === "/alerts") {
+    if (location.pathname === "/events" || location.pathname === "/alerts") {
       getAlerts({ unread: true, limit: 1 })
         .then((d) => setUnreadAlerts(d.unread_count || 0))
         .catch(() => {});
@@ -113,7 +115,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
-          {navItems.map(({ to, icon: Icon, label, badgeKey }) => {
+          {primaryNav.map(({ to, icon: Icon, label, badgeKey }) => {
             const badge = badgeKey ? badges[badgeKey] : 0;
             return (
               <NavLink
@@ -138,6 +140,24 @@ export default function Sidebar() {
               </NavLink>
             );
           })}
+
+          <p className="px-3 pt-5 pb-2 text-[10px] uppercase tracking-[0.08em] text-[#c7c7cc] font-semibold">Operations</p>
+          {secondaryNav.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+                  isActive
+                    ? "bg-[#f0f0f0] text-[#1d1d1f] font-medium"
+                    : "text-[#aeaeb2] hover:text-[#1d1d1f] hover:bg-black/[0.03]"
+                }`
+              }
+            >
+              <Icon size={15} strokeWidth={1.8} />
+              <span className="flex-1">{label}</span>
+            </NavLink>
+          ))}
         </nav>
 
         {user && (

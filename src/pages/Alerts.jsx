@@ -96,8 +96,8 @@ export default function Alerts() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Alerts</h1>
+      <div className="mb-2 flex items-center justify-between gap-4">
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Events</h1>
         {unread > 0 && (
           <button
             onClick={handleMarkAll}
@@ -109,6 +109,8 @@ export default function Alerts() {
           </button>
         )}
       </div>
+
+      <p className="text-[13px] sm:text-[14px] text-[#86868b] mb-6 sm:mb-8">Every drowsy moment, distraction, and near-miss your Guardians caught.</p>
 
       <div className="ios-seg mb-5">
         {[

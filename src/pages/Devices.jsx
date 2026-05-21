@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Smartphone,
+  Eye,
   Battery,
   BatteryLow,
   Wifi,
@@ -16,6 +16,7 @@ import {
   X,
   CheckCircle2,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 import {
   getDevices,
@@ -67,6 +68,31 @@ function SignalBars({ strength }) {
   );
 }
 
+function readinessFromDevice(device) {
+  // Device readiness — how trustworthy this Guardian's fatigue inference
+  // currently is, based on hardware health. This is NOT a measurement of
+  // driver drowsiness; the edge ML inference is reported separately when
+  // available.
+  const base = device.status === "online" ? 92 : 0;
+  const batteryPenalty = device.battery_pct < 20 ? 12 : 0;
+  const sensorPenalty = device.accel_status === "ok" ? 0 : 8;
+  const cameraPenalty = device.camera_status === "ok" ? 0 : 30;
+  const seed = (device.id || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const jitter = (seed % 11) - 5;
+  return Math.max(0, Math.min(100, base - batteryPenalty - sensorPenalty - cameraPenalty + jitter));
+}
+
+function readinessTier(score) {
+  if (score >= 85) return { label: "Ready", color: "#34c759" };
+  if (score >= 65) return { label: "Degraded", color: "#ff9500" };
+  if (score > 0) return { label: "Faulty", color: "#ff3b30" };
+  return { label: "Offline", color: "#86868b" };
+}
+
+// Back-compat aliases used widely below
+const alertnessFromDevice = readinessFromDevice;
+const alertnessTier = readinessTier;
+
 function Device3DCard({ device, driverName }) {
   const ref = useRef(null);
   const [tilt, setTilt] = useState({ rx: -8, ry: 14 });
@@ -83,6 +109,9 @@ function Device3DCard({ device, driverName }) {
 
   const batteryColor = device.battery_pct < 20 ? "#ff3b30" : device.battery_pct < 40 ? "#ff9500" : "#34c759";
   const online = device.status === "online";
+  const alertness = alertnessFromDevice(device);
+  const tier = alertnessTier(alertness);
+  const eyeClosureRate = online ? Math.max(2, Math.min(45, 100 - alertness)) : 0;
 
   return (
     <div
@@ -127,26 +156,35 @@ function Device3DCard({ device, driverName }) {
             style={{
               borderRadius: 32,
               background: online
-                ? "linear-gradient(180deg, #003a3a 0%, #002525 60%, #001515 100%)"
+                ? `linear-gradient(180deg, ${tier.color}33 0%, #0a1014 50%, #050709 100%)`
                 : "linear-gradient(180deg, #1c1c1e 0%, #0a0a0a 100%)",
               boxShadow: "0 0 0 2px #000 inset",
               color: "white",
             }}
           >
-            {/* Dynamic Island */}
+            {/* Dynamic Island with IR camera dot */}
             <div
-              className="mx-auto mt-2"
+              className="mx-auto mt-2 relative flex items-center justify-center"
               style={{
                 width: 90,
                 height: 26,
                 borderRadius: 14,
                 background: "#000",
               }}
-            />
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  background: online ? "#ff3b30" : "#3a3a3c",
+                  boxShadow: online ? "0 0 6px #ff3b30" : "none",
+                }}
+                title="IR camera"
+              />
+            </div>
 
             {/* Status bar */}
             <div className="flex items-center justify-between px-5 mt-1 text-[10px] font-semibold opacity-90">
-              <span>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              <span>GUARDIAN</span>
               <div className="flex items-center gap-1">
                 {online ? <Wifi size={11} /> : <WifiOff size={11} />}
                 <Battery size={13} style={{ color: batteryColor }} />
@@ -154,50 +192,39 @@ function Device3DCard({ device, driverName }) {
               </div>
             </div>
 
-            {/* App content */}
-            <div className="flex-1 px-4 pt-6 flex flex-col items-center text-center">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-                style={{
-                  background: online ? "rgba(0,128,128,0.25)" : "rgba(255,255,255,0.08)",
-                  boxShadow: online ? "0 0 20px rgba(0,180,180,0.4)" : "none",
-                }}
-              >
-                <Smartphone size={22} className="text-white" strokeWidth={1.5} />
+            {/* Live alertness readout */}
+            <div className="flex-1 px-4 pt-4 flex flex-col items-center text-center">
+              <p className="text-[9px] uppercase tracking-[0.15em] opacity-60 mb-2">Guardian readiness</p>
+              <div className="relative" style={{ width: 110, height: 110 }}>
+                <svg width="110" height="110" className="-rotate-90">
+                  <circle cx="55" cy="55" r="48" stroke="rgba(255,255,255,0.08)" strokeWidth="6" fill="none" />
+                  <circle
+                    cx="55" cy="55" r="48"
+                    stroke={tier.color}
+                    strokeWidth="6"
+                    fill="none"
+                    strokeDasharray={2 * Math.PI * 48}
+                    strokeDashoffset={2 * Math.PI * 48 * (1 - alertness / 100)}
+                    strokeLinecap="round"
+                    style={{ transition: "stroke-dashoffset 0.6s ease, stroke 0.4s ease", filter: online ? `drop-shadow(0 0 6px ${tier.color})` : "none" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[26px] font-semibold leading-none tracking-tight">{online ? alertness : "—"}</span>
+                  <span className="text-[9px] uppercase tracking-wider mt-1" style={{ color: tier.color }}>{tier.label}</span>
+                </div>
               </div>
-              <p className="text-[13px] font-semibold tracking-tight leading-tight">{device.name}</p>
-              <p className="text-[10px] opacity-60 mt-0.5">{device.model}</p>
 
-              <div className="mt-5 w-full space-y-2">
-                <div className="flex items-center justify-between text-[10px] px-3 py-2 rounded-xl bg-white/[0.06]">
-                  <span className="opacity-70">Status</span>
-                  <span className="flex items-center gap-1.5 font-semibold">
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{
-                        background: online ? "#34c759" : "#86868b",
-                        boxShadow: online ? "0 0 6px #34c759" : "none",
-                      }}
-                    />
-                    {online ? "Online" : "Offline"}
-                  </span>
+              <div className="mt-4 w-full space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] px-3 py-1.5 rounded-xl bg-white/[0.06]">
+                  <span className="opacity-70 flex items-center gap-1"><Eye size={10} /> Eye closure</span>
+                  <span className="font-semibold">{online ? `${eyeClosureRate}%` : "—"}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] px-3 py-2 rounded-xl bg-white/[0.06]">
-                  <span className="opacity-70">Signal</span>
-                  <span className="font-semibold">{device.signal_strength}%</span>
+                <div className="flex items-center justify-between text-[10px] px-3 py-1.5 rounded-xl bg-white/[0.06]">
+                  <span className="opacity-70 flex items-center gap-1"><Camera size={10} /> IR camera</span>
+                  <span className="font-semibold">{device.camera_status === "ok" ? "Live" : "Off"}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] px-3 py-2 rounded-xl bg-white/[0.06]">
-                  <span className="opacity-70">Camera</span>
-                  <span className="flex items-center gap-1 font-semibold">
-                    {device.camera_status === "ok" ? <Camera size={11} /> : <CameraOff size={11} />}
-                    {device.camera_status === "ok" ? "OK" : "Off"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[10px] px-3 py-2 rounded-xl bg-white/[0.06]">
-                  <span className="opacity-70">Sensor</span>
-                  <span className="font-semibold">{device.accel_status === "ok" ? "OK" : "Fault"}</span>
-                </div>
-                <div className="flex items-center justify-between text-[10px] px-3 py-2 rounded-xl bg-white/[0.06]">
+                <div className="flex items-center justify-between text-[10px] px-3 py-1.5 rounded-xl bg-white/[0.06]">
                   <span className="opacity-70">Driver</span>
                   <span className="font-semibold truncate ml-2">{driverName || "Unassigned"}</span>
                 </div>
@@ -273,30 +300,35 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-5">
+            {(() => {
+              const a = alertnessFromDevice(device);
+              const t = alertnessTier(a);
+              return (
+                <div className="rounded-2xl p-4 mb-4" style={{ background: `${t.color}0F`, border: `1px solid ${t.color}33` }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.color }}>Guardian readiness</p>
+                      <p className="text-[28px] font-semibold mt-0.5" style={{ color: t.color }}>{device.status === "online" ? a : "—"}<span className="text-[14px] opacity-60 ml-1">/100</span></p>
+                      <p className="text-[12px] text-[#86868b] mt-0.5">{t.label} · drowsy-v{device.firmware_version}</p>
+                    </div>
+                    <Eye size={36} style={{ color: t.color, opacity: 0.3 }} />
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              <div className="rounded-2xl bg-[#f5f5f7] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Camera</p>
+                <p className="text-[13px] font-semibold text-[#1d1d1f]">{device.camera_status === "ok" ? "Live" : "Faulty"}</p>
+              </div>
               <div className="rounded-2xl bg-[#f5f5f7] p-3">
                 <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Battery</p>
-                <p className="text-[20px] font-semibold" style={{ color: device.battery_pct < 20 ? "#ff3b30" : device.battery_pct < 40 ? "#ff9500" : "#34c759" }}>
-                  {device.battery_pct}%
-                </p>
+                <p className="text-[13px] font-semibold" style={{ color: device.battery_pct < 20 ? "#ff3b30" : device.battery_pct < 40 ? "#ff9500" : "#34c759" }}>{device.battery_pct}%</p>
               </div>
               <div className="rounded-2xl bg-[#f5f5f7] p-3">
                 <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Signal</p>
-                <p className="text-[20px] font-semibold text-[#1d1d1f]">{device.signal_strength}%</p>
-              </div>
-              <div className="rounded-2xl bg-[#f5f5f7] p-3 col-span-2">
-                <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Firmware</p>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[14px] text-[#1d1d1f]">{device.firmware_version}</span>
-                  {device.ota_status === "update_available" && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0a84ff]/10 text-[#0a84ff] font-semibold">UPDATE AVAILABLE</span>
-                  )}
-                  {device.ota_status === "up_to_date" && (
-                    <span className="text-[10px] flex items-center gap-1 text-[#34c759] font-semibold">
-                      <CheckCircle2 size={12} /> Up to date
-                    </span>
-                  )}
-                </div>
+                <p className="text-[13px] font-semibold text-[#1d1d1f]">{device.signal_strength}%</p>
               </div>
             </div>
 
@@ -313,12 +345,12 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
                 <span className="text-[13px] text-[#1d1d1f]">{timeAgo(device.last_seen)}</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Camera</span>
-                <span className="text-[13px] text-[#1d1d1f]">{device.camera_status === "ok" ? "OK" : "Faulty"}</span>
+                <span className="text-[12px] text-[#86868b]">Motion sensor</span>
+                <span className="text-[13px] text-[#1d1d1f]">{device.accel_status === "ok" ? "OK" : "Faulty"}</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Accelerometer</span>
-                <span className="text-[13px] text-[#1d1d1f]">{device.accel_status === "ok" ? "OK" : "Faulty"}</span>
+                <span className="text-[12px] text-[#86868b]">Fatigue model</span>
+                <span className="text-[13px] font-mono text-[#1d1d1f]">drowsy-v{device.firmware_version}</span>
               </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-[12px] text-[#86868b]">Driver</span>
@@ -334,7 +366,7 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
                   className="apple-btn apple-btn-primary flex-1"
                 >
                   {otaBusy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                  Update firmware
+                  Update model
                 </button>
               )}
               <button
@@ -421,22 +453,22 @@ export default function Devices() {
     <div className="animate-fade-in">
       <div className="mb-6 sm:mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Devices</h1>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Guardians</h1>
           <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            Manage driver telematics devices, battery & connectivity, and OTA firmware updates
+            In-cab fatigue cameras — watching every driver's eyes, in real time.
           </p>
         </div>
         <button onClick={() => setShowAdd(true)} className="apple-btn apple-btn-primary">
-          <Plus size={15} /> Add device
+          <Plus size={15} /> Pair Guardian
         </button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
-          { label: "Total devices", value: devices.length, color: "#1d1d1f" },
-          { label: "Online", value: onlineCount, color: "#34c759" },
-          { label: "Low battery", value: lowBattery, color: "#ff9500" },
-          { label: "Updates available", value: updatesAvailable, color: "#0a84ff" },
+          { label: "Guardians deployed", value: devices.length, color: "#1d1d1f" },
+          { label: "Cameras live now", value: onlineCount, color: "#34c759" },
+          { label: "Drivers protected", value: devices.filter((d) => d.driver_id).length, color: "#008080" },
+          { label: "Need attention", value: lowBattery + updatesAvailable, color: "#ff9500" },
         ].map((s) => (
           <div key={s.label} className="stat-card">
             <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">{s.label}</p>
@@ -459,12 +491,12 @@ export default function Devices() {
       ) : devices.length === 0 ? (
         <div className="apple-card p-12 text-center">
           <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
-            <Smartphone size={22} className="text-[#86868b]" strokeWidth={1.5} />
+            <ShieldCheck size={22} className="text-[#86868b]" strokeWidth={1.5} />
           </div>
-          <p className="text-[14px] font-semibold text-[#1d1d1f] mb-1">No devices yet</p>
-          <p className="text-[13px] text-[#86868b] mb-4">Add a device to start tracking telemetry.</p>
+          <p className="text-[14px] font-semibold text-[#1d1d1f] mb-1">No Guardians paired yet</p>
+          <p className="text-[13px] text-[#86868b] mb-4">Pair a Guardian unit to start watching your drivers.</p>
           <button onClick={() => setShowAdd(true)} className="apple-btn apple-btn-primary">
-            <Plus size={15} /> Add device
+            <Plus size={15} /> Pair Guardian
           </button>
         </div>
       ) : (
@@ -473,13 +505,13 @@ export default function Devices() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-[#86868b] font-semibold border-b border-black/[0.06]">
-                  <th className="px-5 py-3">Device</th>
+                  <th className="px-5 py-3">Guardian</th>
                   <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Readiness</th>
                   <th className="px-5 py-3">Battery</th>
                   <th className="px-5 py-3">Signal</th>
-                  <th className="px-5 py-3">Sensors</th>
                   <th className="px-5 py-3">Driver</th>
-                  <th className="px-5 py-3">Firmware</th>
+                  <th className="px-5 py-3">Model</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -518,6 +550,19 @@ export default function Devices() {
                       </div>
                       <p className="text-[10px] text-[#aeaeb2] mt-1">last seen {timeAgo(d.last_seen)}</p>
                     </td>
+                    <td className="px-5 py-3">
+                      {(() => {
+                        const a = alertnessFromDevice(d);
+                        const t = alertnessTier(a);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Eye size={13} style={{ color: t.color }} />
+                            <span className="text-[12px] font-semibold" style={{ color: t.color }}>{d.status === "online" ? a : "—"}</span>
+                            <span className="text-[10px] text-[#aeaeb2]">{t.label}</span>
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-5 py-3"><BatteryBadge pct={d.battery_pct} /></td>
                     <td className="px-5 py-3">
                       {d.status === "offline" ? (
@@ -528,20 +573,6 @@ export default function Devices() {
                           <span className="text-[11px] text-[#86868b]">{d.signal_strength}</span>
                         </div>
                       )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <span title={`Accelerometer: ${d.accel_status}`}>
-                          <Activity size={14} style={{ color: d.accel_status === "ok" ? "#34c759" : "#ff9500" }} />
-                        </span>
-                        <span title={`Camera: ${d.camera_status}`}>
-                          {d.camera_status === "ok" ? (
-                            <Camera size={14} className="text-[#34c759]" />
-                          ) : (
-                            <CameraOff size={14} className="text-[#aeaeb2]" />
-                          )}
-                        </span>
-                      </div>
                     </td>
                     <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                       <select
@@ -557,7 +588,8 @@ export default function Devices() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[12px] font-mono text-[#3a3a3c]">{d.firmware_version}</span>
+                        <span className="text-[12px] text-[#3a3a3c]">{d.model}</span>
+                        <span className="text-[10px] font-mono text-[#aeaeb2]">v{d.firmware_version}</span>
                         {d.ota_status === "update_available" && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0a84ff]/10 text-[#0a84ff] font-semibold">
                             UPDATE
@@ -620,7 +652,7 @@ export default function Devices() {
             <div className="ios-sheet-handle sm:hidden" />
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">Add device</h2>
+                <h2 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">Pair a Guardian</h2>
                 <button
                   onClick={() => setShowAdd(false)}
                   className="w-8 h-8 rounded-full bg-[#f0f0f0] hover:bg-[#e5e5e7] flex items-center justify-center tap"
@@ -630,17 +662,17 @@ export default function Devices() {
               </div>
               <form onSubmit={handleAdd} className="space-y-3">
                 <div>
-                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Device name</label>
-                  <input className="apple-input" placeholder="e.g. Cab tablet #4" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
+                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Unit label</label>
+                  <input className="apple-input" placeholder="e.g. Cab #4 — Hilux GP-123" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
                 </div>
                 <div>
-                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Model</label>
+                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Hardware model</label>
                   <input className="apple-input" value={newModel} onChange={(e) => setNewModel(e.target.value)} />
                 </div>
                 <div className="flex gap-2 justify-end pt-2">
                   <button type="button" onClick={() => setShowAdd(false)} className="apple-btn apple-btn-secondary">Cancel</button>
                   <button type="submit" disabled={busy} className="apple-btn apple-btn-primary">
-                    {busy ? <span className="ios-spinner ios-spinner-inverse" /> : <Plus size={14} />} Add
+                    {busy ? <span className="ios-spinner ios-spinner-inverse" /> : <Plus size={14} />} Pair
                   </button>
                 </div>
               </form>

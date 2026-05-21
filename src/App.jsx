@@ -56,15 +56,17 @@ function AppRoutes() {
           </>
         ) : (
           <>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/live-ops" element={<LiveOps />} />
+            <Route path="/" element={<SafetyCenter />} />
+            <Route path="/live" element={<LiveOps />} />
+            <Route path="/guardians" element={<Devices />} />
+            <Route path="/devices" element={<Navigate to="/guardians" replace />} />
+            <Route path="/drivers" element={<Drivers />} />
+            <Route path="/events" element={<Alerts />} />
+            <Route path="/alerts" element={<Navigate to="/events" replace />} />
             <Route path="/dispatch" element={<DispatchCenter />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/map" element={<MapView />} />
-            <Route path="/safety" element={<SafetyCenter />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </>

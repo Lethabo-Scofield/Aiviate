@@ -47,8 +47,8 @@ export default function Login() {
           <div className="flex justify-center mb-5">
             <img src="/logo.png" alt="Aiviate" className="w-14 h-14" />
           </div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Welcome back</h1>
-          <p className="text-[15px] text-[#86868b] mt-1">Sign in to your dispatch account</p>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Aiviate Guardian</h1>
+          <p className="text-[15px] text-[#86868b] mt-1">We catch drowsy drivers before the crash does.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

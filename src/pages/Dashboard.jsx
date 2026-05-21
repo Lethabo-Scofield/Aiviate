@@ -202,7 +202,7 @@ export default function Dashboard() {
             <div className="lg:col-span-2 apple-card overflow-hidden">
               <div className="px-5 pt-4 pb-3 flex items-center justify-between">
                 <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Live fleet</h2>
-                <button onClick={() => navigate("/live-ops")} className="text-[12px] font-medium text-[#0a84ff] hover:underline">Open →</button>
+                <button onClick={() => navigate("/live")} className="text-[12px] font-medium text-[#0a84ff] hover:underline">Open →</button>
               </div>
               <div className="h-[360px]">
                 <MapContainer center={center} zoom={11} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
@@ -220,7 +220,7 @@ export default function Dashboard() {
             <div className="apple-card p-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Alerts</h2>
-                <button onClick={() => navigate("/alerts")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f]">All</button>
+                <button onClick={() => navigate("/events")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f]">All</button>
               </div>
               {alerts.length === 0 ? (
                 <p className="text-[13px] text-[#aeaeb2] py-10 text-center">No alerts</p>
