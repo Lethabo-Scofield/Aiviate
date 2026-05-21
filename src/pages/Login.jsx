@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { LogIn, Eye, EyeOff } from "lucide-react";
+import { LogIn, Eye, EyeOff, Sparkles } from "lucide-react";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginDemo } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,6 +24,19 @@ export default function Login() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemo = async () => {
+    setError("");
+    setDemoLoading(true);
+    try {
+      await loginDemo();
+      navigate("/", { replace: true });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -79,7 +93,7 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || demoLoading}
             className="apple-btn apple-btn-primary w-full mt-1"
           >
             {loading ? (
@@ -90,6 +104,25 @@ export default function Login() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-black/[0.06]" />
+          <span className="text-[11px] uppercase tracking-wider text-[#aeaeb2] font-semibold">or</span>
+          <div className="flex-1 h-px bg-black/[0.06]" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDemo}
+          disabled={loading || demoLoading}
+          className="apple-btn apple-btn-secondary w-full"
+        >
+          <Sparkles size={15} />
+          {demoLoading ? "Loading demo..." : "Try the demo"}
+        </button>
+        <p className="text-center text-[11px] text-[#aeaeb2] mt-2">
+          Or sign in with <span className="font-mono text-[#86868b]">demo</span> / <span className="font-mono text-[#86868b]">demo</span>
+        </p>
 
         <p className="text-center mt-6 text-[13px] text-[#86868b]">
           Don't have an account?{" "}

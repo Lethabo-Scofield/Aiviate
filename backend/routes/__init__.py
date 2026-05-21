@@ -11,4 +11,4 @@ devices_bp = Blueprint("devices", __name__)
 alerts_bp = Blueprint("alerts", __name__)
 liveops_bp = Blueprint("liveops", __name__)
 
-from routes import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, seed
+from routes import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, seed, demo

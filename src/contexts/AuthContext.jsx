@@ -77,6 +77,13 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
+    const trimmedEmail = (email || "").trim().toLowerCase();
+    const isDemoShortcut =
+      (trimmedEmail === "demo" || trimmedEmail === "demo@aiviate.io") &&
+      (password || "") === "demo";
+    if (isDemoShortcut) {
+      return loginDemo();
+    }
     let res;
     try {
       res = await fetch(`${API_BASE}/auth/login`, {
@@ -89,6 +96,22 @@ export function AuthProvider({ children }) {
     }
     const data = await parseJSON(res);
     if (!res.ok) throw new Error(data.error || "Login failed");
+    saveAuth(data.token, data.user);
+    return data.user;
+  };
+
+  const loginDemo = async () => {
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/auth/demo-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      throw new Error("Cannot connect to server. Please check that the backend is running.");
+    }
+    const data = await parseJSON(res);
+    if (!res.ok) throw new Error(data.error || "Demo login failed");
     saveAuth(data.token, data.user);
     return data.user;
   };
@@ -111,7 +134,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginDemo, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
