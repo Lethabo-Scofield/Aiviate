@@ -4,7 +4,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   Activity,
-  Truck,
   Gauge,
   Navigation,
   AlertTriangle,
@@ -97,16 +96,14 @@ export default function LiveOps() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-5 flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Live Operations</h1>
-          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            Real-time view of {drivers.length} drivers • {activeCount} on-route
-          </p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#34c759]/10 text-[#34c759]">
-          <span className="w-2 h-2 rounded-full bg-[#34c759] animate-pulse" />
-          <span className="text-[12px] font-semibold">Live • updating every 4s</span>
+      <div className="mb-5 flex items-center justify-between flex-wrap gap-4">
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">
+          Live Ops
+          <span className="text-[14px] font-normal text-[#86868b] ml-3">{activeCount}/{drivers.length} on-route</span>
+        </h1>
+        <div className="flex items-center gap-2 text-[12px] text-[#86868b]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#34c759] animate-pulse" />
+          Live
         </div>
       </div>
 
@@ -164,10 +161,7 @@ export default function LiveOps() {
 
         <div className="space-y-4">
           <div className="apple-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Drivers</h2>
-              <Truck size={15} className="text-[#86868b]" />
-            </div>
+            <h2 className="text-[14px] font-semibold text-[#1d1d1f] mb-3">Drivers</h2>
             {drivers.length === 0 ? (
               <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No drivers active</p>
             ) : (
@@ -232,25 +226,20 @@ export default function LiveOps() {
           )}
 
           <div className="apple-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Recent alerts</h2>
-              <Bell size={15} className="text-[#86868b]" />
-            </div>
+            <h2 className="text-[14px] font-semibold text-[#1d1d1f] mb-3">Alerts</h2>
             {alerts.length === 0 ? (
               <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No alerts</p>
             ) : (
-              <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
+              <div className="space-y-0.5 max-h-[260px] overflow-y-auto">
                 {alerts.map((a) => {
                   const Icon = ALERT_ICONS[a.type] || Bell;
                   const color = ALERT_COLOR[a.severity] || "#86868b";
                   return (
-                    <div key={a.id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-[#f5f5f7]">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}1A`, color }}>
-                        <Icon size={13} strokeWidth={1.8} />
-                      </div>
+                    <div key={a.id} className="flex items-start gap-2.5 py-2">
+                      <Icon size={14} strokeWidth={1.8} style={{ color }} className="mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-semibold text-[#1d1d1f] truncate">{a.title}</p>
-                        <p className="text-[11px] text-[#86868b]">
+                        <p className="text-[12px] font-medium text-[#1d1d1f] truncate">{a.title}</p>
+                        <p className="text-[11px] text-[#aeaeb2] truncate">
                           {a.driver_name ? `${a.driver_name} • ` : ""}{timeAgo(a.created_at)}
                         </p>
                       </div>

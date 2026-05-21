@@ -96,21 +96,18 @@ export default function Alerts() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 sm:mb-8 flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Alerts</h1>
-          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            {unread > 0 ? `${unread} unread • ${alerts.length} total` : `${alerts.length} total alerts`}
-          </p>
-        </div>
-        <button
-          onClick={handleMarkAll}
-          disabled={busy || unread === 0}
-          className="apple-btn apple-btn-secondary text-[13px]"
-        >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-          Mark all read
-        </button>
+      <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Alerts</h1>
+        {unread > 0 && (
+          <button
+            onClick={handleMarkAll}
+            disabled={busy}
+            className="apple-btn apple-btn-secondary text-[13px]"
+          >
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            Mark all read
+          </button>
+        )}
       </div>
 
       <div className="ios-seg mb-5">
@@ -140,55 +137,47 @@ export default function Alerts() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="apple-card p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
-            <Bell size={22} className="text-[#86868b]" strokeWidth={1.5} />
-          </div>
+          <Bell size={22} className="text-[#aeaeb2] mx-auto mb-3" strokeWidth={1.5} />
           <p className="text-[14px] font-semibold text-[#1d1d1f] mb-1">All clear</p>
           <p className="text-[13px] text-[#86868b]">No alerts to show.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="apple-card divide-y divide-black/[0.05]">
           {filtered.map((a) => {
             const Icon = TYPE_ICONS[a.type] || Bell;
             const sev = SEVERITY_STYLE[a.severity] || SEVERITY_STYLE.info;
             return (
               <div
                 key={a.id}
-                className={`apple-card p-4 flex items-start gap-4 transition-all ${a.is_read ? "opacity-70" : ""}`}
+                className={`p-4 flex items-start gap-3 group ${a.is_read ? "opacity-60" : ""}`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${sev.bg}`}>
-                  <Icon size={18} className={sev.text} strokeWidth={1.8} />
-                </div>
+                <Icon size={16} className={`${sev.text} mt-0.5 shrink-0`} strokeWidth={1.8} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="text-[14px] font-semibold text-[#1d1d1f]">{a.title}</p>
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${sev.bg} ${sev.text}`}>
-                      {sev.label}
-                    </span>
-                    {!a.is_read && <span className="w-2 h-2 rounded-full bg-[#0a84ff]" />}
+                  <div className="flex items-center gap-2">
+                    <p className="text-[14px] font-medium text-[#1d1d1f] truncate">{a.title}</p>
+                    {!a.is_read && <span className="w-1.5 h-1.5 rounded-full bg-[#0a84ff] shrink-0" />}
                   </div>
-                  <p className="text-[13px] text-[#6e6e73] leading-relaxed">{a.message}</p>
-                  <div className="flex items-center gap-3 mt-2 text-[11px] text-[#aeaeb2]">
-                    {a.driver_name && <span>Driver: {a.driver_name}</span>}
-                    <span>{timeAgo(a.created_at)}</span>
-                  </div>
+                  <p className="text-[13px] text-[#6e6e73] leading-relaxed mt-0.5">{a.message}</p>
+                  <p className="text-[11px] text-[#aeaeb2] mt-1">
+                    {a.driver_name && <>{a.driver_name} · </>}{timeAgo(a.created_at)}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!a.is_read && (
                     <button
                       onClick={() => handleMarkRead(a.id)}
                       title="Mark as read"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/[0.04] text-[#86868b]"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/[0.04] text-[#86868b]"
                     >
-                      <Check size={15} />
+                      <Check size={14} />
                     </button>
                   )}
                   <button
                     onClick={() => handleDelete(a.id)}
                     title="Delete"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30]"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30]"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

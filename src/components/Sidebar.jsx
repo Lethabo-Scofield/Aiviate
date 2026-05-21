@@ -7,8 +7,6 @@ import {
   Truck,
   Menu,
   X,
-  ChevronRight,
-  Building2,
   Shield,
   Smartphone,
   Bell,
@@ -19,36 +17,16 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getAlerts } from "../services/api";
 
-const navSections = [
-  {
-    label: "Overview",
-    items: [
-      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-      { to: "/live-ops", icon: Activity, label: "Live Operations" },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { to: "/dispatch", icon: Radio, label: "Dispatch Center" },
-      { to: "/jobs", icon: Package, label: "Jobs" },
-      { to: "/map", icon: Map, label: "Live Map" },
-    ],
-  },
-  {
-    label: "Safety & Fleet",
-    items: [
-      { to: "/safety", icon: Shield, label: "Safety Center" },
-      { to: "/drivers", icon: Truck, label: "Drivers" },
-      { to: "/devices", icon: Smartphone, label: "Devices" },
-    ],
-  },
-  {
-    label: "Inbox",
-    items: [
-      { to: "/alerts", icon: Bell, label: "Alerts", badgeKey: "alerts" },
-    ],
-  },
+const navItems = [
+  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/live-ops", icon: Activity, label: "Live Ops" },
+  { to: "/dispatch", icon: Radio, label: "Dispatch" },
+  { to: "/jobs", icon: Package, label: "Jobs" },
+  { to: "/map", icon: Map, label: "Map" },
+  { to: "/safety", icon: Shield, label: "Safety" },
+  { to: "/drivers", icon: Truck, label: "Drivers" },
+  { to: "/devices", icon: Smartphone, label: "Devices" },
+  { to: "/alerts", icon: Bell, label: "Alerts", badgeKey: "alerts" },
 ];
 
 function UserAvatar({ size = 32 }) {
@@ -121,18 +99,10 @@ export default function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="px-5 pt-6 pb-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Aiviate" className="w-9 h-9" />
-            <div>
-              <h1 className="text-[15px] font-bold text-[#1d1d1f] tracking-tight leading-tight">Aiviate</h1>
-              <div className="flex items-center gap-1 mt-0.5">
-                <Building2 size={10} className="text-[#c7c7cc]" />
-                <p className="text-[11px] text-[#86868b] font-medium truncate max-w-[140px]">
-                  {user?.company_name || "Dispatch"}
-                </p>
-              </div>
-            </div>
+        <div className="px-5 pt-7 pb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="Aiviate" className="w-7 h-7" />
+            <h1 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">Aiviate</h1>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -142,81 +112,45 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <div className="px-5 mb-3">
-          <div className="h-px bg-black/[0.06]" />
-        </div>
-
-        <nav className="flex-1 px-3 overflow-y-auto">
-          {navSections.map((section, si) => (
-            <div key={si} className={si > 0 ? "mt-5" : "mt-1"}>
-              <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#c7c7cc]">
-                {section.label}
-              </p>
-              <div className="space-y-0.5">
-                {section.items.map(({ to, icon: Icon, label, badgeKey }) => {
-                  const badge = badgeKey ? badges[badgeKey] : 0;
-                  return (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={to === "/"}
-                      className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-200 ${
-                          isActive
-                            ? "bg-[#e8e8ed] text-[#3a3a3c]"
-                            : "text-[#86868b] hover:text-[#3a3a3c] hover:bg-black/[0.03]"
-                        }`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                              isActive ? "bg-black/[0.05]" : "bg-black/[0.03] group-hover:bg-black/[0.05]"
-                            }`}
-                          >
-                            <Icon size={15} strokeWidth={1.8} />
-                          </div>
-                          <span className="flex-1">{label}</span>
-                          {badge > 0 ? (
-                            <span className="text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#ff3b30] text-white">
-                              {badge > 99 ? "99+" : badge}
-                            </span>
-                          ) : (
-                            <ChevronRight
-                              size={13}
-                              className={`transition-all ${
-                                isActive
-                                  ? "opacity-30"
-                                  : "opacity-0 -translate-x-1 group-hover:opacity-30 group-hover:translate-x-0"
-                              }`}
-                            />
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
+          {navItems.map(({ to, icon: Icon, label, badgeKey }) => {
+            const badge = badgeKey ? badges[badgeKey] : 0;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === "/"}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+                    isActive
+                      ? "bg-[#f0f0f0] text-[#1d1d1f] font-medium"
+                      : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.03]"
+                  }`
+                }
+              >
+                <Icon size={16} strokeWidth={1.8} />
+                <span className="flex-1">{label}</span>
+                {badge > 0 && (
+                  <span className="text-[10px] font-semibold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#ff3b30] text-white">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {user && (
-          <div className="px-3 pb-5 pt-2">
-            <div className="h-px bg-black/[0.06] mb-4 mx-2" />
-            <NavLink
-              to="/profile"
-              className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-black/[0.03] transition-colors group"
-            >
-              <UserAvatar size={32} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-[#1d1d1f] truncate leading-tight">{user.name}</p>
-                <p className="text-[11px] text-[#aeaeb2] truncate leading-tight mt-0.5">{user.email}</p>
-              </div>
-              <ChevronRight size={13} className="text-[#d1d1d6] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-            </NavLink>
-          </div>
+          <NavLink
+            to="/profile"
+            className="mx-3 mb-5 mt-2 flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-black/[0.03] transition-colors"
+          >
+            <UserAvatar size={28} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-medium text-[#1d1d1f] truncate leading-tight">{user.name}</p>
+              <p className="text-[11px] text-[#aeaeb2] truncate leading-tight mt-0.5">{user.email}</p>
+            </div>
+          </NavLink>
         )}
       </aside>
     </>

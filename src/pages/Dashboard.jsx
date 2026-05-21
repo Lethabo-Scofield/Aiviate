@@ -1,16 +1,11 @@
 import { useState, useEffect } from "react";
 import {
   Package,
-  Truck,
-  MapPin,
   ArrowRight,
-  Upload,
-  Shield,
-  Clock,
-  Activity,
   Bell,
   AlertTriangle,
   Eye,
+  Clock,
   Gauge,
   MapPinOff,
   Wifi,
@@ -165,130 +160,49 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 sm:mb-8 flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Dashboard</h1>
-          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">Overview of your dispatch operations</p>
-        </div>
-        {hasData && (
-          <button onClick={handleSeed} disabled={seeding} className="apple-btn apple-btn-secondary text-[12px]">
-            <Sparkles size={13} /> {seeding ? "Generating..." : "Generate demo data"}
-          </button>
-        )}
-      </div>
+      <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight mb-6 sm:mb-8">Dashboard</h1>
 
       {!hasData ? (
-        <div className="space-y-5">
-          <div className="apple-card p-10 sm:p-14 text-center animate-slide-up">
-            <div className="w-16 h-16 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-5">
-              <Package size={28} className="text-[#86868b]" strokeWidth={1.5} />
-            </div>
-            <h2 className="text-[20px] font-semibold text-[#1d1d1f] mb-2 tracking-tight">Get started</h2>
-            <p className="text-[14px] text-[#86868b] mb-8 max-w-sm mx-auto leading-relaxed">
-              Upload a spreadsheet of delivery addresses and the system will optimize your routes automatically.
-            </p>
-            <div className="flex items-center gap-2 justify-center flex-wrap">
-              <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-primary">
-                Upload Deliveries <ArrowRight size={16} />
-              </button>
-              <button onClick={handleSeed} disabled={seeding} className="apple-btn apple-btn-secondary">
-                <Sparkles size={14} /> {seeding ? "Generating..." : "Generate demo data"}
-              </button>
-            </div>
-          </div>
-
-          <div className="apple-card p-6">
-            <h3 className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider mb-5">Three steps to optimized routes</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {[
-                { step: "1", title: "Upload", desc: "Upload an Excel or CSV file with delivery addresses" },
-                { step: "2", title: "Optimize", desc: "System geocodes, clusters and finds the best routes" },
-                { step: "3", title: "Dispatch", desc: "Assign optimized jobs to your drivers" },
-              ].map(({ step, title, desc }) => (
-                <div key={step} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#008080] text-white flex items-center justify-center text-[12px] font-bold shrink-0">{step}</div>
-                  <div>
-                    <p className="text-[14px] font-semibold text-[#1d1d1f] mb-1">{title}</p>
-                    <p className="text-[12px] text-[#aeaeb2] leading-relaxed">{desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="apple-card p-12 sm:p-16 text-center animate-slide-up">
+          <Package size={28} className="text-[#86868b] mx-auto mb-5" strokeWidth={1.5} />
+          <h2 className="text-[20px] font-semibold text-[#1d1d1f] mb-2 tracking-tight">Get started</h2>
+          <p className="text-[14px] text-[#86868b] mb-8 max-w-sm mx-auto leading-relaxed">
+            Upload a spreadsheet of delivery addresses and we'll optimize the routes.
+          </p>
+          <div className="flex items-center gap-2 justify-center flex-wrap">
+            <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-primary">
+              Upload deliveries <ArrowRight size={16} />
+            </button>
+            <button onClick={handleSeed} disabled={seeding} className="apple-btn apple-btn-secondary">
+              <Sparkles size={14} /> {seeding ? "Generating…" : "Try demo data"}
+            </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Active drivers</p>
-                  <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-tight leading-none">{stats.active_drivers || 0}</p>
-                  <p className="text-[11px] mt-2 text-[#aeaeb2]">of {stats.total_drivers || 0} total</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-                  <Truck size={16} className="text-[#86868b]" strokeWidth={1.8} />
-                </div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Stops today</p>
-                  <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-tight leading-none">{stats.stops_today || 0}</p>
-                  <p className="text-[11px] mt-2 text-[#aeaeb2]">{stats.total_stops || 0} all-time</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-                  <MapPin size={16} className="text-[#86868b]" strokeWidth={1.8} />
+            {[
+              { label: "Active drivers", value: stats.active_drivers || 0 },
+              { label: "Stops today", value: stats.stops_today || 0 },
+              { label: "On-time", value: `${stats.on_time_rate || 0}%`, color: "#34c759" },
+              { label: "Safety", value: stats.fleet_safety_score || 100, ring: true },
+              { label: "Distance", value: `${stats.total_distance_km || 0} km` },
+            ].map((s) => (
+              <div key={s.label} className="stat-card">
+                <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">{s.label}</p>
+                <div className="flex items-end justify-between gap-2">
+                  <p className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: s.color || "#1d1d1f" }}>{s.value}</p>
+                  {s.ring && <ScoreRing score={stats.fleet_safety_score || 100} size={40} />}
                 </div>
               </div>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">On-time rate</p>
-                  <p className="text-[28px] font-semibold text-[#34c759] tracking-tight leading-none">{stats.on_time_rate || 0}%</p>
-                  <p className="text-[11px] mt-2 text-[#aeaeb2]">Target 95%</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-                  <Clock size={16} className="text-[#86868b]" strokeWidth={1.8} />
-                </div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Safety score</p>
-                  <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-tight leading-none">{stats.fleet_safety_score || 100}</p>
-                  <p className="text-[11px] mt-2 text-[#aeaeb2]">Fleet average</p>
-                </div>
-                <ScoreRing score={stats.fleet_safety_score || 100} size={48} />
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Total distance</p>
-                  <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-tight leading-none">{stats.total_distance_km || 0}</p>
-                  <p className="text-[11px] mt-2 text-[#aeaeb2]">km optimized</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-                  <Activity size={16} className="text-[#86868b]" strokeWidth={1.8} />
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 apple-card overflow-hidden">
-              <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-                <div>
-                  <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Live fleet map</h2>
-                  <p className="text-[11px] text-[#aeaeb2]">{drivers.length} drivers tracked</p>
-                </div>
-                <button onClick={() => navigate("/live-ops")} className="text-[12px] font-semibold text-[#0a84ff] hover:underline">
-                  Open Live Ops →
-                </button>
+              <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Live fleet</h2>
+                <button onClick={() => navigate("/live-ops")} className="text-[12px] font-medium text-[#0a84ff] hover:underline">Open →</button>
               </div>
               <div className="h-[360px]">
                 <MapContainer center={center} zoom={11} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
@@ -305,27 +219,22 @@ export default function Dashboard() {
 
             <div className="apple-card p-5">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Recent alerts</h2>
-                <button onClick={() => navigate("/alerts")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f] font-medium">View all</button>
+                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Alerts</h2>
+                <button onClick={() => navigate("/alerts")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f]">All</button>
               </div>
               {alerts.length === 0 ? (
-                <div className="py-10 text-center">
-                  <Bell size={22} className="text-[#aeaeb2] mx-auto mb-2" />
-                  <p className="text-[13px] text-[#aeaeb2]">No alerts</p>
-                </div>
+                <p className="text-[13px] text-[#aeaeb2] py-10 text-center">No alerts</p>
               ) : (
-                <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+                <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
                   {alerts.map((a) => {
                     const Icon = ALERT_ICONS[a.type] || Bell;
                     const color = ALERT_COLOR[a.severity] || "#86868b";
                     return (
-                      <div key={a.id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-[#f5f5f7]">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}1A`, color }}>
-                          <Icon size={13} strokeWidth={1.8} />
-                        </div>
+                      <div key={a.id} className="flex items-start gap-2.5 py-2 px-1">
+                        <Icon size={14} strokeWidth={1.8} style={{ color }} className="mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-semibold text-[#1d1d1f] truncate">{a.title}</p>
-                          <p className="text-[11px] text-[#86868b] truncate">
+                          <p className="text-[12px] font-medium text-[#1d1d1f] truncate">{a.title}</p>
+                          <p className="text-[11px] text-[#aeaeb2] truncate">
                             {a.driver_name ? `${a.driver_name} • ` : ""}{timeAgo(a.created_at)}
                           </p>
                         </div>
@@ -338,16 +247,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="apple-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Johannesburg areas</h2>
-                <Shield size={15} className="text-[#86868b]" />
-              </div>
+              <h2 className="text-[14px] font-semibold text-[#1d1d1f] mb-4">Areas</h2>
               {(!stats.areas || stats.areas.length === 0) ? (
                 <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No area data yet</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {stats.areas.map((a) => {
                     const maxStops = Math.max(...stats.areas.map((x) => x.stops));
                     const pct = maxStops > 0 ? (a.stops / maxStops) * 100 : 0;
@@ -355,9 +261,9 @@ export default function Dashboard() {
                       <div key={a.area}>
                         <div className="flex items-center justify-between text-[12px] mb-1">
                           <span className="font-medium text-[#1d1d1f] truncate pr-2">{a.area}</span>
-                          <span className="text-[#86868b]">{a.stops} stops • {a.distance_km} km</span>
+                          <span className="text-[#aeaeb2]">{a.stops} • {a.distance_km} km</span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-[#f0f0f0] overflow-hidden">
+                        <div className="h-1 rounded-full bg-[#f0f0f0] overflow-hidden">
                           <div className="h-full bg-[#008080]" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
@@ -370,51 +276,26 @@ export default function Dashboard() {
             <div className="apple-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Recent jobs</h2>
-                <button onClick={() => navigate("/jobs")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f] font-medium">View all</button>
+                <button onClick={() => navigate("/jobs")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f]">All</button>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {jobs.slice(0, 5).map((job) => (
-                  <div key={job.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#f5f5f7]">
-                    <div>
-                      <p className="text-[13px] font-medium text-[#1d1d1f]">{job.area}</p>
+                  <div key={job.id} className="flex items-center justify-between py-2">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-[#1d1d1f] truncate">{job.area}</p>
                       <p className="text-[11px] text-[#aeaeb2]">{job.total_stops} stops • {job.total_distance_km} km</p>
                     </div>
-                    <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold ${
-                      job.status === "assigned" ? "bg-[#008080]/10 text-[#008080]" :
-                      job.status === "completed" ? "bg-[#34c759]/10 text-[#34c759]" :
-                      "bg-[#ff9500]/10 text-[#ff9500]"
+                    <span className={`text-[11px] font-medium ${
+                      job.status === "assigned" ? "text-[#008080]" :
+                      job.status === "completed" ? "text-[#34c759]" :
+                      "text-[#ff9500]"
                     }`}>{job.status}</span>
                   </div>
                 ))}
                 {jobs.length === 0 && <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No jobs yet</p>}
               </div>
             </div>
-
-            <div className="apple-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Devices</h2>
-                <button onClick={() => navigate("/devices")} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f] font-medium">Manage</button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#f5f5f7] rounded-xl p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold">Total</p>
-                  <p className="text-[24px] font-semibold text-[#1d1d1f]">{stats.total_devices || 0}</p>
-                </div>
-                <div className="bg-[#34c759]/10 rounded-xl p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#34c759] font-semibold">Online</p>
-                  <p className="text-[24px] font-semibold text-[#34c759]">{stats.online_devices || 0}</p>
-                </div>
-                <div className="bg-[#ff9500]/10 rounded-xl p-3 col-span-2">
-                  <p className="text-[10px] uppercase tracking-wider text-[#ff9500] font-semibold">Unread alerts</p>
-                  <p className="text-[24px] font-semibold text-[#ff9500]">{stats.unread_alerts || 0}</p>
-                </div>
-              </div>
-            </div>
           </div>
-
-          <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-secondary text-[13px]">
-            <Upload size={14} /> Upload new deliveries
-          </button>
         </div>
       )}
     </div>
