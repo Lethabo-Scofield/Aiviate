@@ -166,3 +166,97 @@ export async function getStats() {
   const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }
+
+export async function getLiveOps() {
+  const res = await fetch(`${API_BASE}/live-ops`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function getSafetyOverview() {
+  const res = await fetch(`${API_BASE}/safety/overview`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function getSafetyEvents() {
+  const res = await fetch(`${API_BASE}/safety/events`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function getDevices() {
+  const res = await fetch(`${API_BASE}/devices`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function addDevice(name, model) {
+  const res = await fetch(`${API_BASE}/devices`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({ name, model }),
+  });
+  return handleResponse(res);
+}
+
+export async function assignDevice(deviceId, driverId) {
+  const res = await fetch(`${API_BASE}/devices/${deviceId}/assign`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({ driver_id: driverId }),
+  });
+  return handleResponse(res);
+}
+
+export async function triggerDeviceOta(deviceId) {
+  const res = await fetch(`${API_BASE}/devices/${deviceId}/ota`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function removeDevice(deviceId) {
+  const res = await fetch(`${API_BASE}/devices/${deviceId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function getAlerts({ unread = false, limit = 100 } = {}) {
+  const params = new URLSearchParams();
+  if (unread) params.set('unread', 'true');
+  params.set('limit', limit);
+  const res = await fetch(`${API_BASE}/alerts?${params}`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function markAlertRead(alertId) {
+  const res = await fetch(`${API_BASE}/alerts/${alertId}/read`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function markAllAlertsRead() {
+  const res = await fetch(`${API_BASE}/alerts/read-all`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteAlert(alertId) {
+  const res = await fetch(`${API_BASE}/alerts/${alertId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function seedDemoData() {
+  const res = await fetch(`${API_BASE}/demo/seed`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}

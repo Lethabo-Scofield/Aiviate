@@ -194,6 +194,96 @@ class Job(Base):
         }
 
 
+class Device(Base):
+    __tablename__ = "devices"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    model = Column(String, default="Aiviate Mobile")
+    status = Column(String, default="online")  # online / offline
+    battery_pct = Column(Integer, default=100)
+    signal_strength = Column(Integer, default=80)  # 0-100
+    accel_status = Column(String, default="ok")  # ok / warning / error
+    camera_status = Column(String, default="ok")  # ok / offline
+    firmware_version = Column(String, default="1.0.0")
+    ota_status = Column(String, default="up_to_date")  # up_to_date / update_available / updating
+    last_seen = Column(DateTime, default=utcnow)
+    driver_id = Column(String, ForeignKey("drivers.id"), nullable=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "model": self.model,
+            "status": self.status,
+            "battery_pct": self.battery_pct,
+            "signal_strength": self.signal_strength,
+            "accel_status": self.accel_status,
+            "camera_status": self.camera_status,
+            "firmware_version": self.firmware_version,
+            "ota_status": self.ota_status,
+            "last_seen": self.last_seen.isoformat() if self.last_seen else None,
+            "driver_id": self.driver_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(String, primary_key=True)
+    type = Column(String, nullable=False)  # fatigue / route_deviation / delay / harsh_braking / speeding / device_offline / battery_low
+    severity = Column(String, default="warning")  # critical / warning / info
+    title = Column(String, nullable=False)
+    message = Column(Text, default="")
+    driver_id = Column(String, ForeignKey("drivers.id"), nullable=True)
+    driver_name = Column(String, nullable=True)
+    is_read = Column(Boolean, default=False)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "type": self.type,
+            "severity": self.severity,
+            "title": self.title,
+            "message": self.message,
+            "driver_id": self.driver_id,
+            "driver_name": self.driver_name,
+            "is_read": self.is_read,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class SafetyEvent(Base):
+    __tablename__ = "safety_events"
+
+    id = Column(String, primary_key=True)
+    driver_id = Column(String, ForeignKey("drivers.id"), nullable=False)
+    event_type = Column(String, nullable=False)  # harsh_brake / speeding / fatigue / phone_use / sharp_turn
+    severity = Column(Integer, default=1)  # 1 (minor) - 5 (critical)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+    notes = Column(Text, default="")
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "driver_id": self.driver_id,
+            "event_type": self.event_type,
+            "severity": self.severity,
+            "lat": self.lat,
+            "lng": self.lng,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 def init_db():
     Base.metadata.create_all(engine)
 

@@ -1,0 +1,205 @@
+import { useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  Bell,
+  Check,
+  Clock,
+  Eye,
+  Gauge,
+  Loader2,
+  MapPinOff,
+  Trash2,
+  Wifi,
+  Battery,
+} from "lucide-react";
+import { getAlerts, markAlertRead, markAllAlertsRead, deleteAlert } from "../services/api";
+
+const TYPE_ICONS = {
+  fatigue: Eye,
+  route_deviation: MapPinOff,
+  delay: Clock,
+  harsh_braking: AlertTriangle,
+  speeding: Gauge,
+  device_offline: Wifi,
+  battery_low: Battery,
+};
+
+const SEVERITY_STYLE = {
+  critical: { bg: "bg-[#ff3b30]/10", text: "text-[#ff3b30]", label: "Critical" },
+  warning: { bg: "bg-[#ff9500]/10", text: "text-[#ff9500]", label: "Warning" },
+  info: { bg: "bg-[#0a84ff]/10", text: "text-[#0a84ff]", label: "Info" },
+};
+
+function timeAgo(iso) {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+export default function Alerts() {
+  const [alerts, setAlerts] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all"); // all | unread | critical
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    try {
+      const data = await getAlerts({ limit: 200 });
+      setAlerts(data.alerts || []);
+      setUnread(data.unread_count || 0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  const filtered = alerts.filter((a) => {
+    if (filter === "unread") return !a.is_read;
+    if (filter === "critical") return a.severity === "critical";
+    return true;
+  });
+
+  const handleMarkRead = async (id) => {
+    await markAlertRead(id);
+    load();
+  };
+
+  const handleDelete = async (id) => {
+    await deleteAlert(id);
+    setAlerts((prev) => {
+      const removed = prev.find((a) => a.id === id);
+      if (removed && !removed.is_read) setUnread((u) => Math.max(0, u - 1));
+      return prev.filter((a) => a.id !== id);
+    });
+  };
+
+  const handleMarkAll = async () => {
+    setBusy(true);
+    try {
+      await markAllAlertsRead();
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="mb-6 sm:mb-8 flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Alerts</h1>
+          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+            {unread > 0 ? `${unread} unread • ${alerts.length} total` : `${alerts.length} total alerts`}
+          </p>
+        </div>
+        <button
+          onClick={handleMarkAll}
+          disabled={busy || unread === 0}
+          className="apple-btn apple-btn-secondary text-[13px]"
+        >
+          {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          Mark all read
+        </button>
+      </div>
+
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {[
+          { key: "all", label: "All" },
+          { key: "unread", label: `Unread (${unread})` },
+          { key: "critical", label: "Critical" },
+        ].map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-colors ${
+              filter === f.key
+                ? "bg-[#1d1d1f] text-white"
+                : "bg-[#f0f0f0] text-[#3a3a3c] hover:bg-[#e5e5e7]"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="apple-card p-4">
+              <div className="skeleton h-4 w-40 mb-2" />
+              <div className="skeleton h-3 w-72" />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="apple-card p-12 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
+            <Bell size={22} className="text-[#86868b]" strokeWidth={1.5} />
+          </div>
+          <p className="text-[14px] font-semibold text-[#1d1d1f] mb-1">All clear</p>
+          <p className="text-[13px] text-[#86868b]">No alerts to show.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((a) => {
+            const Icon = TYPE_ICONS[a.type] || Bell;
+            const sev = SEVERITY_STYLE[a.severity] || SEVERITY_STYLE.info;
+            return (
+              <div
+                key={a.id}
+                className={`apple-card p-4 flex items-start gap-4 transition-all ${a.is_read ? "opacity-70" : ""}`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${sev.bg}`}>
+                  <Icon size={18} className={sev.text} strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="text-[14px] font-semibold text-[#1d1d1f]">{a.title}</p>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${sev.bg} ${sev.text}`}>
+                      {sev.label}
+                    </span>
+                    {!a.is_read && <span className="w-2 h-2 rounded-full bg-[#0a84ff]" />}
+                  </div>
+                  <p className="text-[13px] text-[#6e6e73] leading-relaxed">{a.message}</p>
+                  <div className="flex items-center gap-3 mt-2 text-[11px] text-[#aeaeb2]">
+                    {a.driver_name && <span>Driver: {a.driver_name}</span>}
+                    <span>{timeAgo(a.created_at)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {!a.is_read && (
+                    <button
+                      onClick={() => handleMarkRead(a.id)}
+                      title="Mark as read"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/[0.04] text-[#86868b]"
+                    >
+                      <Check size={15} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(a.id)}
+                    title="Delete"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30]"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

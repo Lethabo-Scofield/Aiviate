@@ -9,16 +9,22 @@ import {
   X,
   ChevronRight,
   Building2,
+  Shield,
+  Smartphone,
+  Bell,
+  Activity,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { getAlerts } from "../services/api";
 
 const navSections = [
   {
     label: "Overview",
     items: [
       { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+      { to: "/live-ops", icon: Activity, label: "Live Operations" },
     ],
   },
   {
@@ -30,9 +36,17 @@ const navSections = [
     ],
   },
   {
-    label: "Fleet",
+    label: "Safety & Fleet",
     items: [
+      { to: "/safety", icon: Shield, label: "Safety Center" },
       { to: "/drivers", icon: Truck, label: "Drivers" },
+      { to: "/devices", icon: Smartphone, label: "Devices" },
+    ],
+  },
+  {
+    label: "Inbox",
+    items: [
+      { to: "/alerts", icon: Bell, label: "Alerts", badgeKey: "alerts" },
     ],
   },
 ];
@@ -50,12 +64,41 @@ function UserAvatar({ size = 32 }) {
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
   const location = useLocation();
   const { user } = useAuth();
 
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const data = await getAlerts({ unread: true, limit: 1 });
+        if (!cancelled) setUnreadAlerts(data.unread_count || 0);
+      } catch {
+        /* ignore */
+      }
+    };
+    fetchCount();
+    const id = setInterval(fetchCount, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname === "/alerts") {
+      getAlerts({ unread: true, limit: 1 })
+        .then((d) => setUnreadAlerts(d.unread_count || 0))
+        .catch(() => {});
+    }
+  }, [location.pathname]);
+
+  const badges = { alerts: unreadAlerts };
 
   return (
     <>
@@ -105,46 +148,55 @@ export default function Sidebar() {
 
         <nav className="flex-1 px-3 overflow-y-auto">
           {navSections.map((section, si) => (
-            <div key={si} className={si > 0 ? "mt-6" : "mt-1"}>
+            <div key={si} className={si > 0 ? "mt-5" : "mt-1"}>
               <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#c7c7cc]">
                 {section.label}
               </p>
               <div className="space-y-0.5">
-                {section.items.map(({ to, icon: Icon, label }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === "/"}
-                    className={({ isActive }) =>
-                      `group flex items-center gap-3 px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-[#e8e8ed] text-[#3a3a3c]"
-                          : "text-[#86868b] hover:text-[#3a3a3c] hover:bg-black/[0.03]"
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                            isActive ? "bg-black/[0.05]" : "bg-black/[0.03] group-hover:bg-black/[0.05]"
-                          }`}
-                        >
-                          <Icon size={15} strokeWidth={1.8} />
-                        </div>
-                        <span className="flex-1">{label}</span>
-                        <ChevronRight
-                          size={13}
-                          className={`transition-all ${
-                            isActive
-                              ? "opacity-30"
-                              : "opacity-0 -translate-x-1 group-hover:opacity-30 group-hover:translate-x-0"
-                          }`}
-                        />
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                {section.items.map(({ to, icon: Icon, label, badgeKey }) => {
+                  const badge = badgeKey ? badges[badgeKey] : 0;
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === "/"}
+                      className={({ isActive }) =>
+                        `group flex items-center gap-3 px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-200 ${
+                          isActive
+                            ? "bg-[#e8e8ed] text-[#3a3a3c]"
+                            : "text-[#86868b] hover:text-[#3a3a3c] hover:bg-black/[0.03]"
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                              isActive ? "bg-black/[0.05]" : "bg-black/[0.03] group-hover:bg-black/[0.05]"
+                            }`}
+                          >
+                            <Icon size={15} strokeWidth={1.8} />
+                          </div>
+                          <span className="flex-1">{label}</span>
+                          {badge > 0 ? (
+                            <span className="text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#ff3b30] text-white">
+                              {badge > 99 ? "99+" : badge}
+                            </span>
+                          ) : (
+                            <ChevronRight
+                              size={13}
+                              className={`transition-all ${
+                                isActive
+                                  ? "opacity-30"
+                                  : "opacity-0 -translate-x-1 group-hover:opacity-30 group-hover:translate-x-0"
+                              }`}
+                            />
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           ))}

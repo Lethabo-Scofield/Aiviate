@@ -13,6 +13,10 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import LiveOps from "./pages/LiveOps";
+import SafetyCenter from "./pages/SafetyCenter";
+import Devices from "./pages/Devices";
+import Alerts from "./pages/Alerts";
 
 function AdminRoutes() {
   return (
@@ -53,10 +57,14 @@ function AppRoutes() {
         ) : (
           <>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/live-ops" element={<LiveOps />} />
             <Route path="/dispatch" element={<DispatchCenter />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/map" element={<MapView />} />
+            <Route path="/safety" element={<SafetyCenter />} />
             <Route path="/drivers" element={<Drivers />} />
+            <Route path="/devices" element={<Devices />} />
+            <Route path="/alerts" element={<Alerts />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </>

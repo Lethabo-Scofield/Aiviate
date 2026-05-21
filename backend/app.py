@@ -6,7 +6,10 @@ from sqlalchemy import text, inspect
 
 from config import ALLOWED_ORIGINS
 from models import init_db, engine
-from routes import auth_bp, jobs_bp, drivers_bp, stops_bp, optimization_bp, stats_bp
+from routes import (
+    auth_bp, jobs_bp, drivers_bp, stops_bp, optimization_bp, stats_bp,
+    safety_bp, devices_bp, alerts_bp, liveops_bp,
+)
 
 
 def create_app():
@@ -30,6 +33,10 @@ def create_app():
     app.register_blueprint(stops_bp)
     app.register_blueprint(optimization_bp)
     app.register_blueprint(stats_bp)
+    app.register_blueprint(safety_bp)
+    app.register_blueprint(devices_bp)
+    app.register_blueprint(alerts_bp)
+    app.register_blueprint(liveops_bp)
 
     @app.route("/api/health")
     def health():
