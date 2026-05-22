@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowRight,
@@ -14,6 +15,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
+
+/** Shared iOS-feel spring used for tactile press feedback throughout this page. */
+const TAP_SPRING = { type: "spring", stiffness: 420, damping: 26 };
 import { useAuth } from "../contexts/AuthContext";
 import {
   acknowledgeRecommendation,
@@ -21,6 +25,7 @@ import {
   getRecommendations,
   getStats,
 } from "../services/api";
+import { getPaletteOpen, subscribePaletteOpen } from "../lib/paletteBus";
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 function timeAgo(iso) {
@@ -53,16 +58,31 @@ function ask(text) {
 
 /* ─────────────────────────── small bits ─────────────────────────── */
 function Toast({ toast, onClose }) {
-  if (!toast) return null;
-  const bg = toast.kind === "error" ? "#ff3b30" : "#1d1d1f";
   return (
-    <div role="status" aria-live="polite"
-         className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3"
-         style={{ background: bg, color: "white" }}>
-      <span className="text-[13px]">{toast.message}</span>
-      <button onClick={onClose} aria-label="Dismiss notification"
-              className="opacity-70 hover:opacity-100"><X size={13} /></button>
-    </div>
+    <AnimatePresence>
+      {toast && (
+        <motion.div
+          role="status"
+          aria-live="polite"
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 360, damping: 28 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3"
+          style={{ background: toast.kind === "error" ? "#ff3b30" : "#1d1d1f", color: "white" }}
+        >
+          <span className="text-[13px]">{toast.message}</span>
+          <motion.button
+            onClick={onClose}
+            aria-label="Dismiss notification"
+            whileTap={{ scale: 0.85 }}
+            className="opacity-70 hover:opacity-100"
+          >
+            <X size={13} />
+          </motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -79,7 +99,14 @@ function InboxRow({ rec, onAck, onDismiss }) {
   const label = severityLabel(rec.severity);
   const initials = (rec.driver_name || rec.area || "AI").slice(0, 2).toUpperCase();
   return (
-    <div className="rounded-xl bg-white/[0.06] hover:bg-white/[0.09] transition-colors p-3">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.94, x: 40 }}
+      transition={{ type: "spring", stiffness: 360, damping: 30 }}
+      className="rounded-xl bg-white/[0.06] hover:bg-white/[0.09] transition-colors p-3"
+    >
       <div className="flex items-center gap-2 mb-1.5">
         <span
           className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
@@ -107,20 +134,24 @@ function InboxRow({ rec, onAck, onDismiss }) {
         </p>
       )}
       <div className="mt-2 flex items-center gap-2">
-        <button
+        <motion.button
           onClick={() => onAck(rec)}
+          whileTap={{ scale: 0.94 }}
+          transition={TAP_SPRING}
           className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white text-[#0b1220] hover:bg-white/90 flex items-center gap-1"
         >
           <CheckCircle2 size={11} /> Got it
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           onClick={() => onDismiss(rec.id)}
+          whileTap={{ scale: 0.94 }}
+          transition={TAP_SPRING}
           className="text-[11px] text-white/50 hover:text-white/80 ml-auto px-2 py-1"
         >
           Not now
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -142,6 +173,12 @@ export default function Operations() {
   const [toast, setToast] = useState(null);
   const [askText, setAskText] = useState("");
   const askRef = useRef(null);
+  // Read current palette state on mount (synchronously, no race) and
+  // subscribe for changes — so the hero prompt cleanly morphs into the
+  // modal input via shared layoutId="ask-aiviate-prompt" without ever
+  // having two elements with the same id mounted at the same time.
+  const [paletteOpen, setPaletteOpen] = useState(() => getPaletteOpen());
+  useEffect(() => subscribePaletteOpen(setPaletteOpen), []);
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(sessionStorage.getItem("dismissedRecs") || "[]")); }
     catch { return new Set(); }
@@ -228,53 +265,70 @@ export default function Operations() {
         </h1>
       </div>
 
-      {/* Big rounded pill prompt — centered */}
-      <form
-        onSubmit={submitAsk}
-        className="max-w-[680px] mx-auto mb-4"
-      >
-        <div className="flex items-center gap-3 px-5 py-3.5 rounded-full bg-white border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.04)] focus-within:border-[#008080]/40 focus-within:shadow-[0_2px_22px_rgba(0,128,128,0.10)] transition-all">
-          <button
-            type="button"
-            onClick={() => ask("")}
-            title="More commands"
-            aria-label="More commands"
-            className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] flex items-center justify-center shrink-0"
-          >
-            <Plus size={14} />
-          </button>
-          <input
-            ref={askRef}
-            value={askText}
-            onChange={(e) => setAskText(e.target.value)}
-            placeholder='Ask Aiviate, "show me today\u2019s routes."'
-            aria-label="Ask Aiviate"
-            className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
-          />
-          <button
-            type="submit"
-            aria-label="Ask"
-            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-              askText.trim()
-                ? "bg-[#008080] hover:bg-[#006666] text-white"
-                : "bg-[#f5f5f7] text-[#aeaeb2]"
-            }`}
-          >
-            <ArrowRight size={15} />
-          </button>
-        </div>
+      {/* Big rounded pill prompt — centered. Carries the shared layoutId so
+          it visually morphs into the CommandPalette modal input on open. */}
+      <form onSubmit={submitAsk} className="max-w-[680px] mx-auto mb-4">
+        <AnimatePresence>
+          {!paletteOpen && (
+            <motion.div
+              layoutId="ask-aiviate-prompt"
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+              className="flex items-center gap-3 px-5 py-3.5 rounded-full bg-white border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.04)] focus-within:border-[#008080]/40 focus-within:shadow-[0_2px_22px_rgba(0,128,128,0.10)]"
+            >
+              <motion.button
+                type="button"
+                onClick={() => ask("")}
+                title="More commands"
+                aria-label="More commands"
+                whileTap={{ scale: 0.9 }}
+                transition={TAP_SPRING}
+                className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] flex items-center justify-center shrink-0"
+              >
+                <Plus size={14} />
+              </motion.button>
+              <input
+                ref={askRef}
+                value={askText}
+                onChange={(e) => setAskText(e.target.value)}
+                placeholder='Ask Aiviate, "show me today&rsquo;s routes."'
+                aria-label="Ask Aiviate"
+                className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
+              />
+              <motion.button
+                type="submit"
+                aria-label="Ask"
+                whileTap={{ scale: 0.9 }}
+                transition={TAP_SPRING}
+                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                  askText.trim()
+                    ? "bg-[#008080] hover:bg-[#006666] text-white"
+                    : "bg-[#f5f5f7] text-[#aeaeb2]"
+                }`}
+              >
+                <ArrowRight size={15} />
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
 
       {/* Quick-question pills */}
       <div className="flex flex-wrap gap-2 justify-center mb-10">
-        {QUICK_QUESTIONS.map((q) => (
-          <button
+        {QUICK_QUESTIONS.map((q, i) => (
+          <motion.button
             key={q}
             onClick={() => ask(q)}
-            className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed] transition-colors"
+            whileTap={{ scale: 0.94 }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.04 + i * 0.03, type: "spring", stiffness: 380, damping: 28 }}
+            className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed]"
           >
             {q}
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -297,13 +351,15 @@ export default function Operations() {
               <Inbox size={14} className="opacity-80" />
               <p className="text-[12px] font-semibold tracking-wide">Inbox</p>
             </div>
-            <button
+            <motion.button
               onClick={() => ask("what should I do?")}
               aria-label="See all decisions"
-              className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors"
+              whileTap={{ scale: 0.88 }}
+              transition={TAP_SPRING}
+              className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center"
             >
               <ArrowUpRight size={13} />
-            </button>
+            </motion.button>
           </div>
 
           {loading ? (
@@ -349,17 +405,21 @@ export default function Operations() {
                 );
               })()}
               <div className="mt-4 space-y-2 overflow-y-auto max-h-[320px] pr-1 -mr-1">
-                {visibleRecs.slice(0, 3).map((rec) => (
-                  <InboxRow key={rec.id} rec={rec} onAck={onAck} onDismiss={dismiss} />
-                ))}
+                <AnimatePresence initial={false} mode="popLayout">
+                  {visibleRecs.slice(0, 3).map((rec) => (
+                    <InboxRow key={rec.id} rec={rec} onAck={onAck} onDismiss={dismiss} />
+                  ))}
+                </AnimatePresence>
               </div>
               {visibleRecs.length > 3 && (
-                <button
+                <motion.button
                   onClick={() => ask("what should I do?")}
+                  whileTap={{ scale: 0.96 }}
+                  transition={TAP_SPRING}
                   className="mt-3 text-[12px] font-medium text-white/80 hover:text-white inline-flex items-center gap-1 self-start"
                 >
                   See all {visibleRecs.length} <ArrowUpRight size={12} />
-                </button>
+                </motion.button>
               )}
             </>
           )}
@@ -407,12 +467,14 @@ export default function Operations() {
                 ))}
               </div>
             )}
-            <button
+            <motion.button
               onClick={() => ask("what just happened?")}
+              whileTap={{ scale: 0.96 }}
+              transition={TAP_SPRING}
               className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"
             >
               See everything I've handled <ArrowUpRight size={12} />
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -420,13 +482,15 @@ export default function Operations() {
         <div className="rounded-3xl bg-white border border-black/[0.05] p-5 sm:p-6 flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[13px] font-semibold text-[#1d1d1f]">Quick looks</p>
-            <button
+            <motion.button
               onClick={() => ask("how are we doing?")}
               aria-label="Ask for a full briefing"
-              className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] flex items-center justify-center transition-colors"
+              whileTap={{ scale: 0.88 }}
+              transition={TAP_SPRING}
+              className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] flex items-center justify-center"
             >
               <ArrowUpRight size={13} className="text-[#1d1d1f]" />
-            </button>
+            </motion.button>
           </div>
 
           {loading || !stats ? (
@@ -471,23 +535,27 @@ export default function Operations() {
                   q: "any problems?",
                   tone: (stats.unread_alerts ?? 0) > 0 ? "alert" : "neutral",
                 },
-              ].map(({ title, Icon, meta, q, tone }) => {
+              ].map(({ title, Icon, meta, q, tone }, i) => {
                 const metaColor =
                   tone === "alert" ? "text-[#ff3b30]" :
                   tone === "warn" ? "text-[#ff9500]" :
                   "text-[#86868b]";
                 return (
-                  <button
+                  <motion.button
                     key={title}
                     onClick={() => ask(q)}
-                    className="w-full text-left rounded-xl border border-black/[0.05] hover:border-[#008080]/30 hover:bg-[#008080]/[0.02] p-3 transition-colors"
+                    whileTap={{ scale: 0.97 }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 + i * 0.04, type: "spring", stiffness: 360, damping: 28 }}
+                    className="w-full text-left rounded-xl border border-black/[0.05] hover:border-[#008080]/30 hover:bg-[#008080]/[0.02] p-3"
                   >
                     <p className="text-[13px] font-medium text-[#1d1d1f] leading-snug">{title}</p>
                     <p className={`text-[11.5px] mt-1 flex items-center gap-1.5 ${metaColor}`}>
                       <Icon size={11} />
                       <span>{meta}</span>
                     </p>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import CommandPalette from "./CommandPalette";
 import { ArrowRight } from "lucide-react";
+import { setPaletteOpen as publishPaletteOpen } from "../lib/paletteBus";
 
 /** Fire the global ask-aiviate event so any listener (Layout) can open the palette and run it. */
 function ask(text) {
@@ -44,6 +46,13 @@ export default function Layout() {
     return () => window.removeEventListener("ask-aiviate", onAsk);
   }, []);
 
+  // Publish palette open/close to the shared bus so other components
+  // (Home hero prompt) can coordinate shared-element morphs and read
+  // the current value synchronously on mount.
+  useEffect(() => {
+    publishPaletteOpen(paletteOpen);
+  }, [paletteOpen]);
+
   const submitTop = (e) => {
     e?.preventDefault?.();
     const q = topText.trim();
@@ -66,51 +75,67 @@ export default function Layout() {
         {!isHome && (
           <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
             <div className="max-w-[960px] mx-auto px-5 sm:px-8 lg:px-12 py-3 pt-16 lg:pt-3">
-              <form
-                onSubmit={submitTop}
-                className="w-full flex items-center gap-3 px-4 py-2 rounded-xl bg-[#f5f5f7] border border-black/[0.04] focus-within:border-[#008080]/40 focus-within:bg-white transition-colors"
-              >
-                <img src="/logo.png" alt="" className="w-4 h-4 shrink-0" />
-                <input
-                  ref={topInputRef}
-                  value={topText}
-                  onChange={(e) => setTopText(e.target.value)}
-                  placeholder='Ask Aiviate anything — try "show me today\u2019s routes"'
-                  aria-label="Ask Aiviate"
-                  className="flex-1 bg-transparent outline-none text-[13px] text-[#1d1d1f] placeholder:text-[#86868b]"
-                />
-                {topText.trim() ? (
-                  <button
-                    type="submit"
-                    aria-label="Ask"
-                    className="w-7 h-7 rounded-lg bg-[#008080] hover:bg-[#006666] text-white flex items-center justify-center shrink-0"
-                  >
-                    <ArrowRight size={13} />
-                  </button>
-                ) : (
-                  <span className="text-[10px] font-mono text-[#aeaeb2] border border-black/[0.08] rounded px-1.5 py-0.5 shrink-0">⌘K</span>
-                )}
+              <form onSubmit={submitTop}>
+                <motion.div
+                  layoutId={paletteOpen ? undefined : "ask-aiviate-prompt"}
+                  transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl bg-[#f5f5f7] border border-black/[0.04] focus-within:border-[#008080]/40 focus-within:bg-white transition-colors"
+                >
+                  <img src="/logo.png" alt="" className="w-4 h-4 shrink-0" />
+                  <input
+                    ref={topInputRef}
+                    value={topText}
+                    onChange={(e) => setTopText(e.target.value)}
+                    placeholder='Ask Aiviate anything — try "show me today\u2019s routes"'
+                    aria-label="Ask Aiviate"
+                    className="flex-1 bg-transparent outline-none text-[13px] text-[#1d1d1f] placeholder:text-[#86868b]"
+                  />
+                  {topText.trim() ? (
+                    <motion.button
+                      type="submit"
+                      aria-label="Ask"
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                      className="w-7 h-7 rounded-lg bg-[#008080] hover:bg-[#006666] text-white flex items-center justify-center shrink-0"
+                    >
+                      <ArrowRight size={13} />
+                    </motion.button>
+                  ) : (
+                    <span className="text-[10px] font-mono text-[#aeaeb2] border border-black/[0.08] rounded px-1.5 py-0.5 shrink-0">⌘K</span>
+                  )}
+                </motion.div>
               </form>
             </div>
           </div>
         )}
 
         <div className={`px-5 sm:px-8 lg:px-12 ${isHome ? "pt-14 lg:pt-8" : "py-6"} pb-10`}>
-          <div key={location.pathname} className="max-w-[960px] mx-auto animate-page">
-            <Outlet />
-          </div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
+              className="max-w-[960px] mx-auto"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 
       {/* Mobile floating Ask button */}
-      <button
+      <motion.button
         onClick={() => { setInitialQuery(""); setPaletteOpen(true); }}
         title="Ask Aiviate"
         aria-label="Ask Aiviate"
+        whileTap={{ scale: 0.88 }}
+        transition={{ type: "spring", stiffness: 500, damping: 26 }}
         className="fixed bottom-5 right-5 z-[150] lg:hidden w-12 h-12 flex items-center justify-center rounded-full bg-[#008080] shadow-lg"
       >
         <img src="/logo.png" alt="Ask Aiviate" className="w-6 h-6 brightness-0 invert" />
-      </button>
+      </motion.button>
 
       <CommandPalette
         open={paletteOpen}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, X, AlertCircle, CheckCircle2, ChevronRight, MapPin, Send } from "lucide-react";
 import { sendCommand } from "../services/api";
@@ -235,77 +236,115 @@ export default function CommandPalette({ open, onClose, initialQuery, queryNonce
     if (e.key === "Enter") { e.preventDefault(); run(); }
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[8vh] pb-8 bg-black/30 backdrop-blur-[2px] animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-black/[0.08] flex flex-col max-h-[80vh] overflow-hidden"
-      >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-black/[0.06]">
-          <Sparkles size={16} className="text-[#008080]" />
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="Ask Aiviate anything — e.g. show me today's routes"
-            className="flex-1 bg-transparent text-[14px] text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none"
-            disabled={busy}
-          />
-          {busy && <span className="text-[11px] text-[#aeaeb2]">thinking…</span>}
-          <button onClick={onClose} className="text-[#aeaeb2] hover:text-[#1d1d1f]">
-            <X size={16} />
-          </button>
-        </div>
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="palette-scrim"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+          className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[8vh] pb-8 bg-black/30 backdrop-blur-[2px]"
+          onClick={onClose}
+        >
+          <motion.div
+            key="palette-card"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ y: 24, scale: 0.96, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 12, scale: 0.98, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.7 }}
+            className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-black/[0.08] flex flex-col max-h-[80vh] overflow-hidden"
+          >
+            <motion.div
+              layoutId="ask-aiviate-prompt"
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+              className="flex items-center gap-3 px-4 py-3 border-b border-black/[0.06]"
+            >
+              <img src="/logo.png" alt="" className="w-4 h-4 shrink-0" />
+              <input
+                ref={inputRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={onKey}
+                placeholder='Ask Aiviate, "show me today&rsquo;s routes."'
+                className="flex-1 bg-transparent text-[14px] text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none"
+                disabled={busy}
+              />
+              {busy && <span className="text-[11px] text-[#aeaeb2]">thinking…</span>}
+              <motion.button
+                onClick={onClose}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                className="text-[#aeaeb2] hover:text-[#1d1d1f]"
+              >
+                <X size={16} />
+              </motion.button>
+            </motion.div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
-          {history.length === 0 ? (
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[#86868b] font-semibold mb-2">
-                Try asking
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {SUGGESTIONS.map((h) => (
-                  <button
-                    key={h}
-                    onClick={() => run(h)}
-                    className="text-[12px] px-3 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed] transition-colors"
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-[#aeaeb2] mt-4">
-                Talk to me in plain English. I'll show you maps, lists, and answers — and let you assign jobs, notify drivers, or fix routes with a single sentence.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {history.map((h, i) => (
-                <div key={i}>
-                  <div className="flex items-center gap-2 text-[12px] text-[#86868b] mb-1.5">
-                    <ChevronRight size={12} className="text-[#008080]" />
-                    <span className="italic">{h.input}</span>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+              {history.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08, type: "spring", stiffness: 340, damping: 30 }}
+                >
+                  <p className="text-[11px] uppercase tracking-wider text-[#86868b] font-semibold mb-2">
+                    Try asking
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SUGGESTIONS.map((h, i) => (
+                      <motion.button
+                        key={h}
+                        onClick={() => run(h)}
+                        whileTap={{ scale: 0.94 }}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + i * 0.02, type: "spring", stiffness: 400, damping: 28 }}
+                        className="text-[12px] px-3 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed]"
+                      >
+                        {h}
+                      </motion.button>
+                    ))}
                   </div>
-                  <div className="pl-5">
-                    <ResultBlock result={h.result} />
-                  </div>
+                  <p className="text-[11px] text-[#aeaeb2] mt-4">
+                    Talk to me in plain English. I'll show you maps, lists, and answers — and let you assign jobs, notify drivers, or fix routes with a single sentence.
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="space-y-4">
+                  <AnimatePresence initial={false}>
+                    {history.map((h, i) => (
+                      <motion.div
+                        key={i}
+                        layout
+                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 360, damping: 30 }}
+                      >
+                        <div className="flex items-center gap-2 text-[12px] text-[#86868b] mb-1.5">
+                          <ChevronRight size={12} className="text-[#008080]" />
+                          <span className="italic">{h.input}</span>
+                        </div>
+                        <div className="pl-5">
+                          <ResultBlock result={h.result} />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="px-4 py-2 border-t border-black/[0.06] flex items-center justify-between text-[10px] text-[#aeaeb2]">
-          <span>Press Enter to send · Esc to close</span>
-          <span>⌘K / Ctrl+K to open anytime</span>
-        </div>
-      </div>
-    </div>
+            <div className="px-4 py-2 border-t border-black/[0.06] flex items-center justify-between text-[10px] text-[#aeaeb2]">
+              <span>Press Enter to send · Esc to close</span>
+              <span>⌘K / Ctrl+K to open anytime</span>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
