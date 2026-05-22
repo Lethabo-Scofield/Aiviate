@@ -66,6 +66,9 @@ def _run_migrations():
         add_col_if_missing("drivers", "user_id", "VARCHAR")
         add_col_if_missing("drivers", "blocked", "BOOLEAN DEFAULT FALSE")
         add_col_if_missing("drivers", "last_generated_password", "VARCHAR")
+        add_col_if_missing("drivers", "current_lat", "DOUBLE PRECISION")
+        add_col_if_missing("drivers", "current_lng", "DOUBLE PRECISION")
+        add_col_if_missing("drivers", "location_updated_at", "TIMESTAMP")
         add_col_if_missing("users", "driver_id", "VARCHAR")
 
 

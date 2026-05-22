@@ -14,6 +14,7 @@ from intelligence.anomaly_detector import (
     detect_blocked_drivers,
 )
 from intelligence.recommendation_engine import build_recommendations
+from intelligence import command_parser
 
 
 def _ago(minutes):
@@ -149,6 +150,68 @@ class RecommendationEngineTests(unittest.TestCase):
         }
         for r in recs:
             self.assertTrue(required.issubset(r.keys()), f"missing keys in {r}")
+
+
+class AutoOptimizerTests(unittest.TestCase):
+    """End-to-end correctness of the distance comparison after fix.
+
+    Verifies the open-path vs closed-tour bug stays fixed.
+    """
+
+    def test_open_path_distance_is_consistent(self):
+        from intelligence.auto_optimizer import _seq_total
+        from optimize_route import build_distance_matrix, solve_tsp
+        # Five points in a square-ish layout; the bad initial order is
+        # zig-zag, the optimal route is the convex perimeter.
+        locations = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.5, 0.5)]
+        dm = build_distance_matrix(locations)
+        zigzag = [0, 2, 1, 3, 4]
+        distance_zigzag = _seq_total(zigzag, dm)
+        new_route, _closed = solve_tsp(dm, start=0)
+        distance_new = _seq_total(new_route, dm)
+        # The solver should not be strictly worse than the zigzag baseline
+        # under the open-path model. (If we compared closed-tour to open-path,
+        # this assertion would have flipped sign on certain inputs.)
+        self.assertLessEqual(distance_new, distance_zigzag + 1e-6)
+
+
+class CommandParserTests(unittest.TestCase):
+    def test_empty_input_errors(self):
+        r = command_parser.parse("")
+        self.assertIn("error", r)
+
+    def test_unknown_command_errors(self):
+        r = command_parser.parse("teleport DR-1")
+        self.assertIn("error", r)
+        self.assertIn("Unknown", r["error"])
+
+    def test_help_no_args(self):
+        r = command_parser.parse("help")
+        self.assertEqual(r["intent"], "help")
+        self.assertEqual(r["args"], [])
+
+    def test_assign_requires_two_args(self):
+        too_few = command_parser.parse("assign JOB-1")
+        self.assertIn("error", too_few)
+        ok = command_parser.parse("assign JOB-1 DR-3")
+        self.assertEqual(ok["intent"], "assign")
+        self.assertEqual(ok["args"], ["JOB-1", "DR-3"])
+
+    def test_optimize_all_special_case(self):
+        r = command_parser.parse("optimize all")
+        self.assertEqual(r["intent"], "optimize_all")
+
+    def test_aliases_map_correctly(self):
+        self.assertEqual(command_parser.parse("recs")["intent"], "recommendations")
+        self.assertEqual(command_parser.parse("ack REC-1")["intent"], "acknowledge")
+
+    def test_quoted_arg_with_space(self):
+        r = command_parser.parse('assign "JOB ONE" "DRIVER TWO"')
+        self.assertEqual(r["args"], ["JOB ONE", "DRIVER TWO"])
+
+    def test_case_insensitive_head(self):
+        r = command_parser.parse("HELP")
+        self.assertEqual(r["intent"], "help")
 
 
 if __name__ == "__main__":

@@ -93,6 +93,9 @@ class Driver(Base):
     last_generated_password = Column(String, nullable=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
     user_id = Column(String, nullable=True)
+    current_lat = Column(Float, nullable=True)
+    current_lng = Column(Float, nullable=True)
+    location_updated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     def to_dict(self):
@@ -104,6 +107,11 @@ class Driver(Base):
             "status": self.status,
             "blocked": self.blocked or False,
             "has_account": bool(self.user_id),
+            "current_lat": self.current_lat,
+            "current_lng": self.current_lng,
+            "location_updated_at": (
+                self.location_updated_at.isoformat() if self.location_updated_at else None
+            ),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

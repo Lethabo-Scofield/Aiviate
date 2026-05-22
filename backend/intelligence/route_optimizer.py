@@ -6,13 +6,17 @@ for routing. The underlying solver and its CRUD endpoints are unchanged.
 from typing import Dict, List
 
 try:
-    from optimize_route import optimize_stops as _legacy_optimize
+    from optimize_route import optimize_route_from_data as _legacy_optimize
 except ImportError:
     _legacy_optimize = None
 
 
 def optimize(stops: List[Dict], num_drivers: int = 1) -> Dict:
-    """Optimize stop order. Returns structured user-facing output."""
+    """Optimize stop order. Returns structured user-facing output.
+
+    Thin wrapper over the legacy single-vehicle TSP/2-opt solver. Multi-vehicle
+    VRP is not yet wired — `num_drivers > 1` falls back to single-driver.
+    """
     if _legacy_optimize is None:
         return {
             "status": "unavailable",
@@ -20,7 +24,7 @@ def optimize(stops: List[Dict], num_drivers: int = 1) -> Dict:
             "confidence": 0.0,
         }
     try:
-        result = _legacy_optimize(stops, num_drivers=num_drivers)
+        ordered_stops = _legacy_optimize(stops, num_vehicles=num_drivers)
     except Exception as exc:  # noqa: BLE001
         return {
             "status": "error",
@@ -30,13 +34,7 @@ def optimize(stops: List[Dict], num_drivers: int = 1) -> Dict:
 
     return {
         "status": "ok",
-        "routes": result.get("routes", []) if isinstance(result, dict) else [],
-        "total_distance_km": (
-            result.get("total_distance_km") if isinstance(result, dict) else None
-        ),
-        "distance_saved_km": (
-            result.get("distance_saved_km") if isinstance(result, dict) else None
-        ),
-        "explanation": "Route optimized with OR-Tools VRP solver",
+        "ordered_stops": ordered_stops,
+        "explanation": "Stops reordered using 2-opt TSP solver",
         "confidence": 0.95,
     }

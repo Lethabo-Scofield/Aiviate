@@ -124,6 +124,49 @@ def get_driver_detail(driver_id):
         db.close()
 
 
+@drivers_bp.route("/api/drivers/<driver_id>/location", methods=["POST"])
+@require_auth
+def update_driver_location(driver_id):
+    """Streams a driver's current location. Called by the mobile app.
+
+    Accepts: {"lat": float, "lng": float}. Idempotent — overwrites the last
+    known location and updates the timestamp. Authz: only an admin in the
+    tenant, or the driver themselves, may post.
+    """
+    from datetime import datetime, timezone
+    role = getattr(g, "user_role", None)
+    self_driver_id = getattr(g, "driver_id", None)
+    if role != "admin" and self_driver_id != driver_id:
+        return jsonify({"error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    try:
+        lat = float(data.get("lat"))
+        lng = float(data.get("lng"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "lat and lng are required floats"}), 400
+    if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+        return jsonify({"error": "lat/lng out of range"}), 400
+
+    db = get_db_session()
+    try:
+        driver = db.query(Driver).filter(
+            Driver.id == driver_id, Driver.company_id == g.company_id
+        ).first()
+        if not driver:
+            return jsonify({"error": "Driver not found"}), 404
+        driver.current_lat = lat
+        driver.current_lng = lng
+        driver.location_updated_at = datetime.now(timezone.utc)
+        db.commit()
+        return jsonify({"ok": True, "lat": lat, "lng": lng})
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to update location"}), 500
+    finally:
+        db.close()
+
+
 @drivers_bp.route("/api/drivers/<driver_id>/block", methods=["POST"])
 @require_auth
 @require_admin

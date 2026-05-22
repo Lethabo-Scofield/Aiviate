@@ -47,6 +47,15 @@ export async function acknowledgeRecommendation(recId, payload = {}) {
   return handleResponse(res);
 }
 
+export async function sendCommand(text) {
+  const res = await fetch(`${API_BASE}/intelligence/command`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ text }),
+  });
+  return handleResponse(res);
+}
+
 export async function getAuditLog(limit = 25) {
   const res = await fetch(`${API_BASE}/intelligence/audit-log?limit=${limit}`, { headers: getAuthHeaders() });
   return handleResponse(res);

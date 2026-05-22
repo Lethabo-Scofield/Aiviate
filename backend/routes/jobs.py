@@ -47,7 +47,41 @@ def assign_driver(job_id):
         job.assigned_at = datetime.now(timezone.utc)
         db.commit()
 
-        return jsonify({"success": True, "job": job.to_dict()})
+        # Auto-optimize the route on assignment. Best-effort: never block the
+        # assignment response if the optimizer hiccups.
+        opt_summary = None
+        try:
+            from intelligence.auto_optimizer import optimize_job_stops
+            from intelligence.audit_logger import log_action
+
+            start_lat = getattr(driver, "current_lat", None)
+            start_lng = getattr(driver, "current_lng", None)
+            opt_summary = optimize_job_stops(
+                db, job, start_lat=start_lat, start_lng=start_lng
+            )
+            if opt_summary.get("status") == "ok":
+                saved = opt_summary.get("distance_saved_km", 0)
+                anchor = "driver location" if opt_summary.get("used_driver_location") else "depot"
+                log_action(
+                    db, company_id=g.company_id, action_type="route_auto_optimized",
+                    summary=(
+                        f"Auto-optimized route on assignment to {driver.name}: "
+                        f"{opt_summary.get('stops_reordered')} stops reordered, "
+                        f"{saved} km saved (anchored to {anchor})"
+                    ),
+                    actor="workflow_engine", confidence=0.95,
+                    requires_approval=False, related_id=job.id,
+                    details=opt_summary,
+                )
+        except Exception:
+            traceback.print_exc()
+            opt_summary = {"status": "error", "reason": "optimizer raised — see backend logs"}
+
+        return jsonify({
+            "success": True,
+            "job": job.to_dict(),
+            "auto_optimization": opt_summary,
+        })
     except Exception:
         db.rollback()
         traceback.print_exc()
