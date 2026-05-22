@@ -17,6 +17,7 @@ import SafetyCenter from "./pages/SafetyCenter";
 import Devices from "./pages/Devices";
 import Alerts from "./pages/Alerts";
 import CommandCenter from "./pages/CommandCenter";
+import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 
 function AppRoutes() {
@@ -35,21 +36,23 @@ function AppRoutes() {
           </>
         ) : (
           <>
-            <Route path="/" element={<CommandCenter />} />
+            <Route path="/" element={<Operations />} />
+            <Route path="/map" element={<MapView />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            {/* Legacy URLs kept for back-compat — all roll up into Operations now */}
+            <Route path="/command" element={<CommandCenter />} />
             <Route path="/live" element={<LiveOps />} />
             <Route path="/dispatch" element={<DispatchCenter />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/drivers" element={<Drivers />} />
             <Route path="/devices" element={<Devices />} />
-            <Route path="/guardians" element={<Navigate to="/devices" replace />} />
             <Route path="/safety" element={<SafetyCenter />} />
             <Route path="/intelligence" element={<Alerts />} />
-            <Route path="/events" element={<Navigate to="/intelligence" replace />} />
-            <Route path="/alerts" element={<Navigate to="/intelligence" replace />} />
-            <Route path="/map" element={<MapView />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/guardians" element={<Navigate to="/" replace />} />
+            <Route path="/events" element={<Navigate to="/" replace />} />
+            <Route path="/alerts" element={<Navigate to="/" replace />} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
-            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </>
         )}
