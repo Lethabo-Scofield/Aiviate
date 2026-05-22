@@ -2,15 +2,12 @@ import { NavLink } from "react-router-dom";
 import {
   Brain,
   Radio,
-  Package,
-  Map,
   Truck,
   Menu,
   X,
-  Shield,
-  Smartphone,
   Sparkles,
   Activity,
+  Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -19,17 +16,10 @@ import { getAlerts } from "../services/api";
 
 const primaryNav = [
   { to: "/", icon: Brain, label: "Command" },
-  { to: "/live", icon: Activity, label: "Live ops" },
-  { to: "/intelligence", icon: Sparkles, label: "Intelligence", badgeKey: "alerts" },
-];
-
-const secondaryNav = [
+  { to: "/live", icon: Activity, label: "Live" },
   { to: "/dispatch", icon: Radio, label: "Dispatch" },
-  { to: "/jobs", icon: Package, label: "Jobs" },
   { to: "/drivers", icon: Truck, label: "Drivers" },
-  { to: "/devices", icon: Smartphone, label: "Devices" },
-  { to: "/safety", icon: Shield, label: "Safety" },
-  { to: "/map", icon: Map, label: "Map" },
+  { to: "/intelligence", icon: Sparkles, label: "Intelligence", badgeKey: "alerts" },
 ];
 
 function UserAvatar({ size = 32 }) {
@@ -142,24 +132,21 @@ export default function Sidebar() {
             );
           })}
 
-          <p className="px-3 pt-5 pb-2 text-[10px] uppercase tracking-[0.08em] text-[#c7c7cc] font-semibold">Workspace</p>
-          {secondaryNav.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
-                  isActive
-                    ? "bg-[#f0f0f0] text-[#1d1d1f] font-medium"
-                    : "text-[#aeaeb2] hover:text-[#1d1d1f] hover:bg-black/[0.03]"
-                }`
-              }
-            >
-              <Icon size={15} strokeWidth={1.8} />
-              <span className="flex-1">{label}</span>
-            </NavLink>
-          ))}
         </nav>
+
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `mx-3 mb-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+              isActive
+                ? "bg-[#f0f0f0] text-[#1d1d1f] font-medium"
+                : "text-[#aeaeb2] hover:text-[#1d1d1f] hover:bg-black/[0.03]"
+            }`
+          }
+        >
+          <Settings size={15} strokeWidth={1.8} />
+          <span>Settings</span>
+        </NavLink>
 
         {user && (
           <NavLink

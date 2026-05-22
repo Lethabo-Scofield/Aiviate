@@ -12,7 +12,7 @@ export default function NotFound() {
         className="apple-btn apple-btn-primary"
       >
         <Home size={16} />
-        Back to Dashboard
+        Back to Command
       </Link>
     </div>
   );

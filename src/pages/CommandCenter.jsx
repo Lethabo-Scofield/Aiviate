@@ -5,14 +5,12 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  Truck,
   Camera,
   Eye,
   Radio,
   X,
   ChevronRight,
   Sparkles,
-  Activity,
   Zap,
 } from "lucide-react";
 import {
@@ -207,15 +205,6 @@ export default function CommandCenter() {
   const allRecs = useMemo(() => buildRecommendations(data), [data]);
   const recs = allRecs.filter((r) => !dismissed.has(r.id));
 
-  const liveState = useMemo(() => {
-    const lo = data.liveops;
-    const activeDrivers = lo.filter((d) => d.status === "on_route").length;
-    const idleDrivers = lo.filter((d) => d.status === "idle").length;
-    const blocked = lo.filter((d) => d.blocked || d.status === "blocked").length;
-    const camerasLive = data.devices.filter((d) => d.status === "online").length;
-    return { activeDrivers, idleDrivers, blocked, camerasLive };
-  }, [data]);
-
   const dismiss = (id) => {
     const next = new Set(dismissed);
     next.add(id);
@@ -257,29 +246,6 @@ export default function CommandCenter() {
         </div>
       </div>
 
-      {/* Live state strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
-        {[
-          { label: "Drivers on route", value: liveState.activeDrivers, icon: Truck, color: "#34c759" },
-          { label: "Idle drivers", value: liveState.idleDrivers, icon: Activity, color: "#86868b" },
-          { label: "Cameras live", value: liveState.camerasLive, icon: Camera, color: "#008080" },
-          { label: "Blocked / stuck", value: liveState.blocked, icon: AlertTriangle, color: liveState.blocked > 0 ? "#ff9500" : "#86868b" },
-        ].map((s) => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="apple-card p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${s.color}14`, color: s.color }}>
-                <Icon size={16} strokeWidth={1.8} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[20px] font-semibold leading-none" style={{ color: s.color }}>{s.value}</p>
-                <p className="text-[11px] text-[#86868b] mt-1 truncate">{s.label}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Decisions waiting */}
       {recs.length === 0 ? (
         allRecs.length === 0 ? (
@@ -319,11 +285,6 @@ export default function CommandCenter() {
         </div>
       )}
 
-      <div className="mt-8 text-center">
-        <p className="text-[11px] text-[#aeaeb2]">
-          Recommendations refresh every 20 seconds from live telemetry. Acknowledging only hides the card — execute the action in the linked surface.
-        </p>
-      </div>
     </div>
   );
 }

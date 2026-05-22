@@ -1,0 +1,498 @@
+We need to make the Autonomous Logistics Operations System easy to use, easy to understand, and powered by the correct algorithms.
+
+The goal is not to add more screens. The goal is to make the system operationally useful.
+
+PRODUCT PRINCIPLE
+
+Every screen, card, alert, button, and recommendation must answer one of these questions:
+
+1. What is happening now?
+2. What will likely go wrong?
+3. What should the system do next?
+4. What needs human approval?
+5. What has already been handled automatically?
+
+If a UI element does not help answer one of these questions, remove it, simplify it, or move it deeper.
+
+CORE USER EXPERIENCE
+
+The main web dashboard should become an Operations Command Center.
+
+It should be simple enough for a dispatcher to understand in under 30 seconds.
+
+The dashboard should clearly show:
+
+* active deliveries
+* drivers currently operating
+* high-risk routes
+* delayed deliveries
+* customer communication status
+* system recommendations
+* autonomous actions already taken
+* actions waiting for approval
+
+Avoid:
+
+* too many charts
+* unnecessary admin settings
+* decorative metrics
+* generic analytics
+* duplicated pages
+* confusing technical labels
+
+USE SIMPLE OPERATIONAL LANGUAGE
+
+Do not expose raw algorithm names to the user.
+
+Instead of:
+
+* “VRP optimization completed”
+
+Show:
+
+* “Route optimized. Estimated distance reduced by 12 km.”
+
+Instead of:
+
+* “Anomaly detected”
+
+Show:
+
+* “Driver has been stopped for 18 minutes longer than expected.”
+
+Instead of:
+
+* “SLA risk score 0.82”
+
+Show:
+
+* “High risk of late delivery. Estimated delay: 22 minutes.”
+
+Instead of:
+
+* “Workflow triggered”
+
+Show:
+
+* “Customer notified automatically.”
+
+REQUIRED INTELLIGENCE MODULES
+
+The backend must include the following algorithms as clean, testable modules:
+
+1. Route Optimization
+   Purpose:
+   Find the best delivery order for one or more drivers.
+
+Use:
+
+* OR-Tools
+* TSP for single driver
+* VRP for multiple drivers
+* time windows
+* priority stops
+* vehicle capacity
+* distance matrix
+
+User-facing output:
+
+* optimized route
+* distance saved
+* time saved
+* affected stops
+* confidence level
+* explanation
+
+2. ETA Prediction
+   Purpose:
+   Estimate arrival time for each stop.
+
+Start with:
+
+* distance remaining
+* average speed
+* service time
+* traffic multiplier
+* weather multiplier
+
+Later improve with ML.
+
+User-facing output:
+
+* expected arrival time
+* confidence
+* delay risk
+* reason
+
+3. Delay Risk Scoring
+   Purpose:
+   Predict if a delivery may be late.
+
+Inputs:
+
+* ETA
+* promised delivery window
+* weather
+* traffic
+* driver progress
+* remaining stops
+* customer response status
+
+Output:
+
+* low, medium, or high risk
+* predicted delay minutes
+* reason
+* recommended action
+
+4. Dynamic Rerouting
+   Purpose:
+   Decide whether the route should change during delivery.
+
+Triggers:
+
+* weather change
+* traffic delay
+* customer unavailable
+* driver off-route
+* urgent delivery added
+* SLA at risk
+
+Output:
+
+* keep current route
+* recommend reroute
+* auto-reroute
+* request approval
+
+5. Driver Assignment
+   Purpose:
+   Assign the best driver to a job.
+
+Inputs:
+
+* driver location
+* availability
+* workload
+* vehicle type
+* capacity
+* safety score
+* route compatibility
+
+Output:
+
+* best driver
+* backup driver
+* confidence
+* reason
+
+6. Customer Communication Automation
+   Purpose:
+   Contact customers automatically at the right time.
+
+Rules:
+
+* notify customer when driver is near
+* send delay update if delivery risk is high
+* send second message if no response
+* trigger call if still no response
+* escalate if customer remains unreachable
+
+Channels:
+
+* SMS
+* email
+* WhatsApp
+* voice call
+
+Output:
+
+* customer contacted
+* channel used
+* response received or not
+* next action
+
+7. Anomaly Detection
+   Purpose:
+   Detect unusual operational behavior.
+
+Examples:
+
+* driver stopped too long
+* off-route movement
+* signal loss
+* low battery
+* harsh braking
+* delivery taking too long
+* customer unreachable
+* route progress too slow
+
+Start with rule-based thresholds.
+Later improve with ML.
+
+Output:
+
+* issue detected
+* severity
+* confidence
+* recommended action
+
+8. Operational Risk Score
+   Purpose:
+   Give each route, driver, and delivery a simple risk level.
+
+Risk factors:
+
+* delay risk
+* weather risk
+* route complexity
+* customer availability
+* driver behavior
+* device health
+* vehicle condition
+
+Output:
+
+* low, medium, high, or critical
+* reason codes
+* recommended mitigation
+
+9. Autonomous Workflow Engine
+   Purpose:
+   Let the system take operational actions automatically.
+
+Each workflow must have:
+
+* trigger
+* condition
+* action
+* confidence
+* approval requirement
+* audit log
+
+Examples:
+
+If delivery delay risk is high:
+
+* notify customer
+* notify dispatcher
+* recommend reroute
+
+If driver is off-route:
+
+* check alternative route
+* suggest correction
+* update driver instructions
+
+If customer is unavailable:
+
+* skip stop
+* reroute to next stop
+* retry later
+
+If weather risk increases:
+
+* recalculate affected routes
+* update ETAs
+* notify affected customers
+
+If device battery is low:
+
+* warn driver
+* notify dispatcher
+
+10. Recommendation Engine
+    Purpose:
+    Turn algorithm outputs into clear operational recommendations.
+
+Each recommendation must include:
+
+* what happened
+* why it matters
+* suggested action
+* expected benefit
+* confidence
+* approve button
+* dismiss button
+
+Example:
+“Driver 4 is likely to miss Stop 8 by 22 minutes. Reassigning the stop to Driver 2 may reduce the delay to 5 minutes.”
+
+INTERFACE REQUIREMENTS
+
+Main dashboard should have only these core sections:
+
+1. Operations Summary
+   Show:
+
+* active routes
+* at-risk deliveries
+* active drivers
+* autonomous actions today
+* actions needing approval
+
+2. Live Operations Map
+   Show:
+
+* drivers
+* routes
+* high-risk stops
+* delayed routes
+* customer unavailable markers
+
+3. Action Center
+   This is the most important section.
+
+Show:
+
+* recommendations
+* alerts
+* approval requests
+* autonomous actions taken
+
+4. Route Intelligence
+   Show:
+
+* current route
+* optimized route
+* delay risk
+* reroute suggestions
+* distance/time saved
+
+5. Communication Status
+   Show:
+
+* customer contacted
+* customer responded
+* customer unreachable
+* next communication action
+
+Do not create unnecessary pages unless required.
+
+DESIGN REQUIREMENTS
+
+The UI should be:
+
+* clean
+* minimal
+* operational
+* easy to understand
+* action-focused
+* not overloaded
+
+Use plain language.
+Use status labels like:
+
+* On track
+* At risk
+* Late
+* Needs approval
+* Handled automatically
+* Customer unreachable
+* Reroute recommended
+
+Avoid technical labels like:
+
+* algorithm score
+* model inference
+* vector output
+* workflow node
+* optimization artifact
+
+BACKEND REQUIREMENTS
+
+Create clean backend modules under:
+
+backend/intelligence/
+
+Suggested files:
+
+route_optimizer.py
+eta_predictor.py
+delay_risk.py
+dynamic_rerouter.py
+driver_assignment.py
+customer_comms.py
+anomaly_detector.py
+risk_scoring.py
+workflow_engine.py
+recommendation_engine.py
+audit_logger.py
+
+Each module must:
+
+* accept structured JSON
+* return structured JSON
+* include reason codes
+* include confidence score
+* include human-readable explanation
+* be independently testable
+* avoid unnecessary LLM calls
+* be replaceable with ML later
+
+LLM USAGE RULE
+
+Do not use an LLM for core calculations.
+
+Do not use an LLM for:
+
+* route optimization
+* ETA calculation
+* driver assignment
+* risk scoring
+* anomaly detection
+* workflow triggers
+
+Use algorithms for these.
+
+Only use an LLM for:
+
+* writing customer messages
+* summarizing incidents
+* explaining recommendations
+* converting operational data into plain language
+
+Cost control is important.
+
+The system should work even if the LLM is disabled.
+
+TESTING REQUIREMENTS
+
+Add tests for:
+
+* route optimization
+* ETA prediction
+* delay risk scoring
+* dynamic rerouting
+* driver assignment
+* anomaly detection
+* workflow triggers
+* recommendation generation
+* customer communication flow
+
+Each test should prove:
+
+* the algorithm works
+* output is understandable
+* correct action is recommended
+* unsafe autonomous actions require approval
+* low-risk actions can run automatically
+
+FINAL OUTPUT REQUIRED
+
+After implementation, provide:
+
+1. Summary of what changed
+2. List of algorithm modules added
+3. List of UI changes made
+4. Endpoints added or changed
+5. Example request/response JSON
+6. Tests created
+7. What is fully functional now
+8. What is rule-based for now
+9. What can later be replaced with ML
+10. Remaining limitations
+11. Recommended next step
+
+Important:
+The final product must feel like an intelligent logistics operations center, not a generic dashboard.
