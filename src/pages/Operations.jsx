@@ -3,9 +3,14 @@ import {
   AlertTriangle,
   ArrowRight,
   ArrowUpRight,
+  Bell,
   CheckCircle2,
+  Eye,
   Inbox,
+  MapPin,
+  Package,
   Plus,
+  Users,
   X,
   Zap,
 } from "lucide-react";
@@ -61,31 +66,59 @@ function Toast({ toast, onClose }) {
   );
 }
 
-function DecisionCard({ rec, onAck, onDismiss }) {
+function severityLabel(sev) {
+  if (sev === "critical" || sev === "high") return "Critical";
+  if (sev === "medium" || sev === "warning") return "Needs eyes";
+  if (sev === "low" || sev === "info") return "Heads up";
+  return "Heads up";
+}
+
+/** Inbox-style row used inside the dark "Needs your call" card. */
+function InboxRow({ rec, onAck, onDismiss }) {
   const color = SEV_COLOR[rec.severity] || SEV_COLOR.medium;
+  const label = severityLabel(rec.severity);
+  const initials = (rec.driver_name || rec.area || "AI").slice(0, 2).toUpperCase();
   return (
-    <div className="rounded-xl border border-black/[0.06] bg-white p-3 flex items-start gap-2.5">
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-           style={{ background: `${color}1A`, color }}>
-        <AlertTriangle size={13} strokeWidth={1.8} />
+    <div className="rounded-xl bg-white/[0.06] hover:bg-white/[0.09] transition-colors p-3">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span
+          className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+          style={{ background: `${color}26`, color }}
+        >
+          {label}
+        </span>
+        {rec.created_at && (
+          <span className="text-[10px] text-white/50">{timeAgo(rec.created_at)}</span>
+        )}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[12.5px] font-semibold text-[#1d1d1f] leading-snug">{rec.what}</p>
-        {rec.why && <p className="text-[11.5px] text-[#86868b] mt-0.5 leading-snug">{rec.why}</p>}
-        <p className="text-[11.5px] text-[#1d1d1f] mt-1.5 flex items-start gap-1.5">
-          <Zap size={10} className="text-[#008080] mt-0.5 shrink-0" />
-          <span><span className="text-[#86868b]">Suggested: </span>{rec.action}</span>
-        </p>
-        <div className="mt-2 flex items-center gap-2">
-          <button onClick={() => onAck(rec)}
-                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-[#008080] hover:bg-[#006666] text-white flex items-center gap-1">
-            <CheckCircle2 size={11} /> Got it
-          </button>
-          <button onClick={() => onDismiss(rec.id)}
-                  className="text-[11px] text-[#aeaeb2] hover:text-[#86868b] ml-auto px-2 py-1">
-            Not now
-          </button>
+      <div className="flex items-start gap-3">
+        <p className="text-[13px] font-medium text-white/95 flex-1 leading-snug">{rec.what}</p>
+        <div
+          className="w-7 h-7 rounded-full bg-white/[0.12] text-white/80 text-[10px] font-semibold flex items-center justify-center shrink-0"
+          aria-hidden
+        >
+          {initials}
         </div>
+      </div>
+      {rec.action && (
+        <p className="text-[11.5px] text-white/70 mt-1.5 flex items-start gap-1.5">
+          <Zap size={10} className="text-[#34d399] mt-0.5 shrink-0" />
+          <span>{rec.action}</span>
+        </p>
+      )}
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          onClick={() => onAck(rec)}
+          className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white text-[#0b1220] hover:bg-white/90 flex items-center gap-1"
+        >
+          <CheckCircle2 size={11} /> Got it
+        </button>
+        <button
+          onClick={() => onDismiss(rec.id)}
+          className="text-[11px] text-white/50 hover:text-white/80 ml-auto px-2 py-1"
+        >
+          Not now
+        </button>
       </div>
     </div>
   );
@@ -256,48 +289,74 @@ export default function Operations() {
       )}
 
       {/* Card grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-        {/* Inbox / Needs your call */}
-        <div className="rounded-2xl bg-[#0b1220] text-white p-4 sm:p-5 flex flex-col min-h-[260px]">
-          <div className="flex items-center gap-2 mb-3">
-            <Inbox size={14} className="opacity-80" />
-            <p className="text-[12px] uppercase tracking-wider font-semibold opacity-80">Needs your call</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+        {/* ───── Inbox / Needs your call — dark card ───── */}
+        <div className="rounded-3xl bg-[#0b1220] text-white p-5 sm:p-6 flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Inbox size={14} className="opacity-80" />
+              <p className="text-[12px] font-semibold tracking-wide">Inbox</p>
+            </div>
+            <button
+              onClick={() => ask("what should I do?")}
+              aria-label="See all decisions"
+              className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors"
+            >
+              <ArrowUpRight size={13} />
+            </button>
           </div>
+
           {loading ? (
             <div className="space-y-2">
               <div className="skeleton h-4 w-2/3 opacity-30" />
               <div className="skeleton h-3 w-full opacity-30" />
             </div>
           ) : visibleRecs.length === 0 ? (
-            <div className="flex-1 flex flex-col">
-              <p className="text-[20px] font-semibold leading-tight">
-                <span className="text-[#34c759]">All clear.</span>
+            <>
+              <p className="text-[22px] sm:text-[24px] font-semibold leading-tight">
+                <span className="text-[#34d399]">All clear.</span>{" "}
+                <span className="text-white/90">Nothing on your plate.</span>
               </p>
-              <p className="text-[13px] opacity-80 mt-1.5">
-                Nothing needs you right now. Aiviate is watching the fleet in the background.
+              <p className="text-[13px] text-white/70 mt-2">
+                Aiviate is watching the fleet in the background. I'll surface anything that needs you.
               </p>
               <button
                 onClick={() => ask("what should I do?")}
-                className="mt-auto text-[12px] font-medium text-white/90 hover:text-white inline-flex items-center gap-1"
+                className="mt-auto text-[12px] font-medium text-white/80 hover:text-white inline-flex items-center gap-1 self-start pt-4"
               >
                 Ask what to focus on <ArrowUpRight size={12} />
               </button>
-            </div>
+            </>
           ) : (
             <>
-              <p className="text-[20px] font-semibold leading-tight">
-                <span className="text-[#34c759]">{visibleRecs.length} {visibleRecs.length === 1 ? "decision" : "decisions"}</span>{" "}
-                need attention.
-              </p>
-              <div className="mt-3 space-y-2 overflow-y-auto max-h-[280px] pr-1">
+              {(() => {
+                const critical = visibleRecs.filter(
+                  (r) => r.severity === "critical" || r.severity === "high"
+                ).length;
+                const others = visibleRecs.length - critical;
+                return (
+                  <p className="text-[22px] sm:text-[24px] font-semibold leading-tight">
+                    <span className="text-[#34d399]">
+                      {visibleRecs.length} {visibleRecs.length === 1 ? "decision" : "decisions"}
+                    </span>{" "}
+                    <span className="text-white/95">need attention.</span>
+                    {critical > 0 && (
+                      <span className="block text-[13px] font-normal text-white/70 mt-1.5 leading-snug">
+                        {critical} critical{others > 0 ? ` and ${others} routine` : ""}.
+                      </span>
+                    )}
+                  </p>
+                );
+              })()}
+              <div className="mt-4 space-y-2 overflow-y-auto max-h-[320px] pr-1 -mr-1">
                 {visibleRecs.slice(0, 3).map((rec) => (
-                  <DecisionCard key={rec.id} rec={rec} onAck={onAck} onDismiss={dismiss} />
+                  <InboxRow key={rec.id} rec={rec} onAck={onAck} onDismiss={dismiss} />
                 ))}
               </div>
               {visibleRecs.length > 3 && (
                 <button
                   onClick={() => ask("what should I do?")}
-                  className="mt-auto pt-3 text-[12px] font-medium text-white/90 hover:text-white inline-flex items-center gap-1 self-start"
+                  className="mt-3 text-[12px] font-medium text-white/80 hover:text-white inline-flex items-center gap-1 self-start"
                 >
                   See all {visibleRecs.length} <ArrowUpRight size={12} />
                 </button>
@@ -306,93 +365,133 @@ export default function Operations() {
           )}
         </div>
 
-        {/* What I've done for you */}
-        <div className="rounded-2xl bg-white border border-black/[0.06] p-4 sm:p-5 flex flex-col min-h-[260px]">
-          <div className="flex items-center gap-2 mb-3">
-            <img src="/logo.png" alt="" className="w-3.5 h-3.5" />
-            <p className="text-[12px] uppercase tracking-wider font-semibold text-[#86868b]">What I've done for you</p>
+        {/* ───── What I've done for you — hero banner card ───── */}
+        <div className="rounded-3xl bg-white border border-black/[0.05] overflow-hidden flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          {/* Teal gradient hero band (stands in for the photo in the reference) */}
+          <div className="relative px-5 sm:px-6 py-6 bg-gradient-to-br from-[#008080] via-[#0a9c9c] to-[#16b8b8] text-white">
+            <div className="absolute inset-0 opacity-[0.18]" style={{
+              backgroundImage:
+                "radial-gradient(circle at 20% 20%, white 0, transparent 40%), radial-gradient(circle at 80% 70%, white 0, transparent 35%)",
+            }} />
+            <div className="relative">
+              <p className="text-[11px] uppercase tracking-wider font-semibold opacity-90">
+                Auto-pilot · today
+              </p>
+              <p className="text-[28px] font-semibold leading-tight mt-1.5">
+                {recentAutoActions.length}{" "}
+                <span className="opacity-90 font-medium">
+                  {recentAutoActions.length === 1 ? "action" : "actions"} handled for you
+                </span>
+              </p>
+            </div>
           </div>
-          {loading ? (
-            <div className="space-y-2">
-              <div className="skeleton h-3 w-full" />
-              <div className="skeleton h-3 w-2/3" />
-              <div className="skeleton h-3 w-4/5" />
-            </div>
-          ) : recentAutoActions.length === 0 ? (
-            <p className="text-[13px] text-[#86868b]">
-              No automated actions yet — once you assign jobs or telemetry rolls in, I'll log it all here.
-            </p>
-          ) : (
-            <div className="space-y-2 flex-1">
-              {recentAutoActions.map((a, i) => (
-                <div key={i} className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
-                  <span className="text-[#008080] mt-0.5">▸</span>
-                  <span className="flex-1">{a.summary}</span>
-                  <span className="text-[11px] text-[#aeaeb2] shrink-0 mt-0.5">{timeAgo(a.at)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <button
-            onClick={() => ask("what just happened?")}
-            className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"
-          >
-            See everything I've handled <ArrowUpRight size={12} />
-          </button>
+          <div className="p-5 sm:p-6 flex-1 flex flex-col">
+            {loading ? (
+              <div className="space-y-2">
+                <div className="skeleton h-3 w-full" />
+                <div className="skeleton h-3 w-2/3" />
+                <div className="skeleton h-3 w-4/5" />
+              </div>
+            ) : recentAutoActions.length === 0 ? (
+              <p className="text-[13px] text-[#86868b]">
+                Nothing automated yet — once you assign jobs or telemetry rolls in, I'll log it all here.
+              </p>
+            ) : (
+              <div className="space-y-2.5 flex-1">
+                {recentAutoActions.map((a, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
+                    <span className="text-[#008080] mt-0.5">▸</span>
+                    <span className="flex-1 leading-snug">{a.summary}</span>
+                    <span className="text-[11px] text-[#aeaeb2] shrink-0 mt-0.5">{timeAgo(a.at)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => ask("what just happened?")}
+              className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"
+            >
+              See everything I've handled <ArrowUpRight size={12} />
+            </button>
+          </div>
         </div>
 
-        {/* Quick looks — light stats */}
-        <div className="rounded-2xl bg-white border border-black/[0.06] p-4 sm:p-5 flex flex-col min-h-[260px]">
-          <div className="flex items-center gap-2 mb-3">
-            <p className="text-[12px] uppercase tracking-wider font-semibold text-[#86868b]">Quick looks</p>
+        {/* ───── Quick looks — tiled list like "Popular content" ───── */}
+        <div className="rounded-3xl bg-white border border-black/[0.05] p-5 sm:p-6 flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[13px] font-semibold text-[#1d1d1f]">Quick looks</p>
+            <button
+              onClick={() => ask("how are we doing?")}
+              aria-label="Ask for a full briefing"
+              className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] flex items-center justify-center transition-colors"
+            >
+              <ArrowUpRight size={13} className="text-[#1d1d1f]" />
+            </button>
           </div>
+
           {loading || !stats ? (
             <div className="space-y-2">
-              <div className="skeleton h-3 w-full" />
-              <div className="skeleton h-3 w-2/3" />
-              <div className="skeleton h-3 w-4/5" />
+              <div className="skeleton h-12 w-full rounded-xl" />
+              <div className="skeleton h-12 w-full rounded-xl" />
+              <div className="skeleton h-12 w-full rounded-xl" />
+              <div className="skeleton h-12 w-full rounded-xl" />
             </div>
           ) : (
-            <div className="space-y-2.5">
-              <button
-                onClick={() => ask("show me today's routes")}
-                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
-              >
-                <span className="text-[12.5px] text-[#1d1d1f]">Today's stops</span>
-                <span className="text-[14px] font-semibold text-[#1d1d1f]">{stats.stops_today ?? 0}</span>
-              </button>
-              <button
-                onClick={() => ask("who's working?")}
-                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
-              >
-                <span className="text-[12.5px] text-[#1d1d1f]">Active drivers</span>
-                <span className="text-[14px] font-semibold text-[#1d1d1f]">
-                  {stats.active_drivers ?? 0}<span className="text-[11px] text-[#aeaeb2] font-normal"> / {stats.total_drivers ?? 0}</span>
-                </span>
-              </button>
-              <button
-                onClick={() => ask("show unassigned jobs")}
-                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
-              >
-                <span className="text-[12.5px] text-[#1d1d1f]">Unassigned jobs</span>
-                <span className={`text-[14px] font-semibold ${
-                  (stats.unassigned ?? 0) > 0 ? "text-[#ff9500]" : "text-[#34c759]"
-                }`}>{stats.unassigned ?? 0}</span>
-              </button>
-              <button
-                onClick={() => ask("any problems?")}
-                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
-              >
-                <span className="text-[12.5px] text-[#1d1d1f]">Unread alerts</span>
-                <span className={`text-[14px] font-semibold ${
-                  (stats.unread_alerts ?? 0) > 0 ? "text-[#ff3b30]" : "text-[#34c759]"
-                }`}>{stats.unread_alerts ?? 0}</span>
-              </button>
+            <div className="space-y-2 flex-1">
+              {[
+                {
+                  title: "Today's stops",
+                  Icon: MapPin,
+                  meta: `${stats.stops_today ?? 0} on the road`,
+                  q: "show me today's routes",
+                  tone: "neutral",
+                },
+                {
+                  title: "Active drivers",
+                  Icon: Users,
+                  meta: `${stats.active_drivers ?? 0} of ${stats.total_drivers ?? 0} working`,
+                  q: "who's working?",
+                  tone: "neutral",
+                },
+                {
+                  title: "Unassigned jobs",
+                  Icon: Package,
+                  meta: `${stats.unassigned ?? 0} waiting${
+                    (stats.unassigned ?? 0) > 0 ? " — needs assignment" : ""
+                  }`,
+                  q: "show unassigned jobs",
+                  tone: (stats.unassigned ?? 0) > 0 ? "warn" : "neutral",
+                },
+                {
+                  title: "Unread alerts",
+                  Icon: Bell,
+                  meta: `${stats.unread_alerts ?? 0}${
+                    (stats.unread_alerts ?? 0) > 0 ? " from telemetry" : " — all caught up"
+                  }`,
+                  q: "any problems?",
+                  tone: (stats.unread_alerts ?? 0) > 0 ? "alert" : "neutral",
+                },
+              ].map(({ title, Icon, meta, q, tone }) => {
+                const metaColor =
+                  tone === "alert" ? "text-[#ff3b30]" :
+                  tone === "warn" ? "text-[#ff9500]" :
+                  "text-[#86868b]";
+                return (
+                  <button
+                    key={title}
+                    onClick={() => ask(q)}
+                    className="w-full text-left rounded-xl border border-black/[0.05] hover:border-[#008080]/30 hover:bg-[#008080]/[0.02] p-3 transition-colors"
+                  >
+                    <p className="text-[13px] font-medium text-[#1d1d1f] leading-snug">{title}</p>
+                    <p className={`text-[11.5px] mt-1 flex items-center gap-1.5 ${metaColor}`}>
+                      <Icon size={11} />
+                      <span>{meta}</span>
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           )}
-          <p className="text-[10.5px] text-[#aeaeb2] mt-3">
-            Tap any row to ask Aiviate about it.
-          </p>
         </div>
       </div>
 
