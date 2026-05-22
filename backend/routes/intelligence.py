@@ -15,7 +15,7 @@ from sqlalchemy import desc
 
 from routes import intelligence_bp
 from middleware import require_auth, require_admin
-from models import Driver, Device, SafetyEvent, Alert, AuditLog, Job
+from models import Driver, Device, SafetyEvent, Alert, AuditLog, Job, Stop
 from utils import get_db_session
 from intelligence.anomaly_detector import (
     detect_device_anomalies,
@@ -27,6 +27,7 @@ from intelligence.audit_logger import log_action
 from intelligence.workflow_engine import run_autonomous_workflows
 from intelligence.auto_optimizer import optimize_job_stops
 from intelligence import command_parser
+from intelligence.driver_notifier import notify_driver
 from agents import Orchestrator
 from agents.context import build_context as _agents_ctx
 
@@ -240,6 +241,94 @@ def _exec_jobs(db, company_id):
     return _resp(True, f"{len(items)} jobs", type="jobs", items=items)
 
 
+def _route_payload(db, company_id, job):
+    """Build a map-ready payload for one job (stops + driver position)."""
+    stops = (
+        db.query(Stop)
+        .filter(Stop.job_id == job.id)
+        .order_by(Stop.stop_number)
+        .all()
+    )
+    stop_dicts = [
+        {
+            "id": s.id, "stop_number": s.stop_number,
+            "customer_name": s.customer_name, "address": s.address,
+            "lat": s.lat, "lng": s.lng, "completed": bool(s.completed),
+        }
+        for s in stops if s.lat is not None and s.lng is not None
+    ]
+    driver_pos = None
+    if job.driver_id:
+        d = db.query(Driver).filter(
+            Driver.id == job.driver_id, Driver.company_id == company_id
+        ).first()
+        if d and d.current_lat is not None and d.current_lng is not None:
+            driver_pos = {
+                "id": d.id, "name": d.name,
+                "lat": d.current_lat, "lng": d.current_lng,
+            }
+    return {
+        "job_id": job.id, "area": job.area, "status": job.status,
+        "driver_name": job.driver_name, "driver": driver_pos,
+        "total_stops": job.total_stops,
+        "total_distance_km": job.total_distance_km,
+        "stops": stop_dicts,
+    }
+
+
+def _exec_route(db, company_id, job_id):
+    job = db.query(Job).filter(Job.id == job_id, Job.company_id == company_id).first()
+    if not job:
+        return _resp(False, f"Job `{job_id}` not found")
+    payload = _route_payload(db, company_id, job)
+    if not payload["stops"]:
+        return _resp(False, f"Job `{job_id}` has no geocoded stops to map")
+    return _resp(
+        True,
+        f"Route {job.id} — {len(payload['stops'])} stops"
+        + (f" · {job.driver_name}" if job.driver_name else " · unassigned"),
+        type="route_map", routes=[payload],
+    )
+
+
+def _exec_map(db, company_id):
+    jobs = (
+        db.query(Job)
+        .filter(Job.company_id == company_id,
+                Job.status.in_(("assigned", "in_progress")))
+        .all()
+    )
+    payloads = [_route_payload(db, company_id, j) for j in jobs]
+    payloads = [p for p in payloads if p["stops"]]
+    if not payloads:
+        return _resp(True, "No active routes to map yet", type="route_map", routes=[])
+    return _resp(
+        True,
+        f"{len(payloads)} active route(s) on the map",
+        type="route_map", routes=payloads,
+    )
+
+
+def _exec_notify(db, company_id, driver_id, message, actor):
+    d = db.query(Driver).filter(
+        Driver.id == driver_id, Driver.company_id == company_id
+    ).first()
+    if not d:
+        return _resp(False, f"Driver `{driver_id}` not found")
+    if not message or not message.strip():
+        return _resp(False, "Notification needs a message")
+    alert = notify_driver(
+        db, company_id=company_id, driver_id=d.id, driver_name=d.name,
+        title=f"Message from dispatch", message=message.strip(),
+        severity="info", alert_type="dispatch_message", actor=actor,
+    )
+    return _resp(
+        True,
+        f"Created in-app alert for {d.name} (no outbound SMS/push wired)",
+        type="notify_result", alert=alert,
+    )
+
+
 def _exec_alerts(db, company_id):
     rows = (
         db.query(Alert)
@@ -348,7 +437,25 @@ def _exec_assign(db, company_id, job_id, driver_id):
         msg += f" — auto-optimized, saved {opt['distance_saved_km']} km"
     elif opt.get("status") == "error":
         msg += f" — optimizer failed ({opt.get('reason')}); order unchanged"
-    return _resp(True, msg, type="assign_result", auto_optimization=opt)
+
+    # Auto-notify the driver about the new (and possibly re-ordered) route.
+    notif = None
+    try:
+        body = (f"You've been assigned route {job.id} with "
+                f"{job.total_stops or '?'} stops.")
+        if opt.get("status") == "ok":
+            body += (f" Stops were re-ordered for efficiency "
+                     f"(saved {opt['distance_saved_km']} km).")
+        notif = notify_driver(
+            db, company_id=company_id, driver_id=driver.id,
+            driver_name=driver.name, title=f"New route: {job.id}",
+            message=body, severity="info", alert_type="route_assigned",
+            actor="dispatch",
+        )
+    except Exception:  # noqa: BLE001
+        traceback.print_exc()
+    return _resp(True, msg, type="assign_result",
+                 auto_optimization=opt, driver_notified=notif)
 
 
 def _exec_unassign(db, company_id, job_id):
@@ -384,7 +491,26 @@ def _exec_optimize(db, company_id, job_id):
         msg = f"Already optimal — current order is {opt['distance_after_km']} km"
     else:
         msg = f"Skipped: {opt.get('reason', status)}"
-    return _resp(True, msg, type="optimization", details=opt)
+
+    # If the route actually changed AND there's a driver, send a heads-up.
+    notif = None
+    if status == "ok" and driver and (opt.get("stops_reordered", 0) or 0) > 0:
+        try:
+            notif = notify_driver(
+                db, company_id=company_id, driver_id=driver.id,
+                driver_name=driver.name,
+                title=f"Route updated: {job_id}",
+                message=(f"Your stops on {job_id} were re-ordered — "
+                         f"{opt['stops_reordered']} stop(s) changed, "
+                         f"saving {opt['distance_saved_km']} km. "
+                         "Open the app to see the new sequence."),
+                severity="info", alert_type="route_reoptimized",
+                actor="dispatch",
+            )
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+    return _resp(True, msg, type="optimization",
+                 details=opt, driver_notified=notif)
 
 
 def _exec_optimize_all(db, company_id):
@@ -455,6 +581,12 @@ def run_command():
                 result = _exec_drivers(db, cid)
             elif intent == "jobs":
                 result = _exec_jobs(db, cid)
+            elif intent == "route":
+                result = _exec_route(db, cid, args[0])
+            elif intent == "map":
+                result = _exec_map(db, cid)
+            elif intent == "notify":
+                result = _exec_notify(db, cid, args[0], args[1], actor)
             elif intent == "alerts":
                 result = _exec_alerts(db, cid)
             elif intent == "audit":
@@ -487,7 +619,8 @@ def run_command():
         # Audit-log any state-changing command. Read-only commands are noisy
         # and not logged here.
         if result.get("ok") and intent not in {
-            "help", "drivers", "jobs", "alerts", "audit", "recommendations", "stats"
+            "help", "drivers", "jobs", "alerts", "audit", "recommendations",
+            "stats", "route", "map",
         }:
             try:
                 log_action(

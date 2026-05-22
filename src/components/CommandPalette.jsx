@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Terminal, X, ArrowRight, AlertCircle, CheckCircle2, ChevronRight } from "lucide-react";
+import { Terminal, X, ArrowRight, AlertCircle, CheckCircle2, ChevronRight, MapPin, Send } from "lucide-react";
 import { sendCommand } from "../services/api";
+import MiniRouteMap from "./MiniRouteMap";
 
 const HINTS = [
   "help",
   "stats",
-  "drivers",
+  "map",
   "jobs",
+  "drivers",
   "alerts",
   "recommendations",
+  "route <job_id>",
   "optimize all",
   "assign <job_id> <driver_id>",
-  "block <driver_id>",
+  "notify <driver_id> <message>",
   "audit",
 ];
 
@@ -125,11 +128,57 @@ function ResultBlock({ result }) {
       </div>
     );
   }
-  if (t === "optimization" || t === "optimization_bulk" || t === "assign_result") {
+  if (t === "route_map") {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-[12px] text-[#1d1d1f]">
+          <MapPin size={13} className="text-[#008080]" />
+          <span>{result.summary}</span>
+        </div>
+        <MiniRouteMap routes={result.routes || []} height={260} />
+        {(result.routes || []).length > 0 && (
+          <div className="space-y-0.5">
+            {(result.routes || []).map((r) => (
+              <div key={r.job_id} className="text-[11px] font-mono text-[#86868b]">
+                <span className="text-[#1d1d1f]">{r.job_id}</span>
+                {" · "}{r.stops.length} stops
+                {r.driver_name && <> · {r.driver_name}</>}
+                {r.total_distance_km ? <> · {r.total_distance_km} km</> : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (t === "notify_result") {
     return (
       <div className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
-        <CheckCircle2 size={14} className="text-[#34c759] mt-0.5 shrink-0" />
-        <span>{result.summary}</span>
+        <Send size={14} className="text-[#008080] mt-0.5 shrink-0" />
+        <div>
+          <div>{result.summary}</div>
+          {result.alert && (
+            <div className="text-[11px] text-[#86868b] mt-0.5">
+              "{result.alert.message}"
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  if (t === "optimization" || t === "optimization_bulk" || t === "assign_result") {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
+          <CheckCircle2 size={14} className="text-[#34c759] mt-0.5 shrink-0" />
+          <span>{result.summary}</span>
+        </div>
+        {result.driver_notified && (
+          <div className="flex items-start gap-2 text-[11px] text-[#86868b] pl-5">
+            <Send size={11} className="text-[#008080] mt-0.5 shrink-0" />
+            <span>In-app alert queued for driver: "{result.driver_notified.message}"</span>
+          </div>
+        )}
       </div>
     );
   }
