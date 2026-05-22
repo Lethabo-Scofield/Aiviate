@@ -19,6 +19,7 @@ import Alerts from "./pages/Alerts";
 import CommandCenter from "./pages/CommandCenter";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
+import DataSources from "./pages/DataSources";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ function AppRoutes() {
             <Route path="/" element={<Operations />} />
             <Route path="/map" element={<MapView />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/data-sources" element={<DataSources />} />
             <Route path="/profile" element={<Profile />} />
             {/* Legacy URLs kept for back-compat — all roll up into Operations now */}
             <Route path="/command" element={<CommandCenter />} />
