@@ -1,10 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Brain, Map as MapIcon, Settings, Menu, X } from "lucide-react";
+import { Home, Map as MapIcon, Settings, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 const NAV = [
-  { to: "/", icon: Brain, label: "Operations", end: true },
+  { to: "/", icon: Home, label: "Home", end: true },
   { to: "/map", icon: MapIcon, label: "Map" },
 ];
 

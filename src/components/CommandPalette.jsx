@@ -184,19 +184,29 @@ function ResultBlock({ result }) {
   );
 }
 
-export default function CommandPalette({ open, onClose }) {
+export default function CommandPalette({ open, onClose, initialQuery, queryNonce }) {
   const navigate = useNavigate();
   const [text, setText] = useState("");
   const [history, setHistory] = useState([]);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
+  const ranNonceRef = useRef(null);
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [open]);
+
+  // If the host opens us with a pre-filled question, run it once automatically.
+  useEffect(() => {
+    if (open && initialQuery && queryNonce && queryNonce !== ranNonceRef.current) {
+      ranNonceRef.current = queryNonce;
+      run(initialQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialQuery, queryNonce]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
