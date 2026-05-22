@@ -199,11 +199,14 @@ export default function CommandPalette({ open, onClose, initialQuery, queryNonce
     }
   }, [open]);
 
-  // If the host opens us with a pre-filled question, run it once automatically.
+  // If the host opens us with a pre-filled question, show it in the input
+  // briefly so the user sees what's being asked, then run it.
   useEffect(() => {
     if (open && initialQuery && queryNonce && queryNonce !== ranNonceRef.current) {
       ranNonceRef.current = queryNonce;
-      run(initialQuery);
+      setText(initialQuery);
+      const t = setTimeout(() => run(initialQuery), 80);
+      return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialQuery, queryNonce]);
