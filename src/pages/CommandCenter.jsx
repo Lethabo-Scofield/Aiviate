@@ -191,6 +191,8 @@ export default function CommandCenter() {
     );
   }
 
+  const autoActions = auditEntries.filter((e) => e.actor === "workflow_engine");
+
   return (
     <div className="animate-fade-in">
       <div className="mb-5 sm:mb-6 flex items-start justify-between gap-4 flex-wrap">
@@ -211,6 +213,55 @@ export default function CommandCenter() {
             {visibleRecs.length}
           </span>
         </div>
+      </div>
+
+      {/* Aiviate Auto-pilot — what the system handles on its own */}
+      <div className="apple-card p-5 mb-5 border border-[#008080]/15 bg-gradient-to-br from-[#008080]/[0.04] to-transparent">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-[#008080]/10 flex items-center justify-center shrink-0">
+            <Brain size={16} className="text-[#008080]" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-[14px] font-semibold text-[#1d1d1f]">Aiviate Auto-pilot</p>
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-[#34c759]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#34c759] animate-pulse" /> Live
+              </span>
+            </div>
+            <p className="text-[12px] text-[#86868b] mt-0.5">
+              These run continuously without asking you. You see them in the audit log, not as approvals.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+          <div className="text-[12px] text-[#1d1d1f] flex items-start gap-2">
+            <CheckCircle2 size={13} className="text-[#34c759] mt-0.5 shrink-0" />
+            <span><span className="font-semibold">Route auto-optimization</span> — every job is reordered the moment a driver is assigned</span>
+          </div>
+          <div className="text-[12px] text-[#1d1d1f] flex items-start gap-2">
+            <CheckCircle2 size={13} className="text-[#34c759] mt-0.5 shrink-0" />
+            <span><span className="font-semibold">Low-battery alerts</span> — devices below 20% are flagged once, idempotently</span>
+          </div>
+          <div className="text-[12px] text-[#1d1d1f] flex items-start gap-2">
+            <CheckCircle2 size={13} className="text-[#34c759] mt-0.5 shrink-0" />
+            <span><span className="font-semibold">Anomaly detection</span> — offline devices, fatigue clusters, blocked drivers</span>
+          </div>
+          <div className="text-[12px] text-[#1d1d1f] flex items-start gap-2">
+            <CheckCircle2 size={13} className="text-[#34c759] mt-0.5 shrink-0" />
+            <span><span className="font-semibold">Audit trail</span> — every automated and human action is recorded</span>
+          </div>
+        </div>
+        {autoActions.length > 0 && (
+          <div className="pt-3 border-t border-[#008080]/10">
+            <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1.5">
+              Latest auto-pilot action
+            </p>
+            <p className="text-[12px] text-[#1d1d1f]">
+              {autoActions[0].summary}{" "}
+              <span className="text-[#aeaeb2]">· {timeAgo(autoActions[0].at)}</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {loadError && !lastSyncAt ? (
