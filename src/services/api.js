@@ -33,6 +33,25 @@ async function handleResponse(res) {
   return data;
 }
 
+export async function getRecommendations() {
+  const res = await fetch(`${API_BASE}/intelligence/recommendations`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function acknowledgeRecommendation(recId, payload = {}) {
+  const res = await fetch(`${API_BASE}/intelligence/recommendations/${encodeURIComponent(recId)}/acknowledge`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+export async function getAuditLog(limit = 25) {
+  const res = await fetch(`${API_BASE}/intelligence/audit-log?limit=${limit}`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
 export async function uploadExcel(file) {
   const form = new FormData();
   form.append('file', file);

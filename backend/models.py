@@ -284,6 +284,35 @@ class SafetyEvent(Base):
         }
 
 
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(String, primary_key=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    action_type = Column(String, nullable=False)
+    summary = Column(Text, nullable=False)
+    actor = Column(String, default="system")
+    confidence = Column(Float, default=1.0)
+    requires_approval = Column(Boolean, default=False)
+    related_id = Column(String, nullable=True)
+    details = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "action_type": self.action_type,
+            "summary": self.summary,
+            "actor": self.actor,
+            "confidence": self.confidence,
+            "requires_approval": self.requires_approval,
+            "related_id": self.related_id,
+            "details": self.details or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 def init_db():
     Base.metadata.create_all(engine)
 

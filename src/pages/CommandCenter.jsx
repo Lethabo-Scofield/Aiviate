@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Brain,
@@ -12,117 +12,43 @@ import {
   ChevronRight,
   Sparkles,
   Zap,
+  History,
 } from "lucide-react";
 import {
-  getDrivers,
-  getDevices,
-  getSafetyEvents,
-  getAlerts,
-  getLiveOps,
+  getRecommendations,
+  acknowledgeRecommendation,
+  getAuditLog,
 } from "../services/api";
 
-const CATEGORY = {
-  rotate: { label: "Driver risk", color: "#ff3b30", icon: Eye },
-  device: { label: "Telemetry", color: "#0a84ff", icon: Camera },
-  critical: { label: "Critical", color: "#ff3b30", icon: AlertTriangle },
-  blocked: { label: "Dispatch", color: "#ff9500", icon: Radio },
-  delay: { label: "Delay", color: "#ff9500", icon: Clock },
+const CATEGORY_META = {
+  "Driver risk": { color: "#ff3b30", icon: Eye },
+  "Telemetry": { color: "#0a84ff", icon: Camera },
+  "Critical alert": { color: "#ff3b30", icon: AlertTriangle },
+  "Dispatch": { color: "#ff9500", icon: Radio },
+  "Delay": { color: "#ff9500", icon: Clock },
 };
 
-function within(iso, hours) {
-  if (!iso) return false;
-  return Date.now() - new Date(iso).getTime() < hours * 3600 * 1000;
+const SEVERITY_LABEL = {
+  critical: { label: "Critical", color: "#ff3b30" },
+  high: { label: "High", color: "#ff3b30" },
+  medium: { label: "Medium", color: "#ff9500" },
+  low: { label: "Low", color: "#34c759" },
+};
+
+function timeAgo(iso) {
+  if (!iso) return "";
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function minutesSince(iso) {
-  if (!iso) return Infinity;
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-}
-
-function buildRecommendations({ drivers, devices, events, alerts, liveops }) {
-  const recs = [];
-
-  // 1. Driver fatigue rotation — drivers with 2+ fatigue events in last 4h
-  const fatigueByDriver = {};
-  events
-    .filter((e) => e.event_type === "fatigue" && within(e.created_at, 4))
-    .forEach((e) => {
-      fatigueByDriver[e.driver_id] = (fatigueByDriver[e.driver_id] || 0) + 1;
-    });
-  Object.entries(fatigueByDriver).forEach(([driverId, count]) => {
-    if (count >= 2) {
-      const d = drivers.find((x) => x.id === driverId);
-      if (!d) return;
-      const confidence = Math.min(98, 70 + count * 6);
-      recs.push({
-        id: `rotate-${driverId}`,
-        kind: "rotate",
-        title: `Pull ${d.name} from the road`,
-        why: `${count} drowsiness events in the last 4 hours — risk of incident is climbing`,
-        action: "Rotate driver and reassign their remaining stops",
-        confidence,
-        link: `/drivers`,
-      });
-    }
-  });
-
-  // 2. Offline Guardians > 10 minutes
-  devices
-    .filter((d) => d.status === "offline" && minutesSince(d.last_seen) >= 10)
-    .forEach((d) => {
-      recs.push({
-        id: `device-${d.id}`,
-        kind: "device",
-        title: `${d.name} hasn't reported in ${minutesSince(d.last_seen)}m`,
-        why: d.driver_id
-          ? `This driver is currently unmonitored — fatigue inference is offline`
-          : `Unit appears disconnected — battery, network, or pulled from cab`,
-        action: d.driver_id ? "Call driver and confirm device power/connection" : "Mark for retrieval",
-        confidence: 92,
-        link: `/devices`,
-      });
-    });
-
-  // 3. Open critical alerts
-  alerts
-    .filter((a) => a.severity === "critical" && !a.is_read)
-    .slice(0, 4)
-    .forEach((a) => {
-      recs.push({
-        id: `alert-${a.id}`,
-        kind: "critical",
-        title: a.title || "Critical alert open",
-        why: a.message || "Severity flagged as critical and not acknowledged",
-        action: "Acknowledge and dispatch response",
-        confidence: 99,
-        link: `/intelligence`,
-      });
-    });
-
-  // 4. Blocked drivers still in live-ops
-  liveops
-    .filter((d) => d.blocked || d.status === "blocked")
-    .forEach((d) => {
-      recs.push({
-        id: `blocked-${d.driver_id}`,
-        kind: "blocked",
-        title: `${d.driver_name} is blocked but on a route`,
-        why: `Driver is in a blocked state — assigned stops may go undelivered`,
-        action: "Unassign or unblock to keep deliveries flowing",
-        confidence: 88,
-        link: `/dispatch`,
-      });
-    });
-
-  // Sort by category severity then confidence
-  const weight = { critical: 4, rotate: 3, blocked: 2, device: 1, delay: 0 };
-  recs.sort((a, b) => (weight[b.kind] - weight[a.kind]) || (b.confidence - a.confidence));
-  return recs;
-}
-
-function RecommendationCard({ rec, onAccept, onDismiss, onOpen }) {
-  const meta = CATEGORY[rec.kind] || CATEGORY.delay;
+function RecommendationCard({ rec, onAcknowledge, onDismiss, onOpen }) {
+  const meta = CATEGORY_META[rec.category] || CATEGORY_META["Delay"];
   const Icon = meta.icon;
+  const sev = SEVERITY_LABEL[rec.severity] || SEVERITY_LABEL.medium;
   return (
     <div className="apple-card p-4 sm:p-5 flex items-start gap-3 sm:gap-4">
       <div
@@ -132,31 +58,57 @@ function RecommendationCard({ rec, onAccept, onDismiss, onOpen }) {
         <Icon size={16} strokeWidth={1.8} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span
             className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full"
             style={{ background: `${meta.color}14`, color: meta.color }}
           >
-            {meta.label}
+            {rec.category}
+          </span>
+          <span
+            className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: `${sev.color}14`, color: sev.color }}
+          >
+            {sev.label}
           </span>
           <span className="text-[10px] text-[#aeaeb2] flex items-center gap-1">
-            <Sparkles size={10} /> {rec.confidence}% confidence
+            <Sparkles size={10} /> {Math.round(rec.confidence * 100)}% confidence
           </span>
+          {!rec.requires_approval && (
+            <span className="text-[10px] text-[#34c759]">No approval needed</span>
+          )}
         </div>
-        <p className="text-[14px] font-semibold text-[#1d1d1f] leading-snug">{rec.title}</p>
-        <p className="text-[12px] text-[#86868b] mt-1 leading-snug">{rec.why}</p>
+        <p className="text-[14px] font-semibold text-[#1d1d1f] leading-snug">{rec.what}</p>
+        {rec.why && <p className="text-[12px] text-[#86868b] mt-1 leading-snug">{rec.why}</p>}
         <p className="text-[12px] text-[#1d1d1f] mt-2 flex items-start gap-1.5">
           <Zap size={12} className="text-[#008080] mt-0.5 shrink-0" />
-          <span><span className="text-[#86868b]">Recommended: </span>{rec.action}</span>
+          <span>
+            <span className="text-[#86868b]">Recommended: </span>
+            {rec.action}
+          </span>
         </p>
+        {rec.expected_benefit && (
+          <p className="text-[11px] text-[#86868b] mt-1 italic">→ {rec.expected_benefit}</p>
+        )}
         <div className="mt-3 flex items-center gap-2">
-          <button onClick={() => onAccept(rec.id)} className="apple-btn apple-btn-primary text-[12px] py-1.5 px-3">
+          <button
+            onClick={() => onAcknowledge(rec)}
+            className="apple-btn apple-btn-primary text-[12px] py-1.5 px-3"
+          >
             <CheckCircle2 size={12} /> Acknowledge
           </button>
-          <button onClick={() => onOpen(rec.link)} className="apple-btn apple-btn-secondary text-[12px] py-1.5 px-3">
-            Open <ChevronRight size={12} />
-          </button>
-          <button onClick={() => onDismiss(rec.id)} className="text-[12px] text-[#aeaeb2] hover:text-[#86868b] ml-auto px-2 py-1">
+          {rec.link && (
+            <button
+              onClick={() => onOpen(rec.link)}
+              className="apple-btn apple-btn-secondary text-[12px] py-1.5 px-3"
+            >
+              Open <ChevronRight size={12} />
+            </button>
+          )}
+          <button
+            onClick={() => onDismiss(rec.id)}
+            className="text-[12px] text-[#aeaeb2] hover:text-[#86868b] ml-auto px-2 py-1"
+          >
             <X size={12} className="inline" /> Dismiss
           </button>
         </div>
@@ -167,43 +119,40 @@ function RecommendationCard({ rec, onAccept, onDismiss, onOpen }) {
 
 export default function CommandCenter() {
   const navigate = useNavigate();
-  const [data, setData] = useState({ drivers: [], devices: [], events: [], alerts: [], liveops: [] });
+  const [recs, setRecs] = useState([]);
+  const [auditEntries, setAuditEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(sessionStorage.getItem("dismissedRecs") || "[]")); }
     catch { return new Set(); }
   });
 
+  const load = async () => {
+    try {
+      const [recResp, auditResp] = await Promise.all([
+        getRecommendations(),
+        getAuditLog(15),
+      ]);
+      setRecs(Array.isArray(recResp?.recommendations) ? recResp.recommendations : []);
+      setAuditEntries(Array.isArray(auditResp?.entries) ? auditResp.entries : []);
+      setLoadError(null);
+      setLastSyncAt(new Date().toISOString());
+    } catch (e) {
+      setLoadError(e?.message || "Could not reach intelligence service");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [drivers, devices, eventsResp, alertsResp, liveops] = await Promise.all([
-          getDrivers(),
-          getDevices(),
-          getSafetyEvents(),
-          getAlerts({ limit: 50 }),
-          getLiveOps(),
-        ]);
-        const arr = (x, key) =>
-          Array.isArray(x) ? x : Array.isArray(x?.[key]) ? x[key] : [];
-        setData({
-          drivers: arr(drivers, "drivers"),
-          devices: arr(devices, "devices"),
-          events: arr(eventsResp, "events"),
-          alerts: arr(alertsResp, "alerts"),
-          liveops: arr(liveops, "drivers"),
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
     const id = setInterval(load, 20000);
     return () => clearInterval(id);
   }, []);
 
-  const allRecs = useMemo(() => buildRecommendations(data), [data]);
-  const recs = allRecs.filter((r) => !dismissed.has(r.id));
+  const visibleRecs = recs.filter((r) => !dismissed.has(r.id));
 
   const dismiss = (id) => {
     const next = new Set(dismissed);
@@ -211,14 +160,32 @@ export default function CommandCenter() {
     setDismissed(next);
     sessionStorage.setItem("dismissedRecs", JSON.stringify([...next]));
   };
-  const accept = (id) => dismiss(id);
+
+  const acknowledge = async (rec) => {
+    dismiss(rec.id);
+    try {
+      await acknowledgeRecommendation(rec.id, {
+        summary: `Acknowledged: ${rec.what}`,
+        kind: rec.kind,
+      });
+      const fresh = await getAuditLog(15);
+      setAuditEntries(Array.isArray(fresh?.entries) ? fresh.entries : []);
+    } catch (e) {
+      console.warn("Acknowledge failed:", e?.message);
+    }
+  };
 
   if (loading) {
     return (
       <div className="animate-fade-in space-y-4">
         <div className="skeleton h-8 w-56 mb-3" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="apple-card p-6"><div className="skeleton h-4 w-2/3 mb-2" /><div className="skeleton h-3 w-full" /></div>)}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="apple-card p-6">
+              <div className="skeleton h-4 w-2/3 mb-2" />
+              <div className="skeleton h-3 w-full" />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -232,37 +199,61 @@ export default function CommandCenter() {
             <Brain size={22} className="text-[#008080]" /> Command Center
           </h1>
           <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            What needs your decision, right now. Pulled live from telemetry and safety events.
+            What needs your decision, right now. Generated by the intelligence layer from live telemetry and safety events.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-[#aeaeb2] uppercase tracking-wider font-semibold">Decisions waiting</span>
           <span
             className="text-[18px] font-semibold px-3 py-1 rounded-full"
-            style={{ background: recs.length > 0 ? "#ff3b30" : "#34c759", color: "white" }}
+            style={{ background: visibleRecs.length > 0 ? "#ff3b30" : "#34c759", color: "white" }}
           >
-            {recs.length}
+            {visibleRecs.length}
           </span>
         </div>
       </div>
 
-      {/* Decisions waiting */}
-      {recs.length === 0 ? (
-        allRecs.length === 0 ? (
+      {loadError && !lastSyncAt ? (
+        <div className="apple-card p-10 text-center border-2 border-[#ff3b30]/20">
+          <div className="w-14 h-14 rounded-2xl bg-[#ff3b30]/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={22} className="text-[#ff3b30]" />
+          </div>
+          <p className="text-[16px] font-semibold text-[#1d1d1f]">Intelligence service unreachable</p>
+          <p className="text-[13px] text-[#86868b] mt-1">
+            We can't tell you what's happening right now. Treat this as unknown, not safe. ({loadError})
+          </p>
+          <button
+            onClick={() => { setLoading(true); load(); }}
+            className="apple-btn apple-btn-secondary text-[12px] py-1.5 px-3 mt-4"
+          >
+            Retry
+          </button>
+        </div>
+      ) : visibleRecs.length === 0 ? (
+        recs.length === 0 ? (
           <div className="apple-card p-10 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#34c759]/10 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 size={22} className="text-[#34c759]" />
             </div>
             <p className="text-[16px] font-semibold text-[#1d1d1f]">No risks detected</p>
-            <p className="text-[13px] text-[#86868b] mt-1">Telemetry looks clean — no drowsy drivers, no offline devices, no open critical alerts, no blocked routes.</p>
+            <p className="text-[13px] text-[#86868b] mt-1">
+              The intelligence layer is running — no drowsy drivers, no offline devices, no open critical alerts, no blocked routes.
+            </p>
+            {loadError && (
+              <p className="text-[11px] text-[#ff9500] mt-2">
+                Last refresh failed ({loadError}). Showing last known state from {timeAgo(lastSyncAt)}.
+              </p>
+            )}
           </div>
         ) : (
           <div className="apple-card p-10 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#aeaeb2]/10 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 size={22} className="text-[#86868b]" />
             </div>
-            <p className="text-[16px] font-semibold text-[#1d1d1f]">All {allRecs.length} acknowledged this session</p>
-            <p className="text-[13px] text-[#86868b] mt-1">Underlying risks may still be active — acknowledging only hides the card.</p>
+            <p className="text-[16px] font-semibold text-[#1d1d1f]">All {recs.length} acknowledged this session</p>
+            <p className="text-[13px] text-[#86868b] mt-1">
+              Underlying risks may still be active — acknowledging only hides the card.
+            </p>
             <button
               onClick={() => { setDismissed(new Set()); sessionStorage.removeItem("dismissedRecs"); }}
               className="apple-btn apple-btn-secondary text-[12px] py-1.5 px-3 mt-4"
@@ -273,11 +264,11 @@ export default function CommandCenter() {
         )
       ) : (
         <div className="space-y-3">
-          {recs.map((r) => (
+          {visibleRecs.map((r) => (
             <RecommendationCard
               key={r.id}
               rec={r}
-              onAccept={accept}
+              onAcknowledge={acknowledge}
               onDismiss={dismiss}
               onOpen={(link) => navigate(link)}
             />
@@ -285,6 +276,36 @@ export default function CommandCenter() {
         </div>
       )}
 
+      {/* Handled — audit log */}
+      <div className="mt-8">
+        <div className="flex items-center gap-2 mb-3 text-[11px] uppercase tracking-wider font-semibold text-[#86868b]">
+          <History size={12} />
+          Recently handled
+        </div>
+        {auditEntries.length === 0 ? (
+          <div className="apple-card p-5 text-center">
+            <p className="text-[13px] text-[#86868b]">
+              No actions logged yet. Autonomous workflows and operator acknowledgements appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="apple-card divide-y divide-black/[0.06]">
+            {auditEntries.map((e) => (
+              <div key={e.id} className="px-5 py-3 flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-[#008080]/10 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={13} className="text-[#008080]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-[#1d1d1f] leading-snug">{e.summary}</p>
+                  <p className="text-[11px] text-[#86868b] mt-0.5">
+                    {e.actor === "workflow_engine" ? "Automatic" : "Operator"} · {timeAgo(e.at)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
