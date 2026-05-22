@@ -11,6 +11,7 @@ function ask(text) {
 
 export default function Layout() {
   const location = useLocation();
+  const isHome = location.pathname === "/";
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [initialQuery, setInitialQuery] = useState("");
   const [queryNonce, setQueryNonce] = useState(0);
@@ -60,38 +61,41 @@ export default function Layout() {
     <div className="flex min-h-screen bg-white">
       <Sidebar />
       <main className="flex-1 lg:ml-[260px] overflow-auto">
-        {/* Persistent "Ask Aiviate" bar — a real input you can type into directly */}
-        <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
-          <div className="max-w-[960px] mx-auto px-5 sm:px-8 lg:px-12 py-3 pt-16 lg:pt-3">
-            <form
-              onSubmit={submitTop}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl bg-[#f5f5f7] border border-black/[0.04] focus-within:border-[#008080]/40 focus-within:bg-white transition-colors"
-            >
-              <Sparkles size={15} className="text-[#008080] shrink-0" />
-              <input
-                ref={topInputRef}
-                value={topText}
-                onChange={(e) => setTopText(e.target.value)}
-                placeholder='Ask Aiviate anything — try "show me today\u2019s routes"'
-                aria-label="Ask Aiviate"
-                className="flex-1 bg-transparent outline-none text-[13px] text-[#1d1d1f] placeholder:text-[#86868b]"
-              />
-              {topText.trim() ? (
-                <button
-                  type="submit"
-                  aria-label="Ask"
-                  className="w-7 h-7 rounded-lg bg-[#008080] hover:bg-[#006666] text-white flex items-center justify-center shrink-0"
-                >
-                  <ArrowRight size={13} />
-                </button>
-              ) : (
-                <span className="text-[10px] font-mono text-[#aeaeb2] border border-black/[0.08] rounded px-1.5 py-0.5 shrink-0">⌘K</span>
-              )}
-            </form>
+        {/* Persistent "Ask Aiviate" bar — shown on every page EXCEPT Home,
+            because Home has its own centered hero prompt. */}
+        {!isHome && (
+          <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
+            <div className="max-w-[960px] mx-auto px-5 sm:px-8 lg:px-12 py-3 pt-16 lg:pt-3">
+              <form
+                onSubmit={submitTop}
+                className="w-full flex items-center gap-3 px-4 py-2 rounded-xl bg-[#f5f5f7] border border-black/[0.04] focus-within:border-[#008080]/40 focus-within:bg-white transition-colors"
+              >
+                <Sparkles size={15} className="text-[#008080] shrink-0" />
+                <input
+                  ref={topInputRef}
+                  value={topText}
+                  onChange={(e) => setTopText(e.target.value)}
+                  placeholder='Ask Aiviate anything — try "show me today\u2019s routes"'
+                  aria-label="Ask Aiviate"
+                  className="flex-1 bg-transparent outline-none text-[13px] text-[#1d1d1f] placeholder:text-[#86868b]"
+                />
+                {topText.trim() ? (
+                  <button
+                    type="submit"
+                    aria-label="Ask"
+                    className="w-7 h-7 rounded-lg bg-[#008080] hover:bg-[#006666] text-white flex items-center justify-center shrink-0"
+                  >
+                    <ArrowRight size={13} />
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-mono text-[#aeaeb2] border border-black/[0.08] rounded px-1.5 py-0.5 shrink-0">⌘K</span>
+                )}
+              </form>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="px-5 sm:px-8 lg:px-12 py-6 pb-10">
+        <div className={`px-5 sm:px-8 lg:px-12 ${isHome ? "pt-14 lg:pt-8" : "py-6"} pb-10`}>
           <div key={location.pathname} className="max-w-[960px] mx-auto animate-page">
             <Outlet />
           </div>

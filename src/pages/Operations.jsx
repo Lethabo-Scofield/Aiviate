@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
-  RefreshCcw,
+  Inbox,
+  Plus,
   Sparkles,
   X,
   Zap,
@@ -12,6 +15,7 @@ import {
   acknowledgeRecommendation,
   getAuditLog,
   getRecommendations,
+  getStats,
 } from "../services/api";
 
 /* ─────────────────────────── helpers ─────────────────────────── */
@@ -38,9 +42,9 @@ const SEV_COLOR = {
   warning: "#ff9500", info: "#008080",
 };
 
-/** Open the global Ask-Aiviate palette with a pre-filled question. */
+/** Fire the global ask-aiviate event so the palette opens and runs the query. */
 function ask(text) {
-  window.dispatchEvent(new CustomEvent("ask-aiviate", { detail: { text } }));
+  window.dispatchEvent(new CustomEvent("ask-aiviate", { detail: { text: text || "" } }));
 }
 
 /* ─────────────────────────── small bits ─────────────────────────── */
@@ -61,26 +65,26 @@ function Toast({ toast, onClose }) {
 function DecisionCard({ rec, onAck, onDismiss }) {
   const color = SEV_COLOR[rec.severity] || SEV_COLOR.medium;
   return (
-    <div className="apple-card p-4 flex items-start gap-3">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+    <div className="rounded-xl border border-black/[0.06] bg-white p-3 flex items-start gap-2.5">
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
            style={{ background: `${color}1A`, color }}>
-        <AlertTriangle size={14} strokeWidth={1.8} />
+        <AlertTriangle size={13} strokeWidth={1.8} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-[#1d1d1f]">{rec.what}</p>
-        {rec.why && <p className="text-[12px] text-[#86868b] mt-0.5">{rec.why}</p>}
-        <p className="text-[12px] text-[#1d1d1f] mt-1.5 flex items-start gap-1.5">
-          <Zap size={11} className="text-[#008080] mt-0.5 shrink-0" />
+        <p className="text-[12.5px] font-semibold text-[#1d1d1f] leading-snug">{rec.what}</p>
+        {rec.why && <p className="text-[11.5px] text-[#86868b] mt-0.5 leading-snug">{rec.why}</p>}
+        <p className="text-[11.5px] text-[#1d1d1f] mt-1.5 flex items-start gap-1.5">
+          <Zap size={10} className="text-[#008080] mt-0.5 shrink-0" />
           <span><span className="text-[#86868b]">Suggested: </span>{rec.action}</span>
         </p>
-        <div className="mt-2.5 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           <button onClick={() => onAck(rec)}
-                  className="apple-btn apple-btn-primary text-[11px] py-1 px-2.5">
+                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-[#008080] hover:bg-[#006666] text-white flex items-center gap-1">
             <CheckCircle2 size={11} /> Got it
           </button>
           <button onClick={() => onDismiss(rec.id)}
                   className="text-[11px] text-[#aeaeb2] hover:text-[#86868b] ml-auto px-2 py-1">
-            <X size={11} className="inline" /> Not now
+            Not now
           </button>
         </div>
       </div>
@@ -88,24 +92,24 @@ function DecisionCard({ rec, onAck, onDismiss }) {
   );
 }
 
-/* ─────────────────────────── main ─────────────────────────── */
+/* ─────────────────────────── prompts ─────────────────────────── */
 const QUICK_QUESTIONS = [
   "Show me today's routes",
-  "How are we doing?",
   "Who's working?",
   "Any problems?",
-  "What jobs do I have?",
-  "What should I do?",
 ];
 
+/* ─────────────────────────── main ─────────────────────────── */
 export default function Operations() {
   const { user } = useAuth();
   const [recs, setRecs] = useState([]);
   const [audit, setAudit] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [lastSyncAt, setLastSyncAt] = useState(null);
   const [toast, setToast] = useState(null);
+  const [askText, setAskText] = useState("");
+  const askRef = useRef(null);
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(sessionStorage.getItem("dismissedRecs") || "[]")); }
     catch { return new Set(); }
@@ -120,16 +124,17 @@ export default function Operations() {
   const load = useCallback(async () => {
     const myReq = ++reqIdRef.current;
     try {
-      const [recsRes, auditRes] = await Promise.allSettled([
+      const [recsRes, auditRes, statsRes] = await Promise.allSettled([
         getRecommendations(),
         getAuditLog(20),
+        getStats(),
       ]);
       if (myReq !== reqIdRef.current) return;
       setRecs(recsRes.status === "fulfilled" ? (recsRes.value?.recommendations || []) : []);
       setAudit(auditRes.status === "fulfilled" ? (auditRes.value?.entries || []) : []);
-      const anyFailed = recsRes.status === "rejected" || auditRes.status === "rejected";
-      setLoadError(anyFailed ? "Some sections couldn't be reached" : null);
-      setLastSyncAt(new Date().toISOString());
+      setStats(statsRes.status === "fulfilled" ? statsRes.value : null);
+      const anyFailed = [recsRes, auditRes, statsRes].some((r) => r.status === "rejected");
+      setLoadError(anyFailed ? "Some signals couldn't be reached" : null);
     } catch (e) {
       if (myReq !== reqIdRef.current) return;
       setLoadError(e?.message || "Couldn't reach Aiviate");
@@ -170,120 +175,227 @@ export default function Operations() {
     }
   };
 
-  /* ────── loading gate ────── */
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="apple-card p-5">
-            <div className="skeleton h-4 w-2/3 mb-2" />
-            <div className="skeleton h-3 w-full" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const submitAsk = (e) => {
+    e?.preventDefault?.();
+    const q = askText.trim();
+    if (!q) { askRef.current?.focus(); return; }
+    setAskText("");
+    ask(q);
+  };
 
-  const firstName = (user?.name || "").split(" ")[0];
-  const calm = visibleRecs.length === 0 && !loadError;
-  const headline = loadError
-    ? "I'm having trouble reaching some signals — treat them as unknown, not safe."
-    : calm
-      ? "Everything's calm. I'll let you know if something needs you."
-      : `${visibleRecs.length} thing${visibleRecs.length === 1 ? "" : "s"} could use your call.`;
+  const firstName = (user?.name || "").split(" ")[0] || "there";
 
   /* ─────────────────────────── render ─────────────────────────── */
   return (
     <div className="animate-fade-in">
-      {/* Hero */}
-      <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
-        <div>
-          <h1 className="text-[26px] sm:text-[30px] font-semibold text-[#1d1d1f] tracking-tight">
-            {greeting()}{firstName ? `, ${firstName}` : ""}.
-          </h1>
-          <p className="text-[14px] text-[#1d1d1f]/80 mt-1.5 max-w-[560px]">
-            {headline}
-          </p>
-        </div>
-        <button onClick={load} title="Refresh" aria-label="Refresh"
-                className="w-9 h-9 rounded-xl bg-[#f5f5f7] hover:bg-[#ebebed] flex items-center justify-center">
-          <RefreshCcw size={14} className="text-[#1d1d1f]" />
-        </button>
+      {/* Hero — centered greeting */}
+      <div className="text-center pt-6 sm:pt-10 mb-5">
+        <h1 className="text-[24px] sm:text-[30px] font-semibold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
+          <Sparkles size={20} className="text-[#008080]" />
+          Hi {firstName}, what can Aiviate cross off your list?
+        </h1>
       </div>
 
-      {/* The single, prominent ask prompt — primary CTA on this page */}
-      <button
-        onClick={() => ask("")}
-        className="w-full apple-card p-4 mb-5 flex items-center gap-3 hover:bg-[#fafafa] transition-colors text-left group"
+      {/* Big rounded pill prompt — centered */}
+      <form
+        onSubmit={submitAsk}
+        className="max-w-[680px] mx-auto mb-4"
       >
-        <div className="w-9 h-9 rounded-xl bg-[#008080]/10 text-[#008080] flex items-center justify-center shrink-0">
-          <Sparkles size={16} />
+        <div className="flex items-center gap-3 px-5 py-3.5 rounded-full bg-white border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.04)] focus-within:border-[#008080]/40 focus-within:shadow-[0_2px_22px_rgba(0,128,128,0.10)] transition-all">
+          <button
+            type="button"
+            onClick={() => ask("")}
+            title="More commands"
+            aria-label="More commands"
+            className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] flex items-center justify-center shrink-0"
+          >
+            <Plus size={14} />
+          </button>
+          <input
+            ref={askRef}
+            value={askText}
+            onChange={(e) => setAskText(e.target.value)}
+            placeholder='Ask Aiviate, "show me today\u2019s routes."'
+            aria-label="Ask Aiviate"
+            className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
+          />
+          <button
+            type="submit"
+            aria-label="Ask"
+            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+              askText.trim()
+                ? "bg-[#008080] hover:bg-[#006666] text-white"
+                : "bg-[#f5f5f7] text-[#aeaeb2]"
+            }`}
+          >
+            <ArrowRight size={15} />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-medium text-[#1d1d1f]">Ask Aiviate anything</p>
-          <p className="text-[12px] text-[#86868b]">Plain English — maps, lists, assignments, messages to drivers.</p>
-        </div>
-        <span className="text-[10px] font-mono text-[#aeaeb2] border border-black/[0.08] rounded px-1.5 py-0.5 shrink-0">⌘K</span>
-      </button>
+      </form>
 
-      {/* Quick questions — tap to ask, the result opens in the palette */}
-      <div className="flex flex-wrap gap-1.5 mb-8">
+      {/* Quick-question pills */}
+      <div className="flex flex-wrap gap-2 justify-center mb-10">
         {QUICK_QUESTIONS.map((q) => (
           <button
             key={q}
             onClick={() => ask(q)}
-            className="text-[12px] px-3 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed] transition-colors"
+            className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed] transition-colors"
           >
             {q}
           </button>
         ))}
       </div>
 
-      {/* Decisions waiting — the only "to-do" surface */}
-      <h2 className="text-[15px] font-semibold text-[#1d1d1f] mb-2 mt-2">Needs your call</h2>
-      {visibleRecs.length === 0 ? (
-        <div className="apple-card p-6 text-center">
-          <CheckCircle2 size={18} className="text-[#34c759] mx-auto mb-1.5" />
-          <p className="text-[13px] font-semibold text-[#1d1d1f]">Nothing flagged right now</p>
-          <p className="text-[11px] text-[#86868b] mt-0.5">
-            {loadError ? "Some signals didn't load — refresh to retry." : "Aiviate is watching the fleet in the background."}
+      {/* Load error banner (honest) */}
+      {loadError && (
+        <div className="max-w-[680px] mx-auto mb-6 rounded-xl border border-[#ff9500]/30 bg-[#ff9500]/[0.04] p-3 flex items-start gap-2">
+          <AlertTriangle size={14} className="text-[#ff9500] mt-0.5 shrink-0" />
+          <p className="text-[12px] text-[#1d1d1f]">
+            <span className="font-semibold">Heads up:</span> {loadError}. Treat those sections as unknown, not safe.
           </p>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {visibleRecs.map((rec) => (
-            <DecisionCard key={rec.id} rec={rec} onAck={onAck} onDismiss={dismiss} />
-          ))}
-        </div>
       )}
 
-      {/* What Aiviate just did, in human language */}
-      {recentAutoActions.length > 0 && (
-        <>
-          <h2 className="text-[15px] font-semibold text-[#1d1d1f] mb-2 mt-8">What I've done for you</h2>
-          <div className="apple-card p-4">
-            <div className="space-y-1.5">
+      {/* Card grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        {/* Inbox / Needs your call */}
+        <div className="rounded-2xl bg-[#0b1220] text-white p-4 sm:p-5 flex flex-col min-h-[260px]">
+          <div className="flex items-center gap-2 mb-3">
+            <Inbox size={14} className="opacity-80" />
+            <p className="text-[12px] uppercase tracking-wider font-semibold opacity-80">Needs your call</p>
+          </div>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="skeleton h-4 w-2/3 opacity-30" />
+              <div className="skeleton h-3 w-full opacity-30" />
+            </div>
+          ) : visibleRecs.length === 0 ? (
+            <div className="flex-1 flex flex-col">
+              <p className="text-[20px] font-semibold leading-tight">
+                <span className="text-[#34c759]">All clear.</span>
+              </p>
+              <p className="text-[13px] opacity-80 mt-1.5">
+                Nothing needs you right now. Aiviate is watching the fleet in the background.
+              </p>
+              <button
+                onClick={() => ask("what should I do?")}
+                className="mt-auto text-[12px] font-medium text-white/90 hover:text-white inline-flex items-center gap-1"
+              >
+                Ask what to focus on <ArrowUpRight size={12} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-[20px] font-semibold leading-tight">
+                <span className="text-[#34c759]">{visibleRecs.length} {visibleRecs.length === 1 ? "decision" : "decisions"}</span>{" "}
+                need attention.
+              </p>
+              <div className="mt-3 space-y-2 overflow-y-auto max-h-[280px] pr-1">
+                {visibleRecs.slice(0, 3).map((rec) => (
+                  <DecisionCard key={rec.id} rec={rec} onAck={onAck} onDismiss={dismiss} />
+                ))}
+              </div>
+              {visibleRecs.length > 3 && (
+                <button
+                  onClick={() => ask("what should I do?")}
+                  className="mt-auto pt-3 text-[12px] font-medium text-white/90 hover:text-white inline-flex items-center gap-1 self-start"
+                >
+                  See all {visibleRecs.length} <ArrowUpRight size={12} />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* What I've done for you */}
+        <div className="rounded-2xl bg-white border border-black/[0.06] p-4 sm:p-5 flex flex-col min-h-[260px]">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={14} className="text-[#008080]" />
+            <p className="text-[12px] uppercase tracking-wider font-semibold text-[#86868b]">What I've done for you</p>
+          </div>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="skeleton h-3 w-full" />
+              <div className="skeleton h-3 w-2/3" />
+              <div className="skeleton h-3 w-4/5" />
+            </div>
+          ) : recentAutoActions.length === 0 ? (
+            <p className="text-[13px] text-[#86868b]">
+              No automated actions yet — once you assign jobs or telemetry rolls in, I'll log it all here.
+            </p>
+          ) : (
+            <div className="space-y-2 flex-1">
               {recentAutoActions.map((a, i) => (
-                <p key={i} className="text-[13px] text-[#1d1d1f] flex items-start gap-2">
+                <div key={i} className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
                   <span className="text-[#008080] mt-0.5">▸</span>
                   <span className="flex-1">{a.summary}</span>
-                  <span className="text-[11px] text-[#aeaeb2] shrink-0">{timeAgo(a.at)}</span>
-                </p>
+                  <span className="text-[11px] text-[#aeaeb2] shrink-0 mt-0.5">{timeAgo(a.at)}</span>
+                </div>
               ))}
             </div>
-            <button
-              onClick={() => ask("what just happened?")}
-              className="mt-3 text-[11px] text-[#008080] hover:underline"
-            >
-              See everything I've handled →
-            </button>
-          </div>
-        </>
-      )}
+          )}
+          <button
+            onClick={() => ask("what just happened?")}
+            className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"
+          >
+            See everything I've handled <ArrowUpRight size={12} />
+          </button>
+        </div>
 
-      <p className="text-[10px] text-[#aeaeb2] text-center mt-10">
-        Auto-refreshes every 30s · Last sync {lastSyncAt ? timeAgo(lastSyncAt) : "never"}
-      </p>
+        {/* Quick looks — light stats */}
+        <div className="rounded-2xl bg-white border border-black/[0.06] p-4 sm:p-5 flex flex-col min-h-[260px]">
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-[12px] uppercase tracking-wider font-semibold text-[#86868b]">Quick looks</p>
+          </div>
+          {loading || !stats ? (
+            <div className="space-y-2">
+              <div className="skeleton h-3 w-full" />
+              <div className="skeleton h-3 w-2/3" />
+              <div className="skeleton h-3 w-4/5" />
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <button
+                onClick={() => ask("show me today's routes")}
+                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
+              >
+                <span className="text-[12.5px] text-[#1d1d1f]">Today's stops</span>
+                <span className="text-[14px] font-semibold text-[#1d1d1f]">{stats.stops_today ?? 0}</span>
+              </button>
+              <button
+                onClick={() => ask("who's working?")}
+                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
+              >
+                <span className="text-[12.5px] text-[#1d1d1f]">Active drivers</span>
+                <span className="text-[14px] font-semibold text-[#1d1d1f]">
+                  {stats.active_drivers ?? 0}<span className="text-[11px] text-[#aeaeb2] font-normal"> / {stats.total_drivers ?? 0}</span>
+                </span>
+              </button>
+              <button
+                onClick={() => ask("show unassigned jobs")}
+                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
+              >
+                <span className="text-[12.5px] text-[#1d1d1f]">Unassigned jobs</span>
+                <span className={`text-[14px] font-semibold ${
+                  (stats.unassigned ?? 0) > 0 ? "text-[#ff9500]" : "text-[#34c759]"
+                }`}>{stats.unassigned ?? 0}</span>
+              </button>
+              <button
+                onClick={() => ask("any problems?")}
+                className="w-full flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[#f5f5f7] text-left transition-colors"
+              >
+                <span className="text-[12.5px] text-[#1d1d1f]">Unread alerts</span>
+                <span className={`text-[14px] font-semibold ${
+                  (stats.unread_alerts ?? 0) > 0 ? "text-[#ff3b30]" : "text-[#34c759]"
+                }`}>{stats.unread_alerts ?? 0}</span>
+              </button>
+            </div>
+          )}
+          <p className="text-[10.5px] text-[#aeaeb2] mt-3">
+            Tap any row to ask Aiviate about it.
+          </p>
+        </div>
+      </div>
 
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
