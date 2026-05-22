@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import {
-  Eye,
+  Brain,
   Radio,
   Package,
   Map,
@@ -8,8 +8,8 @@ import {
   Menu,
   X,
   Shield,
-  Camera,
-  Bell,
+  Smartphone,
+  Sparkles,
   Activity,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -18,16 +18,17 @@ import { useAuth } from "../contexts/AuthContext";
 import { getAlerts } from "../services/api";
 
 const primaryNav = [
-  { to: "/", icon: Shield, label: "Safety" },
-  { to: "/live", icon: Activity, label: "Live" },
-  { to: "/guardians", icon: Camera, label: "Guardians" },
-  { to: "/drivers", icon: Truck, label: "Drivers" },
-  { to: "/events", icon: Bell, label: "Events", badgeKey: "alerts" },
+  { to: "/", icon: Brain, label: "Command" },
+  { to: "/live", icon: Activity, label: "Live ops" },
+  { to: "/intelligence", icon: Sparkles, label: "Intelligence", badgeKey: "alerts" },
 ];
 
 const secondaryNav = [
   { to: "/dispatch", icon: Radio, label: "Dispatch" },
   { to: "/jobs", icon: Package, label: "Jobs" },
+  { to: "/drivers", icon: Truck, label: "Drivers" },
+  { to: "/devices", icon: Smartphone, label: "Devices" },
+  { to: "/safety", icon: Shield, label: "Safety" },
   { to: "/map", icon: Map, label: "Map" },
 ];
 
@@ -71,7 +72,7 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
-    if (location.pathname === "/events" || location.pathname === "/alerts") {
+    if (location.pathname === "/intelligence" || location.pathname === "/events" || location.pathname === "/alerts") {
       getAlerts({ unread: true, limit: 1 })
         .then((d) => setUnreadAlerts(d.unread_count || 0))
         .catch(() => {});
@@ -141,7 +142,7 @@ export default function Sidebar() {
             );
           })}
 
-          <p className="px-3 pt-5 pb-2 text-[10px] uppercase tracking-[0.08em] text-[#c7c7cc] font-semibold">Operations</p>
+          <p className="px-3 pt-5 pb-2 text-[10px] uppercase tracking-[0.08em] text-[#c7c7cc] font-semibold">Workspace</p>
           {secondaryNav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}

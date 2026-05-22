@@ -17,6 +17,7 @@ import LiveOps from "./pages/LiveOps";
 import SafetyCenter from "./pages/SafetyCenter";
 import Devices from "./pages/Devices";
 import Alerts from "./pages/Alerts";
+import CommandCenter from "./pages/CommandCenter";
 
 function AdminRoutes() {
   return (
@@ -56,17 +57,19 @@ function AppRoutes() {
           </>
         ) : (
           <>
-            <Route path="/" element={<SafetyCenter />} />
+            <Route path="/" element={<CommandCenter />} />
             <Route path="/live" element={<LiveOps />} />
-            <Route path="/guardians" element={<Devices />} />
-            <Route path="/devices" element={<Navigate to="/guardians" replace />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/events" element={<Alerts />} />
-            <Route path="/alerts" element={<Navigate to="/events" replace />} />
             <Route path="/dispatch" element={<DispatchCenter />} />
             <Route path="/jobs" element={<Jobs />} />
+            <Route path="/drivers" element={<Drivers />} />
+            <Route path="/devices" element={<Devices />} />
+            <Route path="/guardians" element={<Navigate to="/devices" replace />} />
+            <Route path="/safety" element={<SafetyCenter />} />
+            <Route path="/intelligence" element={<Alerts />} />
+            <Route path="/events" element={<Navigate to="/intelligence" replace />} />
+            <Route path="/alerts" element={<Navigate to="/intelligence" replace />} />
             <Route path="/map" element={<MapView />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </>

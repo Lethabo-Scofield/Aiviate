@@ -453,21 +453,21 @@ export default function Devices() {
     <div className="animate-fade-in">
       <div className="mb-6 sm:mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Guardians</h1>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Devices</h1>
           <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            In-cab fatigue cameras — watching every driver's eyes, in real time.
+            Telemetry layer — every Guardian unit, its health, and which driver it's watching.
           </p>
         </div>
         <button onClick={() => setShowAdd(true)} className="apple-btn apple-btn-primary">
-          <Plus size={15} /> Pair Guardian
+          <Plus size={15} /> Pair device
         </button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
-          { label: "Guardians deployed", value: devices.length, color: "#1d1d1f" },
-          { label: "Cameras live now", value: onlineCount, color: "#34c759" },
-          { label: "Drivers protected", value: devices.filter((d) => d.driver_id).length, color: "#008080" },
+          { label: "Total devices", value: devices.length, color: "#1d1d1f" },
+          { label: "Online now", value: onlineCount, color: "#34c759" },
+          { label: "Drivers covered", value: devices.filter((d) => d.driver_id).length, color: "#008080" },
           { label: "Need attention", value: lowBattery + updatesAvailable, color: "#ff9500" },
         ].map((s) => (
           <div key={s.label} className="stat-card">
