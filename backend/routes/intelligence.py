@@ -27,6 +27,8 @@ from intelligence.audit_logger import log_action
 from intelligence.workflow_engine import run_autonomous_workflows
 from intelligence.auto_optimizer import optimize_job_stops
 from intelligence import command_parser
+from agents import Orchestrator
+from agents.context import build_context as _agents_ctx
 
 
 def _driver_liveops_summary(db, company_id):
@@ -71,15 +73,51 @@ def recommendations():
             db, company_id=company_id, device_anomalies=device_anomalies
         )
 
-        recs = build_recommendations(
+        # Legacy detector output (telemetry / safety / critical alerts).
+        # Tagged with synthetic agent names so the UI can group everything
+        # under the multi-agent model.
+        legacy = build_recommendations(
             device_anomalies=device_anomalies,
             fatigue_clusters=fatigue_clusters,
             blocked_drivers=blocked,
             open_critical_alerts=crit_alerts,
         )
+        for r in legacy:
+            cat = r.get("category", "")
+            if cat == "Driver risk":
+                r["agent"] = "Driver Safety"
+            elif cat == "Telemetry":
+                r["agent"] = "Device Telemetry"
+            elif cat == "Critical alert":
+                r["agent"] = "Critical Alerts"
+            else:
+                r["agent"] = "Dynamic Rerouting"
+
+        # New: run the agent orchestrator and merge its decisions.
+        ctx = _agents_ctx(db, company_id)
+        agent_decisions, agent_statuses = Orchestrator().run(ctx)
+        merged = legacy + [d.to_dict() for d in agent_decisions]
+
+        # De-duplicate by id (orchestrator may overlap with legacy on blocked drivers)
+        seen = set()
+        recs = []
+        for r in merged:
+            rid = r.get("id")
+            if rid in seen:
+                continue
+            seen.add(rid)
+            recs.append(r)
+
+        # Sort by severity then confidence (mirror orchestrator order)
+        sev_w = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+        recs.sort(
+            key=lambda r: (sev_w.get(r.get("severity"), 0), r.get("confidence", 0)),
+            reverse=True,
+        )
 
         return jsonify({
             "recommendations": recs,
+            "agents": [s.to_dict() for s in agent_statuses],
             "autonomous_actions_this_call": [
                 {
                     "summary": e.summary,

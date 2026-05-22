@@ -20,6 +20,7 @@ import {
 import {
   acknowledgeRecommendation,
   assignDriver,
+  getAgents,
   getAlerts,
   getAuditLog,
   getDevices,
@@ -124,7 +125,7 @@ function RecommendationCard({ rec, onAck, onDismiss }) {
 /* ─────────────────────────── main ─────────────────────────── */
 export default function Operations() {
   const [data, setData] = useState({
-    recs: [], audit: [], drivers: [], jobs: [], alerts: [], devices: [], safety: [],
+    recs: [], audit: [], drivers: [], jobs: [], alerts: [], devices: [], safety: [], agents: [],
   });
   const [partialFailures, setPartialFailures] = useState([]); // list of section names that failed
   const [loading, setLoading] = useState(true);
@@ -154,9 +155,10 @@ export default function Operations() {
         getAlerts({ unread: true, limit: 20 }),
         getDevices(),
         getSafetyEvents(),
+        getAgents(),
       ]);
       if (myReq !== reqIdRef.current) return; // stale response, drop
-      const labels = ["recs", "audit", "drivers", "jobs", "alerts", "devices", "safety"];
+      const labels = ["recs", "audit", "drivers", "jobs", "alerts", "devices", "safety", "agents"];
       const failed = [];
       const get = (i, key, fallback) => {
         if (settled[i].status === "fulfilled") return settled[i].value?.[key] ?? fallback;
@@ -171,6 +173,7 @@ export default function Operations() {
         alerts: get(4, "alerts", []),
         devices: get(5, "devices", []),
         safety: get(6, "events", []),
+        agents: get(7, "agents", []),
       });
       setPartialFailures(failed);
       setLoadError(null);
@@ -324,6 +327,62 @@ export default function Operations() {
           <p className="text-[12px] text-[#1d1d1f]">
             <span className="font-semibold">Partial outage:</span> couldn't fetch{" "}
             <span className="font-mono text-[#86868b]">{partialFailures.join(", ")}</span>. Treat those sections as stale.
+          </p>
+        </div>
+      )}
+
+      {/* Agent roster — multi-agent operations */}
+      {data.agents.length > 0 && (
+        <div className="apple-card p-4 mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain size={14} className="text-[#008080]" />
+            <p className="text-[13px] font-semibold text-[#1d1d1f]">Agents</p>
+            <span className="text-[11px] text-[#86868b] ml-auto">
+              {data.agents.filter((a) => a.state === "active").length} active ·{" "}
+              {data.agents.filter((a) => a.state === "idle").length} idle ·{" "}
+              {data.agents.filter((a) => a.state === "no_signal").length} no signal ·{" "}
+              {data.agents.filter((a) => a.state === "error").length} error
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {data.agents.map((a) => {
+              const dotColor = a.state === "active" ? "#34c759"
+                : a.state === "idle" ? "#aeaeb2"
+                : a.state === "error" ? "#ff3b30"
+                : "#ff9500";
+              const label = a.state === "no_signal" ? "no signal" : a.state;
+              return (
+                <div key={a.name} className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor }} />
+                    <p className="text-[12px] font-semibold text-[#1d1d1f] flex-1 truncate">{a.name}</p>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: dotColor }}>
+                      {label}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#86868b] leading-snug">{a.responsibility}</p>
+                  {a.last_decision_summary && (
+                    <p className="text-[11px] text-[#1d1d1f] mt-1.5 flex items-start gap-1">
+                      <span className="text-[#008080]">▸</span><span className="truncate">{a.last_decision_summary}</span>
+                    </p>
+                  )}
+                  {a.note && (
+                    <p className="text-[10px] text-[#aeaeb2] mt-1 italic leading-snug">{a.note}</p>
+                  )}
+                  {a.error && (
+                    <p className="text-[10px] text-[#ff3b30] mt-1">Error: {a.error}</p>
+                  )}
+                  {a.decisions_emitted > 0 && (
+                    <p className="text-[10px] text-[#aeaeb2] mt-1">
+                      {a.decisions_emitted} decision{a.decisions_emitted === 1 ? "" : "s"} emitted
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-[#aeaeb2] mt-3">
+            Each agent owns one responsibility. Approval & Risk classifies which decisions can run automatically vs need a human.
           </p>
         </div>
       )}

@@ -33,6 +33,11 @@ async function handleResponse(res) {
   return data;
 }
 
+export async function getAgents() {
+  const res = await fetch(`${API_BASE}/agents`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
 export async function getRecommendations() {
   const res = await fetch(`${API_BASE}/intelligence/recommendations`, { headers: getAuthHeaders() });
   return handleResponse(res);
