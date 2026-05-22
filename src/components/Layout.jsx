@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import CommandPalette from "./CommandPalette";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 /** Fire the global ask-aiviate event so any listener (Layout) can open the palette and run it. */
 function ask(text) {
@@ -70,7 +70,7 @@ export default function Layout() {
                 onSubmit={submitTop}
                 className="w-full flex items-center gap-3 px-4 py-2 rounded-xl bg-[#f5f5f7] border border-black/[0.04] focus-within:border-[#008080]/40 focus-within:bg-white transition-colors"
               >
-                <Sparkles size={15} className="text-[#008080] shrink-0" />
+                <img src="/logo.png" alt="" className="w-4 h-4 shrink-0" />
                 <input
                   ref={topInputRef}
                   value={topText}
@@ -107,9 +107,9 @@ export default function Layout() {
         onClick={() => { setInitialQuery(""); setPaletteOpen(true); }}
         title="Ask Aiviate"
         aria-label="Ask Aiviate"
-        className="fixed bottom-5 right-5 z-[150] lg:hidden w-12 h-12 flex items-center justify-center rounded-full bg-[#008080] text-white shadow-lg"
+        className="fixed bottom-5 right-5 z-[150] lg:hidden w-12 h-12 flex items-center justify-center rounded-full bg-[#008080] shadow-lg"
       >
-        <Sparkles size={18} />
+        <img src="/logo.png" alt="Ask Aiviate" className="w-6 h-6 brightness-0 invert" />
       </button>
 
       <CommandPalette

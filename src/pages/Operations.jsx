@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Inbox,
   Plus,
-  Sparkles,
   X,
   Zap,
 } from "lucide-react";
@@ -191,7 +190,7 @@ export default function Operations() {
       {/* Hero — centered greeting */}
       <div className="text-center pt-6 sm:pt-10 mb-5">
         <h1 className="text-[24px] sm:text-[30px] font-semibold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
-          <Sparkles size={20} className="text-[#008080]" />
+          <img src="/logo.png" alt="" className="w-6 h-6 sm:w-7 sm:h-7" />
           Hi {firstName}, what can Aiviate cross off your list?
         </h1>
       </div>
@@ -310,7 +309,7 @@ export default function Operations() {
         {/* What I've done for you */}
         <div className="rounded-2xl bg-white border border-black/[0.06] p-4 sm:p-5 flex flex-col min-h-[260px]">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={14} className="text-[#008080]" />
+            <img src="/logo.png" alt="" className="w-3.5 h-3.5" />
             <p className="text-[12px] uppercase tracking-wider font-semibold text-[#86868b]">What I've done for you</p>
           </div>
           {loading ? (
