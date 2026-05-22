@@ -1,22 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Terminal, X, ArrowRight, AlertCircle, CheckCircle2, ChevronRight, MapPin, Send } from "lucide-react";
+import { Sparkles, X, AlertCircle, CheckCircle2, ChevronRight, MapPin, Send } from "lucide-react";
 import { sendCommand } from "../services/api";
 import MiniRouteMap from "./MiniRouteMap";
 
-const HINTS = [
-  "help",
-  "stats",
-  "map",
-  "jobs",
-  "drivers",
-  "alerts",
-  "recommendations",
-  "route <job_id>",
-  "optimize all",
-  "assign <job_id> <driver_id>",
-  "notify <driver_id> <message>",
-  "audit",
+const SUGGESTIONS = [
+  "Show me today's routes",
+  "How are we doing?",
+  "Any problems?",
+  "What should I do?",
+  "Who's working?",
+  "What jobs do I have?",
 ];
 
 function ResultBlock({ result }) {
@@ -33,11 +27,11 @@ function ResultBlock({ result }) {
 
   if (t === "help") {
     return (
-      <div className="space-y-1">
-        {result.items?.map((c) => (
-          <div key={c.command} className="flex items-baseline gap-3 font-mono text-[12px]">
-            <span className="text-[#008080] font-semibold w-28 shrink-0">{c.command}</span>
-            <span className="text-[#86868b]">{c.description}</span>
+      <div className="space-y-1.5">
+        {result.items?.map((c, i) => (
+          <div key={i} className="flex items-baseline gap-3 text-[12px]">
+            <span className="text-[#008080] font-medium italic">"{c.phrase || c.command}"</span>
+            <span className="text-[#86868b]">— {c.does || c.description}</span>
           </div>
         ))}
       </div>
@@ -240,17 +234,17 @@ export default function CommandPalette({ open, onClose }) {
         className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-black/[0.08] flex flex-col max-h-[80vh] overflow-hidden"
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-black/[0.06]">
-          <Terminal size={16} className="text-[#008080]" />
+          <Sparkles size={16} className="text-[#008080]" />
           <input
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKey}
-            placeholder="Type a command — try `help` or `stats`"
-            className="flex-1 bg-transparent text-[14px] text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none font-mono"
+            placeholder="Ask Aiviate anything — e.g. show me today's routes"
+            className="flex-1 bg-transparent text-[14px] text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none"
             disabled={busy}
           />
-          {busy && <span className="text-[11px] text-[#aeaeb2]">running…</span>}
+          {busy && <span className="text-[11px] text-[#aeaeb2]">thinking…</span>}
           <button onClick={onClose} className="text-[#aeaeb2] hover:text-[#1d1d1f]">
             <X size={16} />
           </button>
@@ -260,30 +254,30 @@ export default function CommandPalette({ open, onClose }) {
           {history.length === 0 ? (
             <div>
               <p className="text-[11px] uppercase tracking-wider text-[#86868b] font-semibold mb-2">
-                Quick commands
+                Try asking
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {HINTS.map((h) => (
+                {SUGGESTIONS.map((h) => (
                   <button
                     key={h}
-                    onClick={() => run(h.includes("<") ? `${h.split(" ")[0]} ` : h)}
-                    className="text-[12px] font-mono px-2 py-1 rounded-lg bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed]"
+                    onClick={() => run(h)}
+                    className="text-[12px] px-3 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed] transition-colors"
                   >
                     {h}
                   </button>
                 ))}
               </div>
               <p className="text-[11px] text-[#aeaeb2] mt-4">
-                Commands run against the live backend and are recorded in the audit log when they change state.
+                Talk to me in plain English. I'll show you maps, lists, and answers — and let you assign jobs, notify drivers, or fix routes with a single sentence.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {history.map((h, i) => (
                 <div key={i}>
-                  <div className="flex items-center gap-2 text-[12px] font-mono text-[#86868b] mb-1.5">
+                  <div className="flex items-center gap-2 text-[12px] text-[#86868b] mb-1.5">
                     <ChevronRight size={12} className="text-[#008080]" />
-                    <span>{h.input}</span>
+                    <span className="italic">{h.input}</span>
                   </div>
                   <div className="pl-5">
                     <ResultBlock result={h.result} />
@@ -295,8 +289,8 @@ export default function CommandPalette({ open, onClose }) {
         </div>
 
         <div className="px-4 py-2 border-t border-black/[0.06] flex items-center justify-between text-[10px] text-[#aeaeb2]">
-          <span>Enter to run · Esc to close</span>
-          <span className="font-mono">⌘K / Ctrl+K to toggle</span>
+          <span>Press Enter to send · Esc to close</span>
+          <span>⌘K / Ctrl+K to open anytime</span>
         </div>
       </div>
     </div>

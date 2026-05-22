@@ -35,13 +35,25 @@ ALIASES = {
 }
 
 
+def _safe_split(text: str) -> List[str]:
+    """shlex.split, but tolerant of unbalanced apostrophes from natural input.
+
+    Conversational phrases ("today's", "who's") use apostrophes that shlex
+    interprets as quote characters. If shlex chokes, fall back to a simple
+    whitespace split so the parser can still produce a useful intent.
+    """
+    try:
+        return shlex.split(text)
+    except ValueError:
+        return text.split()
+
+
 def parse(text: str) -> Dict:
     if not text or not text.strip():
         return {"error": "Empty command — try `help`"}
-    try:
-        parts = shlex.split(text.strip())
-    except ValueError as exc:
-        return {"error": f"Could not parse: {exc}"}
+    parts = _safe_split(text.strip())
+    if not parts:
+        return {"error": "Empty command — try `help`"}
 
     head = parts[0].lower()
     args = parts[1:]
@@ -68,3 +80,24 @@ def parse(text: str) -> Dict:
 
 def help_entries() -> List[Dict]:
     return [{"command": k, "description": v["desc"]} for k, v in COMMANDS.items()]
+
+
+# Friendly examples surfaced in the UI — phrasing that the natural-language
+# layer understands, grouped by what the user is trying to do.
+FRIENDLY_EXAMPLES: List[Dict] = [
+    {"phrase": "show me today's routes",         "does": "Pops up a live map of every active route"},
+    {"phrase": "what jobs do I have?",           "does": "Lists today's jobs and who's on each one"},
+    {"phrase": "who's working?",                 "does": "Shows your drivers and their status"},
+    {"phrase": "any problems?",                  "does": "Surfaces open alerts that need attention"},
+    {"phrase": "how are we doing?",              "does": "Quick snapshot of jobs, drivers, and alerts"},
+    {"phrase": "what should I do?",              "does": "Lists the system's current recommendations"},
+    {"phrase": "show route j-1",                 "does": "Puts a single route on the map"},
+    {"phrase": "give j-1 to Mike",               "does": "Assigns the job and notifies the driver"},
+    {"phrase": "fix all routes",                 "does": "Re-optimizes every active route"},
+    {"phrase": "tell Mike to hurry up",          "does": "Sends an in-app message to that driver"},
+    {"phrase": "block Sarah",                    "does": "Pauses a driver from new assignments"},
+]
+
+
+def friendly_examples() -> List[Dict]:
+    return list(FRIENDLY_EXAMPLES)

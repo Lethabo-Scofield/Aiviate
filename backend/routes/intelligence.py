@@ -26,7 +26,7 @@ from intelligence.recommendation_engine import build_recommendations
 from intelligence.audit_logger import log_action
 from intelligence.workflow_engine import run_autonomous_workflows
 from intelligence.auto_optimizer import optimize_job_stops
-from intelligence import command_parser
+from intelligence import command_parser, natural_parser
 from intelligence.driver_notifier import notify_driver
 from agents import Orchestrator
 from agents.context import build_context as _agents_ctx
@@ -206,8 +206,78 @@ def _resp(ok=True, summary="", **extra):
     return out
 
 
+def _humanize_parse_error(err, original):
+    """Replace CLI-style errors with friendly suggestions."""
+    snippet = (original or "").strip()
+    prefix = f"I didn't catch \"{snippet}\". " if snippet else "I didn't catch that. "
+    return (
+        prefix
+        + "Try things like: \"show me today's routes\", \"how are we doing?\", "
+        + "\"tell Mike to hurry up\", or \"fix all routes\". "
+        + "Type `help` to see everything I understand."
+    )
+
+
+def _resolve_driver(db, company_id, token):
+    """Find a driver by exact id or by partial name match (case-insensitive).
+
+    Returns (driver, error_message). error_message is None on success.
+    """
+    if not token:
+        return None, "Which driver?"
+    token = token.strip().strip('"').strip("'")
+    # Try exact id first.
+    d = db.query(Driver).filter(
+        Driver.id == token, Driver.company_id == company_id
+    ).first()
+    if d:
+        return d, None
+    # Partial name match.
+    matches = (
+        db.query(Driver)
+        .filter(Driver.company_id == company_id,
+                Driver.name.ilike(f"%{token}%"))
+        .all()
+    )
+    if len(matches) == 1:
+        return matches[0], None
+    if len(matches) > 1:
+        names = ", ".join(m.name for m in matches[:5])
+        return None, f"Multiple drivers match \"{token}\": {names}. Be more specific."
+    return None, f"I couldn't find a driver named \"{token}\"."
+
+
+def _resolve_job(db, company_id, token):
+    """Find a job by exact id, otherwise by partial id/area match."""
+    if not token:
+        return None, "Which job?"
+    token = token.strip().strip('"').strip("'")
+    j = db.query(Job).filter(
+        Job.id == token, Job.company_id == company_id
+    ).first()
+    if j:
+        return j, None
+    matches = (
+        db.query(Job)
+        .filter(Job.company_id == company_id)
+        .filter((Job.id.ilike(f"%{token}%")) | (Job.area.ilike(f"%{token}%")))
+        .all()
+    )
+    if len(matches) == 1:
+        return matches[0], None
+    if len(matches) > 1:
+        ids = ", ".join(m.id for m in matches[:5])
+        return None, f"Multiple jobs match \"{token}\": {ids}. Be more specific."
+    return None, f"I couldn't find a job matching \"{token}\"."
+
+
 def _exec_help():
-    return _resp(True, "Available commands", type="help", items=command_parser.help_entries())
+    return _resp(
+        True,
+        "Here are some things you can ask me",
+        type="help",
+        items=command_parser.friendly_examples(),
+    )
 
 
 def _exec_drivers(db, company_id):
@@ -277,12 +347,12 @@ def _route_payload(db, company_id, job):
 
 
 def _exec_route(db, company_id, job_id):
-    job = db.query(Job).filter(Job.id == job_id, Job.company_id == company_id).first()
-    if not job:
-        return _resp(False, f"Job `{job_id}` not found")
+    job, err = _resolve_job(db, company_id, job_id)
+    if err:
+        return _resp(False, err)
     payload = _route_payload(db, company_id, job)
     if not payload["stops"]:
-        return _resp(False, f"Job `{job_id}` has no geocoded stops to map")
+        return _resp(False, f"Job {job.id} has no geocoded stops yet, so I can't put it on the map.")
     return _resp(
         True,
         f"Route {job.id} — {len(payload['stops'])} stops"
@@ -310,13 +380,11 @@ def _exec_map(db, company_id):
 
 
 def _exec_notify(db, company_id, driver_id, message, actor):
-    d = db.query(Driver).filter(
-        Driver.id == driver_id, Driver.company_id == company_id
-    ).first()
-    if not d:
-        return _resp(False, f"Driver `{driver_id}` not found")
+    d, err = _resolve_driver(db, company_id, driver_id)
+    if err:
+        return _resp(False, err)
     if not message or not message.strip():
-        return _resp(False, "Notification needs a message")
+        return _resp(False, "What should I tell them? Add a short message.")
     alert = notify_driver(
         db, company_id=company_id, driver_id=d.id, driver_name=d.name,
         title=f"Message from dispatch", message=message.strip(),
@@ -407,12 +475,12 @@ def _exec_stats(db, company_id):
 
 
 def _exec_assign(db, company_id, job_id, driver_id):
-    driver = db.query(Driver).filter(Driver.id == driver_id, Driver.company_id == company_id).first()
-    if not driver:
-        return _resp(False, f"Driver `{driver_id}` not found")
-    job = db.query(Job).filter(Job.id == job_id, Job.company_id == company_id).first()
-    if not job:
-        return _resp(False, f"Job `{job_id}` not found")
+    driver, err = _resolve_driver(db, company_id, driver_id)
+    if err:
+        return _resp(False, err)
+    job, err = _resolve_job(db, company_id, job_id)
+    if err:
+        return _resp(False, err)
     job.status = "assigned"
     job.driver_id = driver.id
     job.driver_name = driver.name
@@ -459,9 +527,9 @@ def _exec_assign(db, company_id, job_id, driver_id):
 
 
 def _exec_unassign(db, company_id, job_id):
-    job = db.query(Job).filter(Job.id == job_id, Job.company_id == company_id).first()
-    if not job:
-        return _resp(False, f"Job `{job_id}` not found")
+    job, err = _resolve_job(db, company_id, job_id)
+    if err:
+        return _resp(False, err)
     job.status = "unassigned"
     job.driver_id = None
     job.driver_name = None
@@ -471,9 +539,10 @@ def _exec_unassign(db, company_id, job_id):
 
 
 def _exec_optimize(db, company_id, job_id):
-    job = db.query(Job).filter(Job.id == job_id, Job.company_id == company_id).first()
-    if not job:
-        return _resp(False, f"Job `{job_id}` not found")
+    job, err = _resolve_job(db, company_id, job_id)
+    if err:
+        return _resp(False, err)
+    job_id = job.id
     driver = None
     if job.driver_id:
         driver = db.query(Driver).filter(
@@ -540,9 +609,9 @@ def _exec_optimize_all(db, company_id):
 
 
 def _exec_block(db, company_id, driver_id, blocked):
-    d = db.query(Driver).filter(Driver.id == driver_id, Driver.company_id == company_id).first()
-    if not d:
-        return _resp(False, f"Driver `{driver_id}` not found")
+    d, err = _resolve_driver(db, company_id, driver_id)
+    if err:
+        return _resp(False, err)
     d.blocked = blocked
     db.commit()
     return _resp(True, f"{'Blocked' if blocked else 'Unblocked'} {d.name}", type="driver_updated")
@@ -563,9 +632,15 @@ def _exec_acknowledge(db, company_id, rec_id, actor):
 def run_command():
     body = request.get_json(silent=True) or {}
     text = body.get("text", "")
-    parsed = command_parser.parse(text)
+    # Translate natural phrasing → underlying command grammar (deterministic).
+    normalized = natural_parser.normalize(text)
+    parsed = command_parser.parse(normalized)
     if "error" in parsed:
-        return jsonify({"ok": False, "summary": parsed["error"], "input": text}), 200
+        return jsonify({
+            "ok": False,
+            "summary": _humanize_parse_error(parsed["error"], text),
+            "input": text,
+        }), 200
 
     intent = parsed["intent"]
     args = parsed.get("args", [])
