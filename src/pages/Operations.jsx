@@ -24,8 +24,10 @@ import {
   getAuditLog,
   getRecommendations,
   getStats,
+  sendCommand,
 } from "../services/api";
-import { getPaletteOpen, subscribePaletteOpen } from "../lib/paletteBus";
+import ResultBlock from "../components/ResultBlock";
+import { takePendingAsk } from "../lib/askBus";
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 function timeAgo(iso) {
@@ -51,10 +53,6 @@ const SEV_COLOR = {
   warning: "#ff9500", info: "#008080",
 };
 
-/** Fire the global ask-aiviate event so the palette opens and runs the query. */
-function ask(text) {
-  window.dispatchEvent(new CustomEvent("ask-aiviate", { detail: { text: text || "" } }));
-}
 
 /* ─────────────────────────── small bits ─────────────────────────── */
 function Toast({ toast, onClose }) {
@@ -173,12 +171,76 @@ export default function Operations() {
   const [toast, setToast] = useState(null);
   const [askText, setAskText] = useState("");
   const askRef = useRef(null);
-  // Read current palette state on mount (synchronously, no race) and
-  // subscribe for changes — so the hero prompt cleanly morphs into the
-  // modal input via shared layoutId="ask-aiviate-prompt" without ever
-  // having two elements with the same id mounted at the same time.
-  const [paletteOpen, setPaletteOpen] = useState(() => getPaletteOpen());
-  useEffect(() => subscribePaletteOpen(setPaletteOpen), []);
+
+  // ─── Inline chat surface ────────────────────────────────────────────
+  // The whole Home page transforms into a chat view when the user asks
+  // something. `thread` is the live conversation; `mode` controls layout.
+  const [thread, setThread] = useState([]);
+  const [chatBusy, setChatBusy] = useState(false);
+  const mode = thread.length > 0 ? "chat" : "idle";
+  const threadEndRef = useRef(null);
+
+  const askHere = useCallback(async (raw) => {
+    const text = (raw ?? "").trim();
+    if (!text) {
+      askRef.current?.focus();
+      return;
+    }
+    setAskText("");
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setThread((t) => [...t, { id, input: text, busy: true, result: null }]);
+    setChatBusy(true);
+    try {
+      const r = await sendCommand(text);
+      setThread((t) => t.map((m) => (m.id === id ? { ...m, busy: false, result: r } : m)));
+    } catch (e) {
+      setThread((t) => t.map((m) => (m.id === id
+        ? { ...m, busy: false, result: { ok: false, summary: e?.message || "Couldn't reach Aiviate" } }
+        : m)));
+    } finally {
+      setChatBusy(false);
+      setTimeout(() => askRef.current?.focus(), 30);
+    }
+  }, []);
+
+  // Listen for "home:ask" events fired from the global Layout (top-bar
+  // input, mobile FAB, ⌘K, sidebar, etc.). Empty text just focuses the
+  // input; otherwise it kicks off a chat turn.
+  useEffect(() => {
+    const onHomeAsk = (e) => {
+      const text = (e?.detail?.text || "").trim();
+      if (!text) {
+        askRef.current?.focus();
+      } else {
+        askHere(text);
+      }
+    };
+    window.addEventListener("home:ask", onHomeAsk);
+    return () => window.removeEventListener("home:ask", onHomeAsk);
+  }, [askHere]);
+
+  // Drain any ask queued by Layout *before* this component mounted
+  // (i.e. the user submitted an Ask from a different route and we
+  // navigated here). Runs exactly once on mount.
+  useEffect(() => {
+    const pending = takePendingAsk();
+    if (pending === null) return;
+    if (pending === "") {
+      askRef.current?.focus();
+    } else {
+      askHere(pending);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-scroll to the bottom of the thread on new turns.
+  useEffect(() => {
+    if (mode === "chat") {
+      threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [thread, mode]);
+
+  const resetChat = () => setThread([]);
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(sessionStorage.getItem("dismissedRecs") || "[]")); }
     catch { return new Set(); }
@@ -246,10 +308,7 @@ export default function Operations() {
 
   const submitAsk = (e) => {
     e?.preventDefault?.();
-    const q = askText.trim();
-    if (!q) { askRef.current?.focus(); return; }
-    setAskText("");
-    ask(q);
+    askHere(askText);
   };
 
   const firstName = (user?.name || "").split(" ")[0] || "there";
@@ -257,93 +316,153 @@ export default function Operations() {
   /* ─────────────────────────── render ─────────────────────────── */
   return (
     <div className="animate-fade-in">
-      {/* Hero — centered greeting */}
-      <div className="text-center pt-6 sm:pt-10 mb-5">
-        <h1 className="text-[24px] sm:text-[30px] font-semibold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
-          <img src="/logo.png" alt="" className="w-6 h-6 sm:w-7 sm:h-7" />
-          Hi {firstName}, what can Aiviate cross off your list?
-        </h1>
-      </div>
+      {/* Hero greeting — only in idle mode. Fades + slides up out of the
+          way when the page transforms into the chat surface. */}
+      <AnimatePresence initial={false}>
+        {mode === "idle" && (
+          <motion.div
+            key="greeting"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16, height: 0, marginBottom: 0 }}
+            transition={{ type: "spring", stiffness: 360, damping: 30 }}
+            className="text-center pt-6 sm:pt-10 mb-5 overflow-hidden"
+          >
+            <h1 className="text-[24px] sm:text-[30px] font-semibold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
+              <img src="/logo.png" alt="" className="w-6 h-6 sm:w-7 sm:h-7" />
+              Hi {firstName}, what can Aiviate cross off your list?
+            </h1>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Big rounded pill prompt — centered. Carries the shared layoutId so
-          it visually morphs into the CommandPalette modal input on open. */}
-      <form onSubmit={submitAsk} className="max-w-[680px] mx-auto mb-4">
-        <AnimatePresence>
-          {!paletteOpen && (
-            <motion.div
-              layoutId="ask-aiviate-prompt"
-              initial={false}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 34 }}
-              className="flex items-center gap-3 px-5 py-3.5 rounded-full bg-white border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.04)] focus-within:border-[#008080]/40 focus-within:shadow-[0_2px_22px_rgba(0,128,128,0.10)]"
+      {/* Prompt — two visual variants share layoutId="ask-aiviate-prompt"
+          so the centered pill physically morphs into the sticky top bar
+          when the page enters chat mode (and back again). */}
+      <form onSubmit={submitAsk}>
+        {mode === "idle" ? (
+          <motion.div
+            layoutId="ask-aiviate-prompt"
+            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            className="max-w-[680px] mx-auto mb-4 flex items-center gap-3 px-5 py-3.5 rounded-full bg-white border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.04)] focus-within:border-[#008080]/40 focus-within:shadow-[0_2px_22px_rgba(0,128,128,0.10)]"
+          >
+            <motion.button
+              type="button"
+              onClick={() => askHere("")}
+              title="More commands"
+              aria-label="More commands"
+              whileTap={{ scale: 0.9 }}
+              transition={TAP_SPRING}
+              className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] flex items-center justify-center shrink-0"
             >
-              <motion.button
-                type="button"
-                onClick={() => ask("")}
-                title="More commands"
-                aria-label="More commands"
-                whileTap={{ scale: 0.9 }}
-                transition={TAP_SPRING}
-                className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] flex items-center justify-center shrink-0"
-              >
-                <Plus size={14} />
-              </motion.button>
-              <input
-                ref={askRef}
-                value={askText}
-                onChange={(e) => setAskText(e.target.value)}
-                placeholder='Ask Aiviate, "show me today&rsquo;s routes."'
-                aria-label="Ask Aiviate"
-                className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
-              />
-              <motion.button
-                type="submit"
-                aria-label="Ask"
-                whileTap={{ scale: 0.9 }}
-                transition={TAP_SPRING}
-                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                  askText.trim()
-                    ? "bg-[#008080] hover:bg-[#006666] text-white"
-                    : "bg-[#f5f5f7] text-[#aeaeb2]"
-                }`}
-              >
-                <ArrowRight size={15} />
-              </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <Plus size={14} />
+            </motion.button>
+            <input
+              ref={askRef}
+              value={askText}
+              onChange={(e) => setAskText(e.target.value)}
+              placeholder='Ask Aiviate, "show me today&rsquo;s routes."'
+              aria-label="Ask Aiviate"
+              className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
+            />
+            <motion.button
+              type="submit"
+              aria-label="Ask"
+              whileTap={{ scale: 0.9 }}
+              transition={TAP_SPRING}
+              disabled={chatBusy}
+              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                askText.trim()
+                  ? "bg-[#008080] hover:bg-[#006666] text-white"
+                  : "bg-[#f5f5f7] text-[#aeaeb2]"
+              }`}
+            >
+              <ArrowRight size={15} />
+            </motion.button>
+          </motion.div>
+        ) : (
+          <motion.div
+            layoutId="ask-aiviate-prompt"
+            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            className="sticky top-14 lg:top-3 z-20 max-w-[760px] mx-auto mb-4 flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-white/95 backdrop-blur border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.05)] focus-within:border-[#008080]/40"
+          >
+            <img src="/logo.png" alt="" className="w-4 h-4 shrink-0" />
+            <input
+              ref={askRef}
+              value={askText}
+              onChange={(e) => setAskText(e.target.value)}
+              placeholder={chatBusy ? "Thinking…" : "Ask a follow-up…"}
+              aria-label="Ask Aiviate"
+              className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
+            />
+            <motion.button
+              type="button"
+              onClick={resetChat}
+              whileTap={{ scale: 0.92 }}
+              transition={TAP_SPRING}
+              title="Start a new chat"
+              className="text-[11.5px] font-medium px-2.5 py-1 rounded-full text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7]"
+            >
+              New chat
+            </motion.button>
+            <motion.button
+              type="submit"
+              aria-label="Send"
+              whileTap={{ scale: 0.9 }}
+              transition={TAP_SPRING}
+              disabled={chatBusy || !askText.trim()}
+              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                askText.trim() && !chatBusy
+                  ? "bg-[#008080] hover:bg-[#006666] text-white"
+                  : "bg-[#f5f5f7] text-[#aeaeb2]"
+              }`}
+            >
+              <ArrowRight size={14} />
+            </motion.button>
+          </motion.div>
+        )}
       </form>
 
-      {/* Quick-question pills */}
-      <div className="flex flex-wrap gap-2 justify-center mb-10">
-        {QUICK_QUESTIONS.map((q, i) => (
-          <motion.button
-            key={q}
-            onClick={() => ask(q)}
-            whileTap={{ scale: 0.94 }}
-            initial={{ opacity: 0, y: 6 }}
+      {/* IDLE: quick-question pills + load error + 3-card grid.
+          CHAT: a conversation thread of question → answer blocks. */}
+      <AnimatePresence mode="wait" initial={false}>
+        {mode === "idle" ? (
+          <motion.div
+            key="idle-body"
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.04 + i * 0.03, type: "spring", stiffness: 380, damping: 28 }}
-            className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed]"
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           >
-            {q}
-          </motion.button>
-        ))}
-      </div>
+            {/* Quick-question pills */}
+            <div className="flex flex-wrap gap-2 justify-center mb-10">
+              {QUICK_QUESTIONS.map((q, i) => (
+                <motion.button
+                  key={q}
+                  onClick={() => askHere(q)}
+                  whileTap={{ scale: 0.94 }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04 + i * 0.03, type: "spring", stiffness: 380, damping: 28 }}
+                  className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed]"
+                >
+                  {q}
+                </motion.button>
+              ))}
+            </div>
 
-      {/* Load error banner (honest) */}
-      {loadError && (
-        <div className="max-w-[680px] mx-auto mb-6 rounded-xl border border-[#ff9500]/30 bg-[#ff9500]/[0.04] p-3 flex items-start gap-2">
-          <AlertTriangle size={14} className="text-[#ff9500] mt-0.5 shrink-0" />
-          <p className="text-[12px] text-[#1d1d1f]">
-            <span className="font-semibold">Heads up:</span> {loadError}. Treat those sections as unknown, not safe.
-          </p>
-        </div>
-      )}
+            {/* Load error banner (honest) */}
+            {loadError && (
+              <div className="max-w-[680px] mx-auto mb-6 rounded-xl border border-[#ff9500]/30 bg-[#ff9500]/[0.04] p-3 flex items-start gap-2">
+                <AlertTriangle size={14} className="text-[#ff9500] mt-0.5 shrink-0" />
+                <p className="text-[12px] text-[#1d1d1f]">
+                  <span className="font-semibold">Heads up:</span> {loadError}. Treat those sections as unknown, not safe.
+                </p>
+              </div>
+            )}
 
-      {/* Card grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+            {/* Card grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         {/* ───── Inbox / Needs your call — dark card ───── */}
         <div className="rounded-3xl bg-[#0b1220] text-white p-5 sm:p-6 flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
           <div className="flex items-center justify-between mb-3">
@@ -352,7 +471,7 @@ export default function Operations() {
               <p className="text-[12px] font-semibold tracking-wide">Inbox</p>
             </div>
             <motion.button
-              onClick={() => ask("what should I do?")}
+              onClick={() => askHere("what should I do?")}
               aria-label="See all decisions"
               whileTap={{ scale: 0.88 }}
               transition={TAP_SPRING}
@@ -377,7 +496,7 @@ export default function Operations() {
                 Aiviate is watching the fleet in the background. I'll surface anything that needs you.
               </p>
               <button
-                onClick={() => ask("what should I do?")}
+                onClick={() => askHere("what should I do?")}
                 className="mt-auto text-[12px] font-medium text-white/80 hover:text-white inline-flex items-center gap-1 self-start pt-4"
               >
                 Ask what to focus on <ArrowUpRight size={12} />
@@ -413,7 +532,7 @@ export default function Operations() {
               </div>
               {visibleRecs.length > 3 && (
                 <motion.button
-                  onClick={() => ask("what should I do?")}
+                  onClick={() => askHere("what should I do?")}
                   whileTap={{ scale: 0.96 }}
                   transition={TAP_SPRING}
                   className="mt-3 text-[12px] font-medium text-white/80 hover:text-white inline-flex items-center gap-1 self-start"
@@ -468,7 +587,7 @@ export default function Operations() {
               </div>
             )}
             <motion.button
-              onClick={() => ask("what just happened?")}
+              onClick={() => askHere("what just happened?")}
               whileTap={{ scale: 0.96 }}
               transition={TAP_SPRING}
               className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"
@@ -483,7 +602,7 @@ export default function Operations() {
           <div className="flex items-center justify-between mb-4">
             <p className="text-[13px] font-semibold text-[#1d1d1f]">Quick looks</p>
             <motion.button
-              onClick={() => ask("how are we doing?")}
+              onClick={() => askHere("how are we doing?")}
               aria-label="Ask for a full briefing"
               whileTap={{ scale: 0.88 }}
               transition={TAP_SPRING}
@@ -543,7 +662,7 @@ export default function Operations() {
                 return (
                   <motion.button
                     key={title}
-                    onClick={() => ask(q)}
+                    onClick={() => askHere(q)}
                     whileTap={{ scale: 0.97 }}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -561,7 +680,60 @@ export default function Operations() {
             </div>
           )}
         </div>
-      </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="chat-body"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="max-w-[760px] mx-auto pb-12"
+          >
+            <div className="space-y-5">
+              <AnimatePresence initial={false}>
+                {thread.map((turn) => (
+                  <motion.div
+                    key={turn.id}
+                    layout
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    className="space-y-2.5"
+                  >
+                    {/* Your question — right-aligned bubble */}
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-[#008080] text-white text-[13.5px] px-3.5 py-2 leading-snug shadow-[0_2px_10px_rgba(0,128,128,0.18)]">
+                        {turn.input}
+                      </div>
+                    </div>
+                    {/* Aiviate's answer — left aligned card */}
+                    <div className="flex justify-start">
+                      <div className="max-w-[92%] w-full rounded-2xl rounded-bl-md bg-white border border-black/[0.06] px-4 py-3 shadow-[0_2px_14px_rgba(0,0,0,0.03)]">
+                        {turn.busy ? (
+                          <div className="flex items-center gap-2 text-[12.5px] text-[#86868b]">
+                            <motion.span
+                              animate={{ opacity: [0.3, 1, 0.3] }}
+                              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                              className="inline-block w-1.5 h-1.5 rounded-full bg-[#008080]"
+                            />
+                            <span>Aiviate is thinking…</span>
+                          </div>
+                        ) : (
+                          <ResultBlock result={turn.result} />
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              <div ref={threadEndRef} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>

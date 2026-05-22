@@ -1,69 +1,64 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./Sidebar";
-import CommandPalette from "./CommandPalette";
 import { ArrowRight } from "lucide-react";
-import { setPaletteOpen as publishPaletteOpen } from "../lib/paletteBus";
-
-/** Fire the global ask-aiviate event so any listener (Layout) can open the palette and run it. */
-function ask(text) {
-  window.dispatchEvent(new CustomEvent("ask-aiviate", { detail: { text: text || "" } }));
-}
+import { setPendingAsk } from "../lib/askBus";
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === "/";
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [initialQuery, setInitialQuery] = useState("");
-  const [queryNonce, setQueryNonce] = useState(0);
   const [topText, setTopText] = useState("");
   const topInputRef = useRef(null);
+
+  /**
+   * Single entry point for "ask Aiviate" from anywhere in the app.
+   * Always takes the user Home, where the page transforms into a
+   * chat surface and renders the answer inline. No modal pop-up.
+   */
+  const goAsk = (text) => {
+    const t = (text || "").trim();
+    if (location.pathname !== "/") {
+      // Queue the ask in a module-scoped buffer; Operations will drain
+      // it the moment it mounts. This is reliable regardless of how
+      // long the route transition takes.
+      setPendingAsk(t);
+      navigate("/");
+    } else {
+      // Already on Home — Operations is mounted, just fire the event.
+      window.dispatchEvent(
+        new CustomEvent("home:ask", { detail: { text: t } })
+      );
+    }
+  };
 
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setInitialQuery("");
-        setPaletteOpen((v) => !v);
-      } else if (e.key === "Escape" && paletteOpen) {
-        setPaletteOpen(false);
+        goAsk("");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paletteOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
-  // Anywhere in the app: window.dispatchEvent(new CustomEvent('ask-aiviate', {detail:{text}}))
+  // Legacy: components that still dispatch the old "ask-aiviate" event
+  // are routed through the new chat surface.
   useEffect(() => {
-    const onAsk = (e) => {
-      const text = e?.detail?.text || "";
-      setInitialQuery(text);
-      setQueryNonce((n) => n + 1);
-      setPaletteOpen(true);
-    };
+    const onAsk = (e) => goAsk(e?.detail?.text || "");
     window.addEventListener("ask-aiviate", onAsk);
     return () => window.removeEventListener("ask-aiviate", onAsk);
-  }, []);
-
-  // Publish palette open/close to the shared bus so other components
-  // (Home hero prompt) can coordinate shared-element morphs and read
-  // the current value synchronously on mount.
-  useEffect(() => {
-    publishPaletteOpen(paletteOpen);
-  }, [paletteOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const submitTop = (e) => {
     e?.preventDefault?.();
     const q = topText.trim();
-    if (!q) {
-      // Empty submit just opens the palette with focus.
-      setInitialQuery("");
-      setPaletteOpen(true);
-      return;
-    }
     setTopText("");
-    ask(q);
+    goAsk(q);
   };
 
   return (
@@ -77,7 +72,7 @@ export default function Layout() {
             <div className="max-w-[960px] mx-auto px-5 sm:px-8 lg:px-12 py-3 pt-16 lg:pt-3">
               <form onSubmit={submitTop}>
                 <motion.div
-                  layoutId={paletteOpen ? undefined : "ask-aiviate-prompt"}
+                  layoutId="ask-aiviate-prompt"
                   transition={{ type: "spring", stiffness: 380, damping: 34 }}
                   className="w-full flex items-center gap-3 px-4 py-2 rounded-xl bg-[#f5f5f7] border border-black/[0.04] focus-within:border-[#008080]/40 focus-within:bg-white transition-colors"
                 >
@@ -125,9 +120,9 @@ export default function Layout() {
         </div>
       </main>
 
-      {/* Mobile floating Ask button */}
+      {/* Mobile floating Ask button — takes you straight to the Home chat. */}
       <motion.button
-        onClick={() => { setInitialQuery(""); setPaletteOpen(true); }}
+        onClick={() => goAsk("")}
         title="Ask Aiviate"
         aria-label="Ask Aiviate"
         whileTap={{ scale: 0.88 }}
@@ -136,13 +131,6 @@ export default function Layout() {
       >
         <img src="/logo.png" alt="Ask Aiviate" className="w-6 h-6 brightness-0 invert" />
       </motion.button>
-
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        initialQuery={initialQuery}
-        queryNonce={queryNonce}
-      />
     </div>
   );
 }
