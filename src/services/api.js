@@ -38,6 +38,29 @@ export async function getAgents() {
   return handleResponse(res);
 }
 
+export async function getAutopilotStatus() {
+  const res = await fetch(`${API_BASE}/autopilot/status`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function updateAutopilotSettings(payload) {
+  const res = await fetch(`${API_BASE}/autopilot/settings`, {
+    method: "PATCH",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+export async function runAutopilot(force = false) {
+  const res = await fetch(`${API_BASE}/autopilot/run`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ force }),
+  });
+  return handleResponse(res);
+}
+
 export async function getRecommendations() {
   const res = await fetch(`${API_BASE}/intelligence/recommendations`, { headers: getAuthHeaders() });
   return handleResponse(res);
