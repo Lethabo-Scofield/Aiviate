@@ -26,6 +26,7 @@ from intelligence.recommendation_engine import build_recommendations
 from intelligence.audit_logger import log_action
 from intelligence.workflow_engine import run_autonomous_workflows
 from intelligence.auto_optimizer import optimize_job_stops
+from intelligence.autopilot import autopilot_status, run_autopilot, update_settings
 from intelligence import command_parser, natural_parser
 from intelligence.driver_notifier import notify_driver
 from agents import Orchestrator
@@ -277,6 +278,73 @@ def _exec_help():
         "Here are some things you can ask me",
         type="help",
         items=command_parser.friendly_examples(),
+    )
+
+
+def _exec_greeting():
+    return _resp(
+        True,
+        "Hey. I can watch dispatch, surface problems, run Autopilot, optimize routes, assign jobs, notify drivers, and show you what changed.",
+        type="greeting",
+        items=[
+            {"phrase": "autopilot status", "does": "Shows whether Aiviate is actively running operations"},
+            {"phrase": "turn autopilot on", "does": "Lets Aiviate handle approved low-risk work"},
+            {"phrase": "run autopilot now", "does": "Forces one operational check"},
+            {"phrase": "show me today's routes", "does": "Shows active routes on a map"},
+            {"phrase": "what should I do?", "does": "Shows decisions that need your attention"},
+        ],
+    )
+
+
+def _exec_autopilot(db, company_id):
+    status = autopilot_status(db, company_id)
+    settings = status.get("settings") or {}
+    pending = status.get("pending_approvals") or []
+    recent = status.get("recent_actions") or []
+    return _resp(
+        True,
+        (
+            f"Autopilot is {'on' if settings.get('enabled') else 'off'} "
+            f"in {settings.get('mode', 'assist')} mode. "
+            f"{len(pending)} approval(s) waiting, {len(recent)} recent action(s)."
+        ),
+        type="autopilot",
+        settings=settings,
+        pending_approvals=pending,
+        recent_actions=recent,
+    )
+
+
+def _exec_autopilot_run(db, company_id):
+    result = run_autopilot(db, company_id, force=True)
+    return _resp(
+        True,
+        result.get("summary") or "Autopilot completed a check",
+        type="autopilot_run",
+        actions=result.get("actions", []),
+        mode=result.get("mode"),
+        enabled=result.get("enabled"),
+    )
+
+
+def _exec_autopilot_update(db, company_id, args):
+    if not args:
+        return _exec_autopilot(db, company_id)
+    if args[0] == "on":
+        settings = update_settings(db, company_id, {"enabled": True})
+    elif args[0] == "off":
+        settings = update_settings(db, company_id, {"enabled": False})
+    elif args[0] == "mode" and len(args) >= 2:
+        settings = update_settings(db, company_id, {"mode": args[1]})
+    else:
+        return _resp(False, "I can set Autopilot on, off, or mode assist/autonomous/emergency.")
+    return _resp(
+        True,
+        f"Autopilot is {'on' if settings.enabled else 'off'} in {settings.mode} mode",
+        type="autopilot",
+        settings=settings.to_dict(),
+        pending_approvals=[],
+        recent_actions=[],
     )
 
 
@@ -652,6 +720,14 @@ def run_command():
         try:
             if intent == "help":
                 result = _exec_help()
+            elif intent == "greeting":
+                result = _exec_greeting()
+            elif intent == "autopilot":
+                result = _exec_autopilot(db, cid)
+            elif intent == "autopilot_run":
+                result = _exec_autopilot_run(db, cid)
+            elif intent == "autopilot_update":
+                result = _exec_autopilot_update(db, cid, args)
             elif intent == "drivers":
                 result = _exec_drivers(db, cid)
             elif intent == "jobs":
@@ -694,8 +770,8 @@ def run_command():
         # Audit-log any state-changing command. Read-only commands are noisy
         # and not logged here.
         if result.get("ok") and intent not in {
-            "help", "drivers", "jobs", "alerts", "audit", "recommendations",
-            "stats", "route", "map",
+            "help", "greeting", "drivers", "jobs", "alerts", "audit", "recommendations",
+            "stats", "route", "map", "autopilot",
         }:
             try:
                 log_action(

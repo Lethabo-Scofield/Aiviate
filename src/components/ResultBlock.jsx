@@ -29,6 +29,60 @@ export default function ResultBlock({ result }) {
       </div>
     );
   }
+  if (t === "greeting") {
+    return (
+      <div className="space-y-2">
+        <p className="text-[13px] text-[#1d1d1f]">{result.summary}</p>
+        <div className="grid gap-1.5">
+          {result.items?.map((c, i) => (
+            <div key={i} className="flex items-baseline gap-3 text-[12px]">
+              <span className="text-[#008080] font-medium italic">"{c.phrase}"</span>
+              <span className="text-[#86868b]">— {c.does}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (t === "autopilot" || t === "autopilot_run") {
+    const settings = result.settings || {};
+    const pending = result.pending_approvals || [];
+    const recent = result.recent_actions || [];
+    const actions = result.actions || [];
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
+          <CheckCircle2 size={14} className="text-[#008080] mt-0.5 shrink-0" />
+          <span>{result.summary}</span>
+        </div>
+        {settings.mode && (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-[#f5f5f7] px-3 py-2">
+              <p className="text-[11px] text-[#86868b]">Mode</p>
+              <p className="text-[13px] font-semibold capitalize text-[#1d1d1f]">{settings.mode}</p>
+            </div>
+            <div className="rounded-lg bg-[#f5f5f7] px-3 py-2">
+              <p className="text-[11px] text-[#86868b]">State</p>
+              <p className={`text-[13px] font-semibold ${settings.enabled ? "text-[#34c759]" : "text-[#ff9500]"}`}>
+                {settings.enabled ? "On" : "Off"}
+              </p>
+            </div>
+          </div>
+        )}
+        {pending.slice(0, 3).map((a) => (
+          <div key={a.id} className="rounded-lg bg-[#ff9500]/[0.07] px-3 py-2 text-[12px] text-[#1d1d1f]">
+            {a.summary}
+          </div>
+        ))}
+        {(actions.length > 0 ? actions : recent).slice(0, 4).map((a, i) => (
+          <div key={a.id || i} className="text-[12px] flex items-start gap-2">
+            <span className="text-[#008080] mt-0.5">▸</span>
+            <span className="text-[#1d1d1f]">{a.summary}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (t === "stats") {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

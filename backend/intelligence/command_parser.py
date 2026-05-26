@@ -9,7 +9,9 @@ from typing import Dict, List
 
 
 COMMANDS: Dict[str, Dict] = {
+    "greeting":        {"argc": 0, "desc": "Say hello and explain what Aiviate can do"},
     "help":            {"argc": 0, "desc": "List all commands"},
+    "autopilot":       {"argc": 0, "desc": "Show Autopilot status"},
     "drivers":         {"argc": 0, "desc": "List drivers and status"},
     "jobs":            {"argc": 0, "desc": "List jobs and their assignments"},
     "map":             {"argc": 0, "desc": "Show all active routes on a map"},
@@ -60,7 +62,24 @@ def parse(text: str) -> Dict:
     intent = ALIASES.get(head, head)
 
     if intent not in COMMANDS:
+        if intent == "autopilot" and args:
+            sub = args[0].lower()
+            if sub == "run":
+                return {"intent": "autopilot_run", "args": []}
+            if sub in ("on", "off"):
+                return {"intent": "autopilot_update", "args": [sub]}
+            if sub == "mode" and len(args) >= 2:
+                return {"intent": "autopilot_update", "args": ["mode", args[1].lower()]}
         return {"error": f"Unknown command `{head}` — try `help`"}
+
+    if intent == "autopilot" and args:
+        sub = args[0].lower()
+        if sub == "run":
+            return {"intent": "autopilot_run", "args": []}
+        if sub in ("on", "off"):
+            return {"intent": "autopilot_update", "args": [sub]}
+        if sub == "mode" and len(args) >= 2:
+            return {"intent": "autopilot_update", "args": ["mode", args[1].lower()]}
 
     # `optimize all` is a distinct intent
     if intent == "optimize" and len(args) == 1 and args[0].lower() == "all":
@@ -85,6 +104,10 @@ def help_entries() -> List[Dict]:
 # Friendly examples surfaced in the UI — phrasing that the natural-language
 # layer understands, grouped by what the user is trying to do.
 FRIENDLY_EXAMPLES: List[Dict] = [
+    {"phrase": "hy",                            "does": "Starts a normal Aiviate conversation"},
+    {"phrase": "autopilot status",              "does": "Shows whether Autopilot is running and what needs approval"},
+    {"phrase": "turn autopilot on",             "does": "Enables autonomous operations"},
+    {"phrase": "run autopilot now",             "does": "Runs one immediate operational check"},
     {"phrase": "show me today's routes",         "does": "Pops up a live map of every active route"},
     {"phrase": "what jobs do I have?",           "does": "Lists today's jobs and who's on each one"},
     {"phrase": "who's working?",                 "does": "Shows your drivers and their status"},
