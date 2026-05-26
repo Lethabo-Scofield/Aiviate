@@ -22,9 +22,12 @@ import { useAuth } from "../contexts/AuthContext";
 import {
   acknowledgeRecommendation,
   getAuditLog,
+  getAutopilotStatus,
   getRecommendations,
   getStats,
+  runAutopilot,
   sendCommand,
+  updateAutopilotSettings,
 } from "../services/api";
 import ResultBlock from "../components/ResultBlock";
 import { takePendingAsk } from "../lib/askBus";
@@ -165,6 +168,8 @@ export default function Operations() {
   const { user } = useAuth();
   const [recs, setRecs] = useState([]);
   const [audit, setAudit] = useState([]);
+  const [autopilot, setAutopilot] = useState(null);
+  const [autopilotBusy, setAutopilotBusy] = useState(false);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -255,16 +260,18 @@ export default function Operations() {
   const load = useCallback(async () => {
     const myReq = ++reqIdRef.current;
     try {
-      const [recsRes, auditRes, statsRes] = await Promise.allSettled([
+      const [recsRes, auditRes, statsRes, autopilotRes] = await Promise.allSettled([
         getRecommendations(),
         getAuditLog(20),
         getStats(),
+        getAutopilotStatus(),
       ]);
       if (myReq !== reqIdRef.current) return;
       setRecs(recsRes.status === "fulfilled" ? (recsRes.value?.recommendations || []) : []);
       setAudit(auditRes.status === "fulfilled" ? (auditRes.value?.entries || []) : []);
       setStats(statsRes.status === "fulfilled" ? statsRes.value : null);
-      const anyFailed = [recsRes, auditRes, statsRes].some((r) => r.status === "rejected");
+      setAutopilot(autopilotRes.status === "fulfilled" ? autopilotRes.value : null);
+      const anyFailed = [recsRes, auditRes, statsRes, autopilotRes].some((r) => r.status === "rejected");
       setLoadError(anyFailed ? "Some signals couldn't be reached" : null);
     } catch (e) {
       if (myReq !== reqIdRef.current) return;
@@ -280,13 +287,55 @@ export default function Operations() {
     return () => clearInterval(id);
   }, [load]);
 
+  const refreshAutopilot = useCallback(async () => {
+    try {
+      setAutopilot(await getAutopilotStatus());
+    } catch {
+      // Main load banner already reports unreachable signals.
+    }
+  }, []);
+
+  const setAutopilotSettings = async (payload) => {
+    setAutopilotBusy(true);
+    try {
+      const res = await updateAutopilotSettings(payload);
+      setAutopilot((current) => ({ ...(current || {}), settings: res.settings }));
+      notify(payload.enabled === false ? "Autopilot paused" : "Autopilot settings updated");
+      await refreshAutopilot();
+    } catch (e) {
+      notify(e?.message || "Couldn't update Autopilot", "error");
+    } finally {
+      setAutopilotBusy(false);
+    }
+  };
+
+  const runAutopilotNow = async (force = false) => {
+    setAutopilotBusy(true);
+    try {
+      const res = await runAutopilot(force);
+      notify(res.summary || "Autopilot checked the operation");
+      await load();
+    } catch (e) {
+      notify(e?.message || "Autopilot couldn't run", "error");
+    } finally {
+      setAutopilotBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!autopilot?.settings?.enabled || autopilot?.settings?.mode === "manual") return undefined;
+    const id = setInterval(() => runAutopilotNow(false), 30000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autopilot?.settings?.enabled, autopilot?.settings?.mode]);
+
   const visibleRecs = useMemo(
     () => recs.filter((r) => !dismissed.has(r.id)),
     [recs, dismissed]
   );
   const recentAutoActions = useMemo(
-    () => audit.filter((e) => e.actor === "workflow_engine" || e.actor === "dispatch").slice(0, 4),
-    [audit]
+    () => (autopilot?.recent_actions || audit.filter((e) => e.actor === "workflow_engine" || e.actor === "dispatch")).slice(0, 4),
+    [audit, autopilot]
   );
 
   const dismiss = (id) => {
@@ -311,6 +360,9 @@ export default function Operations() {
     askHere(askText);
   };
 
+  const autopilotSettings = autopilot?.settings;
+  const autopilotOn = !!autopilotSettings?.enabled;
+  const pendingApprovals = autopilot?.pending_approvals || [];
   const firstName = (user?.name || "").split(" ")[0] || "there";
 
   /* ─────────────────────────── render ─────────────────────────── */
@@ -544,36 +596,94 @@ export default function Operations() {
           )}
         </div>
 
-        {/* ───── What I've done for you — hero banner card ───── */}
+        {/* ───── Autopilot control tower ───── */}
         <div className="rounded-3xl bg-white border border-black/[0.05] overflow-hidden flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-          {/* Teal gradient hero band (stands in for the photo in the reference) */}
           <div className="relative px-5 sm:px-6 py-6 bg-gradient-to-br from-[#008080] via-[#0a9c9c] to-[#16b8b8] text-white">
             <div className="absolute inset-0 opacity-[0.18]" style={{
               backgroundImage:
                 "radial-gradient(circle at 20% 20%, white 0, transparent 40%), radial-gradient(circle at 80% 70%, white 0, transparent 35%)",
             }} />
             <div className="relative">
-              <p className="text-[11px] uppercase tracking-wider font-semibold opacity-90">
-                Auto-pilot · today
-              </p>
-              <p className="text-[28px] font-semibold leading-tight mt-1.5">
-                {recentAutoActions.length}{" "}
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-wider font-semibold opacity-90">
+                  Autopilot · {autopilotSettings?.mode || "assist"}
+                </p>
+                <motion.button
+                  type="button"
+                  onClick={() => setAutopilotSettings({ enabled: !autopilotOn })}
+                  disabled={autopilotBusy}
+                  whileTap={{ scale: 0.94 }}
+                  transition={TAP_SPRING}
+                  className={`text-[11px] font-semibold px-3 py-1.5 rounded-full ${
+                    autopilotOn ? "bg-white text-[#008080]" : "bg-white/15 text-white"
+                  }`}
+                >
+                  {autopilotOn ? "ON" : "OFF"}
+                </motion.button>
+              </div>
+              <p className="text-[26px] font-semibold leading-tight mt-2">
+                {pendingApprovals.length > 0 ? pendingApprovals.length : recentAutoActions.length}{" "}
                 <span className="opacity-90 font-medium">
-                  {recentAutoActions.length === 1 ? "action" : "actions"} handled for you
+                  {pendingApprovals.length > 0
+                    ? pendingApprovals.length === 1 ? "approval waiting" : "approvals waiting"
+                    : recentAutoActions.length === 1 ? "action handled" : "actions handled"}
                 </span>
+              </p>
+              <p className="text-[12px] text-white/75 mt-1">
+                {autopilotOn ? "Aiviate is checking operations every 30 seconds." : "Turn it on to let Aiviate run low-risk work."}
               </p>
             </div>
           </div>
           <div className="p-5 sm:p-6 flex-1 flex flex-col">
+            <div className="flex items-center gap-2 mb-4">
+              {["assist", "autonomous", "emergency"].map((mode) => (
+                <motion.button
+                  key={mode}
+                  type="button"
+                  onClick={() => setAutopilotSettings({ mode })}
+                  disabled={autopilotBusy}
+                  whileTap={{ scale: 0.94 }}
+                  transition={TAP_SPRING}
+                  className={`text-[11px] capitalize font-medium px-2.5 py-1.5 rounded-lg ${
+                    autopilotSettings?.mode === mode
+                      ? "bg-[#008080] text-white"
+                      : "bg-[#f5f5f7] text-[#3a3a3c] hover:bg-[#ebebed]"
+                  }`}
+                >
+                  {mode}
+                </motion.button>
+              ))}
+              <motion.button
+                type="button"
+                onClick={() => runAutopilotNow(true)}
+                disabled={autopilotBusy}
+                whileTap={{ scale: 0.94 }}
+                transition={TAP_SPRING}
+                className="ml-auto text-[11px] font-medium px-2.5 py-1.5 rounded-lg bg-[#1d1d1f] text-white disabled:opacity-50"
+              >
+                {autopilotBusy ? "Running..." : "Run now"}
+              </motion.button>
+            </div>
             {loading ? (
               <div className="space-y-2">
                 <div className="skeleton h-3 w-full" />
                 <div className="skeleton h-3 w-2/3" />
                 <div className="skeleton h-3 w-4/5" />
               </div>
+            ) : pendingApprovals.length > 0 ? (
+              <div className="space-y-2.5 flex-1">
+                {pendingApprovals.slice(0, 3).map((a) => (
+                  <div key={a.id} className="rounded-xl bg-[#ff9500]/[0.07] border border-[#ff9500]/20 p-3">
+                    <p className="text-[12.5px] font-medium text-[#1d1d1f] leading-snug">{a.summary}</p>
+                    <p className="text-[11px] text-[#86868b] mt-1">
+                      Confidence {Math.round((a.confidence || 0) * 100)}% · awaiting operator approval
+                    </p>
+                  </div>
+                ))}
+              </div>
             ) : recentAutoActions.length === 0 ? (
               <p className="text-[13px] text-[#86868b]">
-                Nothing automated yet — once you assign jobs or telemetry rolls in, I'll log it all here.
+                Nothing automated yet. Once jobs, telemetry, or route changes appear, Autopilot will act or ask for approval here.
               </p>
             ) : (
               <div className="space-y-2.5 flex-1">
@@ -587,7 +697,7 @@ export default function Operations() {
               </div>
             )}
             <motion.button
-              onClick={() => askHere("what just happened?")}
+              onClick={() => askHere("what has autopilot done?")}
               whileTap={{ scale: 0.96 }}
               transition={TAP_SPRING}
               className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"

@@ -321,6 +321,33 @@ class AuditLog(Base):
         }
 
 
+class AutopilotSettings(Base):
+    __tablename__ = "autopilot_settings"
+
+    company_id = Column(String, ForeignKey("companies.id"), primary_key=True)
+    enabled = Column(Boolean, default=False)
+    mode = Column(String, default="assist")  # manual / assist / autonomous / emergency
+    max_actions_per_run = Column(Integer, default=5)
+    auto_assign = Column(Boolean, default=True)
+    auto_optimize = Column(Boolean, default=True)
+    auto_notify = Column(Boolean, default=True)
+    safety_approval_required = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "company_id": self.company_id,
+            "enabled": bool(self.enabled),
+            "mode": self.mode,
+            "max_actions_per_run": self.max_actions_per_run,
+            "auto_assign": bool(self.auto_assign),
+            "auto_optimize": bool(self.auto_optimize),
+            "auto_notify": bool(self.auto_notify),
+            "safety_approval_required": bool(self.safety_approval_required),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 def init_db():
     Base.metadata.create_all(engine)
 
