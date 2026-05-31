@@ -1,4 +1,118 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const LOCAL_DEMO_TOKEN = "local-demo-token";
+const LOCAL_DEMO_ACTION_DETAILS = {
+  title: "Today's dispatch briefing",
+  status: "Completed",
+  owner: "AgentZero",
+  confidence: 99,
+  inputs: [
+    "23 stops scheduled for today",
+    "4 active drivers available",
+    "1 unassigned job waiting",
+    "3 unread operational alerts",
+  ],
+  steps: [
+    "Checked open routes and driver capacity",
+    "Compared unassigned work against available drivers",
+    "Scanned unread alerts for anything blocking dispatch",
+    "Prepared the first dispatch summary for the operator",
+  ],
+  outcome: "Briefing is ready. No high-risk change was made without approval.",
+  nextFocus: "Assign the 1 waiting job or ask AgentZero to show the best driver match.",
+};
+const LOCAL_DEMO_ACTION = {
+  summary: "Prepared today's dispatch briefing",
+  action_type: "autopilot_dispatch_briefing",
+  at: new Date().toISOString(),
+  details: { focus_action: true, ...LOCAL_DEMO_ACTION_DETAILS },
+};
+const LOCAL_DEMO_SETTINGS = {
+  enabled: true,
+  mode: "autonomous",
+  max_actions_per_run: 5,
+  auto_assign: true,
+  auto_optimize: true,
+  auto_notify: true,
+  safety_approval_required: true,
+};
+const LOCAL_DEMO_STATS = {
+  stops_today: 23,
+  active_drivers: 4,
+  total_drivers: 5,
+  unassigned: 1,
+  unread_alerts: 3,
+};
+
+function isLocalDemo() {
+  return localStorage.getItem("aiviate_token") === LOCAL_DEMO_TOKEN;
+}
+
+function localDemoAutopilot() {
+  return {
+    settings: { ...LOCAL_DEMO_SETTINGS },
+    recent_actions: [{ ...LOCAL_DEMO_ACTION, at: new Date().toISOString() }],
+    pending_approvals: [],
+  };
+}
+
+function localDemoCommand(text = "") {
+  const lower = text.toLowerCase();
+  if (lower.includes("autopilot") || lower.includes("handled") || lower.includes("done")) {
+    return {
+      ok: true,
+      type: "autopilot",
+      summary: "AgentZero completed 1 autonomous task. Here are the details.",
+      settings: { ...LOCAL_DEMO_SETTINGS },
+      recent_actions: [{ ...LOCAL_DEMO_ACTION, at: new Date().toISOString() }],
+      pending_approvals: [],
+    };
+  }
+  if (lower.includes("route") || lower.includes("today")) {
+    return {
+      ok: true,
+      type: "stats",
+      summary: "Today's operation is ready.",
+      items: [
+        { label: "Stops today", value: LOCAL_DEMO_STATS.stops_today },
+        { label: "Active drivers", value: LOCAL_DEMO_STATS.active_drivers },
+        { label: "Unassigned jobs", value: LOCAL_DEMO_STATS.unassigned },
+      ],
+    };
+  }
+  if (lower.includes("working") || lower.includes("driver")) {
+    return {
+      ok: true,
+      type: "drivers",
+      summary: "4 drivers are active.",
+      items: [
+        { id: "DRV-DEMO001", name: "Thabo Mokoena", status: "available" },
+        { id: "DRV-DEMO002", name: "Lerato Dlamini", status: "available" },
+        { id: "DRV-DEMO003", name: "Sipho Khumalo", status: "available" },
+        { id: "DRV-DEMO004", name: "Naledi Botha", status: "available" },
+      ],
+    };
+  }
+  if (lower.includes("problem") || lower.includes("alert")) {
+    return {
+      ok: true,
+      type: "alerts",
+      summary: "3 alerts are open for review.",
+      items: [
+        { id: "ALT-DEMO001", severity: "warning", title: "Delivery Delayed" },
+        { id: "ALT-DEMO002", severity: "warning", title: "Route Deviation" },
+        { id: "ALT-DEMO003", severity: "info", title: "Device Offline" },
+      ],
+    };
+  }
+  return {
+    ok: true,
+    type: "autopilot",
+    summary: "I prepared today's dispatch briefing and I am watching the operation in autonomous mode.",
+    settings: { ...LOCAL_DEMO_SETTINGS },
+    recent_actions: [{ ...LOCAL_DEMO_ACTION, at: new Date().toISOString() }],
+    pending_approvals: [],
+  };
+}
 
 function getAuthHeaders(contentType) {
   const headers = {};
@@ -10,6 +124,9 @@ function getAuthHeaders(contentType) {
 
 async function handleResponse(res) {
   if (res.status === 401) {
+    if (isLocalDemo()) {
+      return {};
+    }
     localStorage.removeItem("aiviate_token");
     localStorage.removeItem("aiviate_user");
     window.location.replace("/login");
@@ -39,11 +156,13 @@ export async function getAgents() {
 }
 
 export async function getAutopilotStatus() {
+  if (isLocalDemo()) return localDemoAutopilot();
   const res = await fetch(`${API_BASE}/autopilot/status`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }
 
 export async function updateAutopilotSettings(payload) {
+  if (isLocalDemo()) return { settings: { ...LOCAL_DEMO_SETTINGS, ...payload } };
   const res = await fetch(`${API_BASE}/autopilot/settings`, {
     method: "PATCH",
     headers: getAuthHeaders("application/json"),
@@ -53,6 +172,14 @@ export async function updateAutopilotSettings(payload) {
 }
 
 export async function runAutopilot(force = false) {
+  if (isLocalDemo()) {
+    return {
+      enabled: true,
+      mode: "autonomous",
+      actions: [{ type: "dispatch_briefing", summary: LOCAL_DEMO_ACTION.summary }],
+      summary: "Autopilot completed 1 action",
+    };
+  }
   const res = await fetch(`${API_BASE}/autopilot/run`, {
     method: "POST",
     headers: getAuthHeaders("application/json"),
@@ -62,6 +189,7 @@ export async function runAutopilot(force = false) {
 }
 
 export async function getRecommendations() {
+  if (isLocalDemo()) return { recommendations: [] };
   const res = await fetch(`${API_BASE}/intelligence/recommendations`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }
@@ -76,6 +204,7 @@ export async function acknowledgeRecommendation(recId, payload = {}) {
 }
 
 export async function sendCommand(text) {
+  if (isLocalDemo()) return localDemoCommand(text);
   const res = await fetch(`${API_BASE}/intelligence/command`, {
     method: "POST",
     headers: getAuthHeaders("application/json"),
@@ -85,6 +214,17 @@ export async function sendCommand(text) {
 }
 
 export async function getAuditLog(limit = 25) {
+  if (isLocalDemo()) {
+    return {
+      entries: [{
+        actor: "autopilot",
+        action_type: LOCAL_DEMO_ACTION.action_type,
+        summary: LOCAL_DEMO_ACTION.summary,
+        created_at: new Date().toISOString(),
+        details: LOCAL_DEMO_ACTION.details,
+      }],
+    };
+  }
   const res = await fetch(`${API_BASE}/intelligence/audit-log?limit=${limit}`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }
@@ -219,6 +359,7 @@ export async function getStops() {
 }
 
 export async function getStats() {
+  if (isLocalDemo()) return { ...LOCAL_DEMO_STATS };
   const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }

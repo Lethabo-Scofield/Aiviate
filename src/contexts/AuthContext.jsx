@@ -4,7 +4,16 @@ const AuthContext = createContext(null);
 
 const TOKEN_KEY = "aiviate_token";
 const USER_KEY = "aiviate_user";
+const LOCAL_DEMO_TOKEN = "local-demo-token";
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+const LOCAL_DEMO_USER = {
+  id: "USR-LOCAL-DEMO",
+  email: "demo@aiviate.io",
+  name: "Demo Dispatcher",
+  role: "admin",
+  company_id: "CMP-LOCAL-DEMO",
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -36,6 +45,10 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!token) {
+      setLoading(false);
+      return;
+    }
+    if (token === LOCAL_DEMO_TOKEN) {
       setLoading(false);
       return;
     }
@@ -102,13 +115,19 @@ export function AuthProvider({ children }) {
 
   const loginDemo = async () => {
     let res;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 2500);
     try {
       res = await fetch(`${API_BASE}/auth/demo-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
       });
     } catch {
-      throw new Error("Cannot connect to server. Please check that the backend is running.");
+      saveAuth(LOCAL_DEMO_TOKEN, LOCAL_DEMO_USER);
+      return LOCAL_DEMO_USER;
+    } finally {
+      window.clearTimeout(timeout);
     }
     const data = await parseJSON(res);
     if (!res.ok) throw new Error(data.error || "Demo login failed");

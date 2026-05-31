@@ -329,6 +329,51 @@ def _run_safety_escalations(db, settings, company_id: str) -> List[Dict]:
     return actions
 
 
+def _run_dispatch_briefing(db, company_id: str) -> Dict:
+    open_jobs = (
+        db.query(Job)
+        .filter(Job.company_id == company_id, Job.status.in_(("unassigned", "assigned", "in_progress")))
+        .count()
+    )
+    unassigned_jobs = (
+        db.query(Job)
+        .filter(Job.company_id == company_id, Job.status == "unassigned")
+        .count()
+    )
+    active_alerts = (
+        db.query(Alert)
+        .filter(Alert.company_id == company_id, Alert.is_read == False)  # noqa: E712
+        .count()
+    )
+
+    summary = (
+        f"Autopilot prepared dispatch briefing: {open_jobs} open route(s), "
+        f"{unassigned_jobs} unassigned, {active_alerts} unread alert(s)"
+    )
+    entry = log_action(
+        db,
+        company_id=company_id,
+        action_type="autopilot_dispatch_briefing",
+        summary=summary,
+        actor="autopilot",
+        confidence=0.99,
+        requires_approval=False,
+        details={
+            "open_jobs": open_jobs,
+            "unassigned_jobs": unassigned_jobs,
+            "active_alerts": active_alerts,
+        },
+    )
+    return {
+        "type": "dispatch_briefing",
+        "summary": "Prepared today's dispatch briefing",
+        "audit_id": entry.id,
+        "open_jobs": open_jobs,
+        "unassigned_jobs": unassigned_jobs,
+        "active_alerts": active_alerts,
+    }
+
+
 def run_autopilot(db, company_id: str, *, force: bool = False) -> Dict:
     settings = get_or_create_settings(db, company_id)
     actions: List[Dict] = []
@@ -353,6 +398,8 @@ def run_autopilot(db, company_id: str, *, force: bool = False) -> Dict:
     actions.extend(_run_auto_assign(db, settings, company_id, actions_left))
     actions_left = max_actions - len(actions)
     actions.extend(_run_auto_optimize(db, settings, company_id, actions_left))
+    if not actions:
+        actions.append(_run_dispatch_briefing(db, company_id))
 
     log_action(
         db,

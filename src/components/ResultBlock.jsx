@@ -1,6 +1,90 @@
 import { AlertCircle, CheckCircle2, MapPin, Send } from "lucide-react";
 import MiniRouteMap from "./MiniRouteMap";
 
+function ActionReceipt({ action }) {
+  const details = action.details || {};
+  if (!details.title && !details.inputs && !details.steps) {
+    return (
+      <div className="text-[12px] flex items-start gap-2">
+        <span className="text-[#008080] mt-0.5">▸</span>
+        <span className="text-[#1d1d1f]">{action.summary}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-black/[0.06] bg-white px-3 py-3 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10.5px] uppercase tracking-wider font-semibold text-[#008080]">
+            {details.status || "Completed"}
+          </p>
+          <p className="text-[13.5px] font-semibold text-[#1d1d1f] mt-0.5">
+            {details.title || action.summary}
+          </p>
+        </div>
+        {details.confidence && (
+          <div className="text-right shrink-0">
+            <p className="text-[10.5px] text-[#86868b]">Confidence</p>
+            <p className="text-[13px] font-semibold text-[#1d1d1f]">{details.confidence}%</p>
+          </div>
+        )}
+      </div>
+
+      {details.owner && (
+        <div className="rounded-lg bg-[#f5f5f7] px-3 py-2">
+          <p className="text-[10.5px] text-[#86868b]">Owner</p>
+          <p className="text-[12.5px] font-medium text-[#1d1d1f]">{details.owner}</p>
+        </div>
+      )}
+
+      {details.inputs?.length > 0 && (
+        <div>
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#86868b] mb-1.5">Checked</p>
+          <div className="grid gap-1.5">
+            {details.inputs.map((item) => (
+              <div key={item} className="flex items-start gap-2 text-[12px] text-[#1d1d1f]">
+                <CheckCircle2 size={12} className="text-[#34c759] mt-0.5 shrink-0" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {details.steps?.length > 0 && (
+        <div>
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#86868b] mb-1.5">Steps</p>
+          <div className="space-y-1.5">
+            {details.steps.map((step, index) => (
+              <div key={step} className="flex items-start gap-2 text-[12px] text-[#1d1d1f]">
+                <span className="w-4 h-4 rounded-full bg-[#008080]/10 text-[#008080] text-[10px] font-semibold flex items-center justify-center shrink-0 mt-px">
+                  {index + 1}
+                </span>
+                <span>{step}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {details.outcome && (
+        <div className="rounded-lg bg-[#008080]/[0.06] px-3 py-2">
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#008080] mb-1">Outcome</p>
+          <p className="text-[12.5px] text-[#1d1d1f] leading-snug">{details.outcome}</p>
+        </div>
+      )}
+
+      {details.nextFocus && (
+        <div className="rounded-lg bg-[#1d1d1f]/[0.04] px-3 py-2">
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#86868b] mb-1">Next focus</p>
+          <p className="text-[12.5px] text-[#1d1d1f] leading-snug">{details.nextFocus}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Renders a single backend command result inside the Home chat surface
  * (or anywhere else). Pure presentation; no side effects.
@@ -80,6 +164,12 @@ export default function ResultBlock({ result }) {
             <span className="text-[#1d1d1f]">{a.summary}</span>
           </div>
         ))}
+        {(actions.length > 0 ? actions : recent)
+          .filter((a) => a.details?.title || a.details?.inputs || a.details?.steps)
+          .slice(0, 1)
+          .map((a, i) => (
+            <ActionReceipt key={`details-${a.id || i}`} action={a} />
+          ))}
       </div>
     );
   }

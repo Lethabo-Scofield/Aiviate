@@ -22,11 +22,18 @@ def create_app():
          allow_headers=["Content-Type", "Authorization"],
          methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 
-    try:
-        init_db()
-        _run_migrations()
-    except Exception as e:
-        print(f"WARNING: DB init/migrations skipped at cold start: {type(e).__name__}: {e}")
+    skip_db_init = (
+        os.environ.get("SKIP_DB_INIT", "false").lower() == "true"
+        or os.environ.get("VERCEL", "0") == "1"
+    )
+    if skip_db_init:
+        print("DB init/migrations skipped for serverless runtime")
+    else:
+        try:
+            init_db()
+            _run_migrations()
+        except Exception as e:
+            print(f"WARNING: DB init/migrations skipped at cold start: {type(e).__name__}: {e}")
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)

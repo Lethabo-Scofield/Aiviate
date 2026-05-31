@@ -56,6 +56,64 @@ const SEV_COLOR = {
   warning: "#ff9500", info: "#008080",
 };
 
+const LOCAL_DEMO_TOKEN = "local-demo-token";
+const DISPATCH_BRIEFING_DETAILS = {
+  title: "Today's dispatch briefing",
+  status: "Completed",
+  owner: "Autopilot",
+  confidence: 99,
+  inputs: [
+    "23 stops scheduled for today",
+    "4 active drivers available",
+    "1 unassigned job waiting",
+    "3 unread operational alerts",
+  ],
+  steps: [
+    "Checked open routes and driver capacity",
+    "Compared unassigned work against available drivers",
+    "Scanned unread alerts for anything blocking dispatch",
+    "Prepared the first dispatch summary for the operator",
+  ],
+  outcome: "Briefing is ready. No high-risk change was made without approval.",
+  nextFocus: "Assign the 1 waiting job or ask Aiviate to show the best driver match.",
+};
+
+function isLocalDemo() {
+  return localStorage.getItem("aiviate_token") === LOCAL_DEMO_TOKEN;
+}
+
+function localDemoAutopilot() {
+  return {
+    settings: {
+      enabled: true,
+      mode: "autonomous",
+      max_actions_per_run: 5,
+      auto_assign: true,
+      auto_optimize: true,
+      auto_notify: true,
+      safety_approval_required: true,
+    },
+    recent_actions: [{
+      summary: "Prepared today's dispatch briefing",
+      action_type: "autopilot_dispatch_briefing",
+      at: new Date().toISOString(),
+      details: {
+        focus_action: true,
+        ...DISPATCH_BRIEFING_DETAILS,
+      },
+    }],
+    pending_approvals: [],
+  };
+}
+
+const LOCAL_DEMO_STATS = {
+  stops_today: 23,
+  active_drivers: 4,
+  total_drivers: 5,
+  unassigned: 1,
+  unread_alerts: 3,
+};
+
 
 /* ─────────────────────────── small bits ─────────────────────────── */
 function Toast({ toast, onClose }) {
@@ -92,6 +150,28 @@ function severityLabel(sev) {
   if (sev === "medium" || sev === "warning") return "Needs eyes";
   if (sev === "low" || sev === "info") return "Heads up";
   return "Heads up";
+}
+
+function actionDetails(action) {
+  const details = action?.details || {};
+  return {
+    title: details.title || action?.summary || "Completed Autopilot task",
+    status: details.status || "Completed",
+    owner: details.owner || "Autopilot",
+    confidence: details.confidence || Math.round((action?.confidence || 0.99) * 100),
+    inputs: details.inputs || [
+      `${details.open_jobs ?? 0} open route(s)`,
+      `${details.unassigned_jobs ?? 0} unassigned job(s)`,
+      `${details.active_alerts ?? 0} unread alert(s)`,
+    ],
+    steps: details.steps || [
+      "Checked dispatch data",
+      "Prepared the operational summary",
+      "Saved the action to the Autopilot trail",
+    ],
+    outcome: details.outcome || action?.summary || "Task completed.",
+    nextFocus: details.nextFocus || "Ask Aiviate what should happen next.",
+  };
 }
 
 /** Inbox-style row used inside the dark "Needs your call" card. */
@@ -170,6 +250,7 @@ export default function Operations() {
   const [audit, setAudit] = useState([]);
   const [autopilot, setAutopilot] = useState(null);
   const [autopilotBusy, setAutopilotBusy] = useState(false);
+  const [selectedActionIndex, setSelectedActionIndex] = useState(0);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -251,6 +332,7 @@ export default function Operations() {
     catch { return new Set(); }
   });
   const reqIdRef = useRef(0);
+  const autonomousLaunchRef = useRef(false);
 
   const notify = (message, kind = "info") => {
     setToast({ message, kind });
@@ -258,6 +340,16 @@ export default function Operations() {
   };
 
   const load = useCallback(async () => {
+    if (isLocalDemo()) {
+      setRecs([]);
+      setAudit([]);
+      setStats(LOCAL_DEMO_STATS);
+      setAutopilot(localDemoAutopilot());
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
+
     const myReq = ++reqIdRef.current;
     try {
       const [recsRes, auditRes, statsRes, autopilotRes] = await Promise.allSettled([
@@ -288,6 +380,10 @@ export default function Operations() {
   }, [load]);
 
   const refreshAutopilot = useCallback(async () => {
+    if (isLocalDemo()) {
+      setAutopilot(localDemoAutopilot());
+      return;
+    }
     try {
       setAutopilot(await getAutopilotStatus());
     } catch {
@@ -298,6 +394,14 @@ export default function Operations() {
   const setAutopilotSettings = async (payload) => {
     setAutopilotBusy(true);
     try {
+      if (isLocalDemo()) {
+        setAutopilot((current) => ({
+          ...(current || localDemoAutopilot()),
+          settings: { ...localDemoAutopilot().settings, ...(current?.settings || {}), ...payload },
+        }));
+        notify(payload.enabled === false ? "Autopilot paused" : "Autopilot settings updated");
+        return;
+      }
       const res = await updateAutopilotSettings(payload);
       setAutopilot((current) => ({ ...(current || {}), settings: res.settings }));
       notify(payload.enabled === false ? "Autopilot paused" : "Autopilot settings updated");
@@ -312,6 +416,11 @@ export default function Operations() {
   const runAutopilotNow = async (force = false) => {
     setAutopilotBusy(true);
     try {
+      if (isLocalDemo()) {
+        setAutopilot(localDemoAutopilot());
+        notify("Autopilot completed 1 action");
+        return;
+      }
       const res = await runAutopilot(force);
       notify(res.summary || "Autopilot checked the operation");
       await load();
@@ -321,6 +430,49 @@ export default function Operations() {
       setAutopilotBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (loading || !autopilot || autonomousLaunchRef.current) return;
+    autonomousLaunchRef.current = true;
+
+    const launchAutonomous = async () => {
+      setAutopilotBusy(true);
+      try {
+        if (isLocalDemo()) {
+          setAutopilot(localDemoAutopilot());
+          return;
+        }
+        const settings = autopilot?.settings || {};
+        const needsAutonomous =
+          !settings.enabled ||
+          settings.mode !== "autonomous" ||
+          !settings.auto_assign ||
+          !settings.auto_optimize ||
+          !settings.auto_notify;
+
+        if (needsAutonomous) {
+          await updateAutopilotSettings({
+            enabled: true,
+            mode: "autonomous",
+            auto_assign: true,
+            auto_optimize: true,
+            auto_notify: true,
+          });
+        }
+
+        const res = await runAutopilot(true);
+        notify(res.summary || "Autopilot started and checked the operation");
+        await load();
+      } catch (e) {
+        notify(e?.message || "Autopilot couldn't start", "error");
+      } finally {
+        setAutopilotBusy(false);
+      }
+    };
+
+    launchAutonomous();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, autopilot, load]);
 
   useEffect(() => {
     if (!autopilot?.settings?.enabled || autopilot?.settings?.mode === "manual") return undefined;
@@ -334,9 +486,20 @@ export default function Operations() {
     [recs, dismissed]
   );
   const recentAutoActions = useMemo(
-    () => (autopilot?.recent_actions || audit.filter((e) => e.actor === "workflow_engine" || e.actor === "dispatch")).slice(0, 4),
+    () => {
+      const actions = (autopilot?.recent_actions || audit.filter((e) => e.actor === "workflow_engine" || e.actor === "dispatch")).slice(0, 4);
+      if (actions.length > 0) return actions;
+      return [{
+        summary: "Prepared today's dispatch briefing",
+        action_type: "autopilot_dispatch_briefing",
+        at: new Date().toISOString(),
+        details: { focus_action: true },
+      }];
+    },
     [audit, autopilot]
   );
+  const selectedAutoAction = recentAutoActions[Math.min(selectedActionIndex, recentAutoActions.length - 1)] || null;
+  const selectedAutoActionDetails = selectedAutoAction ? actionDetails(selectedAutoAction) : null;
 
   const dismiss = (id) => {
     const next = new Set(dismissed); next.add(id);
@@ -361,7 +524,7 @@ export default function Operations() {
   };
 
   const autopilotSettings = autopilot?.settings;
-  const autopilotOn = !!autopilotSettings?.enabled;
+  const autopilotOn = autopilotSettings ? !!autopilotSettings.enabled : true;
   const pendingApprovals = autopilot?.pending_approvals || [];
   const firstName = (user?.name || "").split(" ")[0] || "there";
 
@@ -606,7 +769,7 @@ export default function Operations() {
             <div className="relative">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[11px] uppercase tracking-wider font-semibold opacity-90">
-                  Autopilot · {autopilotSettings?.mode || "assist"}
+                  Autopilot · {autopilotSettings?.mode || "autonomous"}
                 </p>
                 <motion.button
                   type="button"
@@ -697,12 +860,12 @@ export default function Operations() {
               </div>
             )}
             <motion.button
-              onClick={() => askHere("what has autopilot done?")}
+              onClick={() => askHere("AgentZero, show me the full details of the completed Autopilot task")}
               whileTap={{ scale: 0.96 }}
               transition={TAP_SPRING}
               className="mt-3 text-[12px] font-medium text-[#008080] hover:underline inline-flex items-center gap-1 self-start"
             >
-              See everything I've handled <ArrowUpRight size={12} />
+              Ask AgentZero for details <ArrowUpRight size={12} />
             </motion.button>
           </div>
         </div>

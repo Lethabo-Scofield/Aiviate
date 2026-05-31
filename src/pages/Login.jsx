@@ -1,17 +1,52 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { LogIn, Eye, EyeOff, Sparkles } from "lucide-react";
 
 export default function Login() {
-  const { login, loginDemo } = useAuth();
+  const { login, loginDemo, user } = useAuth();
   const navigate = useNavigate();
+  const autoStartedRef = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/", { replace: true });
+      return;
+    }
+    if (autoStartedRef.current) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled || autoStartedRef.current) return;
+      autoStartedRef.current = true;
+      setError("");
+      setDemoLoading(true);
+      loginDemo()
+        .then(() => {
+          if (!cancelled) navigate("/", { replace: true });
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            autoStartedRef.current = false;
+            setError(err.message);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setDemoLoading(false);
+        });
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [user, loginDemo, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
