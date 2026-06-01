@@ -26,6 +26,8 @@ _PATTERNS: List[Tuple[re.Pattern, object]] = [
     (re.compile(r"^\s*\??\s*(help|what can you do|what do you do|how does this work)\s*\??\s*$", re.I), "help"),
 
     # ── autopilot ─────────────────────────────────────────────────────
+    (re.compile(r"^\s*(agent\s*zero|agentzero|aiviate)[,:\s]+.*?(full\s+)?details?.*?(completed\s+)?(autopilot|auto\s*pilot).*?(task|action|work).*$", re.I), "autopilot"),
+    (re.compile(r"^\s*(show|give|open|explain|tell)\b.*?(full\s+)?details?.*?(completed\s+)?(autopilot|auto\s*pilot).*?(task|action|work).*$", re.I), "autopilot"),
     (re.compile(r"^\s*(autopilot|auto\s*pilot)\s*\??\s*$", re.I), "autopilot"),
     (re.compile(r"^\s*(autopilot|auto\s*pilot)\s+(status|state|overview|summary)\s*\??\s*$", re.I), "autopilot"),
     (re.compile(r"^\s*(what\s+(has|did)\s+)?(autopilot|auto\s*pilot)\s+(done|handled|do)\s*\??\s*$", re.I), "audit"),

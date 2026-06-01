@@ -44,7 +44,7 @@ const LOCAL_DEMO_STATS = {
 };
 
 function isLocalDemo() {
-  return localStorage.getItem("aiviate_token") === LOCAL_DEMO_TOKEN;
+  return import.meta.env.DEV && localStorage.getItem("aiviate_token") === LOCAL_DEMO_TOKEN;
 }
 
 function localDemoAutopilot() {

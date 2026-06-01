@@ -350,6 +350,28 @@ def _run_dispatch_briefing(db, company_id: str) -> Dict:
         f"Autopilot prepared dispatch briefing: {open_jobs} open route(s), "
         f"{unassigned_jobs} unassigned, {active_alerts} unread alert(s)"
     )
+    detail_payload = {
+        "title": "Today's dispatch briefing",
+        "status": "Completed",
+        "owner": "AgentZero",
+        "confidence": 99,
+        "inputs": [
+            f"{open_jobs} open route(s) active right now",
+            f"{unassigned_jobs} unassigned job(s) waiting",
+            f"{active_alerts} unread operational alert(s)",
+        ],
+        "steps": [
+            "Checked open routes and driver capacity",
+            "Compared unassigned work against available drivers",
+            "Scanned unread alerts for anything blocking dispatch",
+            "Prepared the first dispatch summary for the operator",
+        ],
+        "outcome": "Briefing is ready. No high-risk change was made without approval.",
+        "nextFocus": "Assign waiting jobs or ask AgentZero to show the best driver match.",
+        "open_jobs": open_jobs,
+        "unassigned_jobs": unassigned_jobs,
+        "active_alerts": active_alerts,
+    }
     entry = log_action(
         db,
         company_id=company_id,
@@ -358,19 +380,13 @@ def _run_dispatch_briefing(db, company_id: str) -> Dict:
         actor="autopilot",
         confidence=0.99,
         requires_approval=False,
-        details={
-            "open_jobs": open_jobs,
-            "unassigned_jobs": unassigned_jobs,
-            "active_alerts": active_alerts,
-        },
+        details=detail_payload,
     )
     return {
         "type": "dispatch_briefing",
         "summary": "Prepared today's dispatch briefing",
         "audit_id": entry.id,
-        "open_jobs": open_jobs,
-        "unassigned_jobs": unassigned_jobs,
-        "active_alerts": active_alerts,
+        **detail_payload,
     }
 
 

@@ -6,6 +6,7 @@ const TOKEN_KEY = "aiviate_token";
 const USER_KEY = "aiviate_user";
 const LOCAL_DEMO_TOKEN = "local-demo-token";
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const LOCAL_DEMO_ENABLED = import.meta.env.DEV;
 
 const LOCAL_DEMO_USER = {
   id: "USR-LOCAL-DEMO",
@@ -48,7 +49,12 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
+    if (token === LOCAL_DEMO_TOKEN && LOCAL_DEMO_ENABLED) {
+      setLoading(false);
+      return;
+    }
     if (token === LOCAL_DEMO_TOKEN) {
+      logout();
       setLoading(false);
       return;
     }
@@ -124,8 +130,11 @@ export function AuthProvider({ children }) {
         signal: controller.signal,
       });
     } catch {
-      saveAuth(LOCAL_DEMO_TOKEN, LOCAL_DEMO_USER);
-      return LOCAL_DEMO_USER;
+      if (LOCAL_DEMO_ENABLED) {
+        saveAuth(LOCAL_DEMO_TOKEN, LOCAL_DEMO_USER);
+        return LOCAL_DEMO_USER;
+      }
+      throw new Error("Cannot connect to server. Please check that the backend is running.");
     } finally {
       window.clearTimeout(timeout);
     }
