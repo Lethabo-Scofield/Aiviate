@@ -44,7 +44,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PYTHONPATH=/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages python3 backend/app.py"
+args = "python3 backend/app.py"
 waitForPort = 8000
 
 [[ports]]
