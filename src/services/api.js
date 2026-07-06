@@ -474,6 +474,30 @@ export async function optimizeWithEngine() {
   return handleResponse(res);
 }
 
+export async function dispatchWithEngine() {
+  if (isLocalDemo()) {
+    const plan = localDemoEnginePlan();
+    return {
+      success: true,
+      jobs_created: plan.routes.length,
+      drivers_assigned: plan.routes.length,
+      assignments: plan.routes.map((r, i) => ({
+        job_id: `JOB-DEMO-${i + 1}`,
+        area: `AI Route ${i + 1}`,
+        driver_name: r.stops[0]?.customer_name ? ["Thabo Mokoena", "Lerato Dlamini", "Sipho Khumalo"][i % 3] : "Driver",
+        stops: r.stops.length,
+      })),
+      plan,
+    };
+  }
+  const res = await fetch(`${API_BASE}/engine/dispatch`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({}),
+  });
+  return handleResponse(res);
+}
+
 function localDemoEnginePlan() {
   const base = new Date();
   base.setHours(8, 0, 0, 0);

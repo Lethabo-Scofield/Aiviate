@@ -50,7 +50,27 @@ export function AuthProvider({ children }) {
       return;
     }
     if (token === LOCAL_DEMO_TOKEN && LOCAL_DEMO_ENABLED) {
-      setLoading(false);
+      // A stale offline-demo session. Now that the backend is reachable, try to
+      // upgrade it to a real backend demo session so real data (jobs, drivers,
+      // engine plans) shows. Fall back to the offline demo if the backend is down.
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 2500);
+      fetch(`${API_BASE}/auth/demo-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.token && data.user) {
+            saveAuth(data.token, data.user);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          window.clearTimeout(timeout);
+          setLoading(false);
+        });
       return;
     }
     if (token === LOCAL_DEMO_TOKEN) {

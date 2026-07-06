@@ -1,0 +1,1 @@
+- [JWT_SECRET token churn](jwt-secret-token-churn.md) — unset JWT_SECRET → random per-boot key → browser tokens 401 after every backend restart; set it as a shared env var.

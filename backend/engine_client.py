@@ -208,6 +208,7 @@ def _shape_plan(plan, result, id_map):
                 {
                     "sequence": rs.get("sequence_number"),
                     "order_id": rs.get("order_id"),
+                    "stop_id": (original or {}).get("id"),
                     "customer_name": (original or {}).get("customer_name"),
                     "address": (original or {}).get("address"),
                     "lat": (original or {}).get("lat"),

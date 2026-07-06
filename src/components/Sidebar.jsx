@@ -1,5 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Map as MapIcon, Sparkles, Settings, Menu, X } from "lucide-react";
+import {
+  Home, Map as MapIcon, Sparkles, Settings, Menu, X,
+  Send, ClipboardList, Users, Radio, Smartphone, ShieldCheck,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -7,6 +10,12 @@ const NAV = [
   { to: "/", icon: Home, label: "Home", end: true },
   { to: "/map", icon: MapIcon, label: "Map" },
   { to: "/ai-planner", icon: Sparkles, label: "AI Planner" },
+  { to: "/dispatch", icon: Send, label: "Dispatch" },
+  { to: "/jobs", icon: ClipboardList, label: "Jobs" },
+  { to: "/drivers", icon: Users, label: "Drivers" },
+  { to: "/command", icon: Radio, label: "Command Center" },
+  { to: "/devices", icon: Smartphone, label: "Devices" },
+  { to: "/safety", icon: ShieldCheck, label: "Safety" },
 ];
 
 function UserAvatar({ size = 28 }) {

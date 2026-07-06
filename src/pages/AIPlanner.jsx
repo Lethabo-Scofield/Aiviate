@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -9,8 +10,10 @@ import {
   AlertTriangle,
   Loader2,
   CheckCircle2,
+  UserCheck,
+  ArrowRight,
 } from "lucide-react";
-import { getEngineStatus, optimizeWithEngine } from "../services/api";
+import { getEngineStatus, optimizeWithEngine, dispatchWithEngine } from "../services/api";
 
 function formatEta(iso) {
   if (!iso) return "";
@@ -40,6 +43,8 @@ export default function AIPlanner() {
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState(null);
   const [error, setError] = useState("");
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -55,6 +60,7 @@ export default function AIPlanner() {
     setLoading(true);
     setError("");
     setPlan(null);
+    setDispatchResult(null);
     try {
       const result = await optimizeWithEngine();
       setPlan(result);
@@ -62,6 +68,19 @@ export default function AIPlanner() {
       setError(e.message || "The AI Planner could not build a plan.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function assignAndSave() {
+    setDispatching(true);
+    setError("");
+    try {
+      const result = await dispatchWithEngine();
+      setDispatchResult(result);
+    } catch (e) {
+      setError(e.message || "Could not assign drivers and save jobs.");
+    } finally {
+      setDispatching(false);
     }
   }
 
@@ -156,6 +175,54 @@ export default function AIPlanner() {
             <div className="flex items-center gap-2 text-[13px] text-[#86868b]">
               <CheckCircle2 size={15} className="text-[#34c759]" />
               Plan confidence: {Math.round(plan.confidence * 100)}% · Solver {plan.solver_status || "—"}
+            </div>
+          )}
+
+          {dispatchResult ? (
+            <div className="bg-[#34c759]/[0.08] border border-[#34c759]/25 rounded-2xl px-5 py-4">
+              <div className="flex items-center gap-2 mb-2.5">
+                <CheckCircle2 size={18} className="text-[#34c759]" />
+                <span className="text-[14px] font-semibold text-[#1d1d1f]">
+                  {dispatchResult.jobs_created} job{dispatchResult.jobs_created !== 1 ? "s" : ""} saved and assigned to{" "}
+                  {dispatchResult.drivers_assigned} driver{dispatchResult.drivers_assigned !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <ul className="text-[12px] text-[#86868b] space-y-1 mb-3">
+                {dispatchResult.assignments?.map((a) => (
+                  <li key={a.job_id}>
+                    <span className="font-medium text-[#1d1d1f]">{a.area}</span> → {a.driver_name} · {a.stops} stops
+                  </li>
+                ))}
+              </ul>
+              <Link
+                to="/jobs"
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#008080] hover:underline"
+              >
+                View jobs <ArrowRight size={14} />
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white rounded-2xl border border-black/[0.06] px-5 py-4">
+              <p className="text-[13px] text-[#86868b]">
+                Happy with this plan? Assign it to your drivers and save it as jobs.
+              </p>
+              <button
+                onClick={assignAndSave}
+                disabled={dispatching}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#008080] text-white text-[13px] font-medium disabled:opacity-40 active:scale-[0.98] transition-transform whitespace-nowrap"
+              >
+                {dispatching ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Assigning…
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={16} />
+                    Assign drivers & save jobs
+                  </>
+                )}
+              </button>
             </div>
           )}
 
