@@ -67,5 +67,3 @@ build = ["bash", "-c", "npm run build"]
 [userenv]
 
 [userenv.shared]
-NEON_DATABASE_URL = "postgresql://neondb_owner:npg_SEMN1KqPzJ9B@ep-purple-glitter-an8r2gmt.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require"
-JWT_SECRET = "4274f40daec40e811b76017269d3a962c94381e34ce56ef5b26ed179931ac1df"
