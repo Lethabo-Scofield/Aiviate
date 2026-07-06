@@ -384,7 +384,7 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
   );
 }
 
-export default function Devices() {
+export default function Devices({ embedded = false }) {
   const [devices, setDevices] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -451,13 +451,15 @@ export default function Devices() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 sm:mb-8 flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Devices</h1>
-          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            Telemetry layer — every Guardian unit, its health, and which driver it's watching.
-          </p>
-        </div>
+      <div className={`mb-6 sm:mb-8 flex items-start flex-wrap gap-4 ${embedded ? "justify-end" : "justify-between"}`}>
+        {!embedded && (
+          <div>
+            <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Devices</h1>
+            <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+              Telemetry layer — every Guardian unit, its health, and which driver it's watching.
+            </p>
+          </div>
+        )}
         <button onClick={() => setShowAdd(true)} className="apple-btn apple-btn-primary">
           <Plus size={15} /> Pair device
         </button>

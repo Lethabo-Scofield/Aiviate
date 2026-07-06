@@ -676,6 +676,33 @@ def _exec_optimize_all(db, company_id):
     )
 
 
+def _exec_dispatch(db, company_id):
+    """Plan routes from all stops and auto-assign them to drivers — the same
+    end-to-end flow the old AI Planner page ran, now driven by the agent."""
+    from routes.engine import run_dispatch, DispatchError
+    try:
+        summary = run_dispatch(db, company_id)
+    except DispatchError as exc:
+        return _resp(False, str(exc))
+    except Exception:  # noqa: BLE001
+        traceback.print_exc()
+        db.rollback()
+        return _resp(False, "I couldn't build and assign the plan. Please try again.")
+
+    n = summary.get("jobs_created", 0)
+    d = summary.get("drivers_assigned", 0)
+    items = [
+        f"{a['area']} → {a['driver_name']} ({a['stops']} stops)"
+        for a in summary.get("assignments", [])
+    ]
+    return _resp(
+        True,
+        f"Planned and dispatched {n} route(s) across {d} driver(s).",
+        type="dispatch",
+        items=items,
+    )
+
+
 def _exec_block(db, company_id, driver_id, blocked):
     d, err = _resolve_driver(db, company_id, driver_id)
     if err:
@@ -754,6 +781,8 @@ def run_command():
                 result = _exec_optimize(db, cid, args[0])
             elif intent == "optimize_all":
                 result = _exec_optimize_all(db, cid)
+            elif intent == "dispatch":
+                result = _exec_dispatch(db, cid)
             elif intent == "block":
                 result = _exec_block(db, cid, args[0], True)
             elif intent == "unblock":

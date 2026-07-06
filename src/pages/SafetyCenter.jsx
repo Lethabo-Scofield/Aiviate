@@ -52,7 +52,7 @@ function tier(score) {
   return { label: "At risk", color: "#ff3b30" };
 }
 
-export default function SafetyCenter() {
+export default function SafetyCenter({ embedded = false }) {
   const [overview, setOverview] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,12 +113,14 @@ export default function SafetyCenter() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Safety</h1>
-        <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-          Live fatigue picture across your fleet — driven by your Guardian cameras.
-        </p>
-      </div>
+      {!embedded && (
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Safety</h1>
+          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+            Live fatigue picture across your fleet — driven by your Guardian cameras.
+          </p>
+        </div>
+      )}
 
       {/* Critical band — drowsy now */}
       {severeNow.length > 0 ? (

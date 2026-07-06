@@ -280,7 +280,7 @@ export default function MapView() {
             <MapIcon size={24} className="text-[#c7c7cc]" strokeWidth={1.5} />
           </div>
           <p className="text-[14px] text-[#86868b] mb-4">No jobs to display on the map</p>
-          <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-primary text-[13px]">
+          <button onClick={() => navigate("/jobs?tab=dispatch")} className="apple-btn apple-btn-primary text-[13px]">
             Create jobs first
           </button>
         </div>

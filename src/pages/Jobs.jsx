@@ -4,7 +4,7 @@ import { SkeletonList } from "../components/Loader";
 import { getJobs, getDrivers, assignDriver, unassignDriver } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
-export default function Jobs() {
+export default function Jobs({ embedded = false }) {
   const [jobs, setJobs] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [expandedJob, setExpandedJob] = useState(null);
@@ -63,14 +63,16 @@ export default function Jobs() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Jobs</h1>
-          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
-            {jobs.length} jobs | {unassigned.length} need drivers
-          </p>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
+          <div>
+            <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Jobs</h1>
+            <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+              {jobs.length} jobs | {unassigned.length} need drivers
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {error ? (
         <div className="apple-card p-10 text-center">
@@ -83,7 +85,7 @@ export default function Jobs() {
             <Package size={24} className="text-[#c7c7cc]" strokeWidth={1.5} />
           </div>
           <p className="text-[14px] text-[#86868b] mb-4">No jobs yet</p>
-          <button onClick={() => navigate("/dispatch")} className="apple-btn apple-btn-primary text-[13px]">
+          <button onClick={() => navigate("/jobs?tab=dispatch")} className="apple-btn apple-btn-primary text-[13px]">
             Upload deliveries
           </button>
         </div>

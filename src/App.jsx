@@ -3,24 +3,20 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import DriverLayout from "./components/DriverLayout";
-import DispatchCenter from "./pages/DispatchCenter";
-import Jobs from "./pages/Jobs";
+import JobsCenter from "./pages/JobsCenter";
+import Fleet from "./pages/Fleet";
 import MapView from "./pages/MapView";
-import Drivers from "./pages/Drivers";
 import MyJobs from "./pages/MyJobs";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import LiveOps from "./pages/LiveOps";
-import SafetyCenter from "./pages/SafetyCenter";
-import Devices from "./pages/Devices";
 import Alerts from "./pages/Alerts";
 import CommandCenter from "./pages/CommandCenter";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 import DataSources from "./pages/DataSources";
-import AIPlanner from "./pages/AIPlanner";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -40,18 +36,20 @@ function AppRoutes() {
           <>
             <Route path="/" element={<Operations />} />
             <Route path="/map" element={<MapView />} />
-            <Route path="/ai-planner" element={<AIPlanner />} />
+            <Route path="/jobs" element={<JobsCenter />} />
+            <Route path="/fleet" element={<Fleet />} />
+            <Route path="/command" element={<CommandCenter />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/data-sources" element={<DataSources />} />
             <Route path="/profile" element={<Profile />} />
-            {/* Legacy URLs kept for back-compat — all roll up into Operations now */}
-            <Route path="/command" element={<CommandCenter />} />
+            {/* Legacy URLs kept for back-compat — planning now lives with the agent,
+                and Drivers/Devices/Safety now live under Fleet. */}
+            <Route path="/ai-planner" element={<Navigate to="/" replace />} />
+            <Route path="/dispatch" element={<Navigate to="/jobs?tab=dispatch" replace />} />
+            <Route path="/drivers" element={<Navigate to="/fleet" replace />} />
+            <Route path="/devices" element={<Navigate to="/fleet?tab=devices" replace />} />
+            <Route path="/safety" element={<Navigate to="/fleet?tab=safety" replace />} />
             <Route path="/live" element={<LiveOps />} />
-            <Route path="/dispatch" element={<DispatchCenter />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/safety" element={<SafetyCenter />} />
             <Route path="/intelligence" element={<Alerts />} />
             <Route path="/guardians" element={<Navigate to="/" replace />} />
             <Route path="/events" element={<Navigate to="/" replace />} />

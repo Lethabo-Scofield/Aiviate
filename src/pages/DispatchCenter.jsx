@@ -4,7 +4,7 @@ import { Spinner } from "../components/Loader";
 import { uploadExcel, optimizeStops, getStops, getJobs, loadTestData } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
-export default function DispatchCenter() {
+export default function DispatchCenter({ embedded = false }) {
   const [step, setStep] = useState("upload");
   const [uploading, setUploading] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
@@ -98,10 +98,12 @@ export default function DispatchCenter() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Dispatch</h1>
-        <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">Upload delivery addresses and optimize routes</p>
-      </div>
+      {!embedded && (
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Dispatch</h1>
+          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">Upload delivery addresses and optimize routes</p>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 sm:gap-3 mb-8 overflow-x-auto pb-1">
         {["Upload", "Optimize", "Done"].map((label, i) => (
@@ -309,7 +311,7 @@ export default function DispatchCenter() {
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-              <button onClick={() => navigate("/jobs")} className="apple-btn apple-btn-primary text-[13px] py-2 px-4 flex-1 sm:flex-initial">
+              <button onClick={() => navigate("/jobs?tab=jobs")} className="apple-btn apple-btn-primary text-[13px] py-2 px-4 flex-1 sm:flex-initial">
                 Assign Drivers
               </button>
               <button onClick={handleReset} className="apple-btn apple-btn-secondary text-[13px] py-2 px-4 flex-1 sm:flex-initial">

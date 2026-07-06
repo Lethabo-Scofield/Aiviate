@@ -78,8 +78,28 @@ _PATTERNS: List[Tuple[re.Pattern, object]] = [
     # ── audit ───────────────────────────────────────────────────────
     (re.compile(r"^\s*(what\s+(just\s+)?happened|recent\s+(activity|actions?)|audit|history)\s*\??\s*$", re.I), "audit"),
 
+    # ── plan & dispatch (build routes from stops + auto-assign) ─────
+    #   Must come BEFORE "optimize all" so "plan and assign everything"
+    #   routes to a full dispatch rather than a re-optimize.
+    #   Deliberately NARROW: only explicit "plan / dispatch / auto-assign"
+    #   phrasing may fire this (it is state-changing). Generic verbs like
+    #   "run" or "show" are intentionally excluded so a read-only request
+    #   such as "run jobs report" can never trigger a live dispatch.
+    (re.compile(
+        r"^\s*(plan|dispatch)\b[^\n]*?"
+        r"(plan(?:ning)?|dispatch|route|delivery|deliveries|stops?|day|everything|jobs?|all)\b.*$",
+        re.I), "dispatch"),
+    (re.compile(r"^\s*(plan|dispatch)\s*(it|them|everything|all|now)?\s*$", re.I), "dispatch"),
+    (re.compile(r"^\s*(build|create|make|generate)\b[^\n]*?(routes?|plan|day)\b.*$", re.I), "dispatch"),
+    (re.compile(r"^\s*auto[\s-]*assign\b.*$", re.I), "dispatch"),
+    # "assign all jobs", "assign everything" — anchored so a single
+    # assignment like "assign j-1 to Mike" falls through to the assign rule.
+    (re.compile(r"^\s*assign\s+(all|every)\s+(jobs?|routes?|deliveries|stops?)\s*$", re.I), "dispatch"),
+    (re.compile(r"^\s*assign\s+everything\s*$", re.I), "dispatch"),
+
     # ── optimize all ────────────────────────────────────────────────
     (re.compile(r"^\s*(fix|optimize|tidy(\s+up)?|reorder|clean\s+up)\b[^\n]*?(all\s+(routes?|jobs?)|every\s+route|everything)\s*$", re.I), "optimize all"),
+    (re.compile(r"^\s*(run|do)\b[^\n]*?optimi[sz][a-z]*\b[^\n]*?(all|every|everything|routes?)\s*$", re.I), "optimize all"),
     (re.compile(r"^\s*optimize\s+all\s*$", re.I), "optimize all"),
 
     # ── optimize single ─────────────────────────────────────────────

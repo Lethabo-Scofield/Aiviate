@@ -3,8 +3,8 @@ import { Smartphone, Shield, Map, Package, User, ChevronRight, Database } from "
 
 const sections = [
   { to: "/settings/data-sources", icon: Database, label: "Delivery data sources", desc: "API, CSV upload, or a folder of stops" },
-  { to: "/devices", icon: Smartphone, label: "Devices", desc: "Guardian units, pairing, firmware" },
-  { to: "/safety", icon: Shield, label: "Safety center", desc: "Fatigue trends and driver risk" },
+  { to: "/fleet?tab=devices", icon: Smartphone, label: "Devices", desc: "Guardian units, pairing, firmware" },
+  { to: "/fleet?tab=safety", icon: Shield, label: "Safety center", desc: "Fatigue trends and driver risk" },
   { to: "/jobs", icon: Package, label: "Jobs", desc: "Full delivery list and history" },
   { to: "/map", icon: Map, label: "Map", desc: "Geographic view of routes" },
   { to: "/profile", icon: User, label: "Account", desc: "Profile and sign-out" },
