@@ -62,8 +62,8 @@ export default function MyJobs() {
             <Truck size={18} className="text-[#008080]" />
           </div>
           <div>
-            <h1 className="text-[22px] font-semibold text-[#1d1d1f] tracking-tight">My Deliveries</h1>
-            <p className="text-[13px] text-[#86868b]">
+            <h1 className="text-[22px] font-semibold text-[#111315] tracking-tight">My Deliveries</h1>
+            <p className="text-[13px] text-[#868E96]">
               {user?.name || "Driver"} &middot; {activeJobs.length} active job{activeJobs.length !== 1 ? "s" : ""}
             </p>
           </div>
@@ -77,11 +77,11 @@ export default function MyJobs() {
         </div>
       ) : data.jobs.length === 0 ? (
         <div className="apple-card p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-4">
             <Package size={24} className="text-[#c7c7cc]" strokeWidth={1.5} />
           </div>
-          <p className="text-[15px] font-medium text-[#1d1d1f] mb-1">No jobs assigned yet</p>
-          <p className="text-[13px] text-[#86868b]">Your admin will assign delivery jobs to you. Check back soon.</p>
+          <p className="text-[15px] font-medium text-[#111315] mb-1">No jobs assigned yet</p>
+          <p className="text-[13px] text-[#868E96]">Your admin will assign delivery jobs to you. Check back soon.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -97,18 +97,18 @@ export default function MyJobs() {
                   onClick={() => setExpandedJob(isExpanded ? null : job.id)}
                   className="w-full p-4 flex items-center gap-3 text-left"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#f5f5f7] flex items-center justify-center shrink-0">
-                    <Navigation size={16} className="text-[#86868b]" />
+                  <div className="w-10 h-10 rounded-xl bg-[#F1F3F5] flex items-center justify-center shrink-0">
+                    <Navigation size={16} className="text-[#868E96]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-[#1d1d1f] truncate">{job.area}</p>
-                    <p className="text-[12px] text-[#86868b]">
+                    <p className="text-[14px] font-semibold text-[#111315] truncate">{job.area}</p>
+                    <p className="text-[12px] text-[#868E96]">
                       {completed}/{total} stops &middot; {job.total_distance_km.toFixed(1)} km
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 relative">
                     <svg className="w-10 h-10 -rotate-90">
-                      <circle cx="20" cy="20" r="16" fill="none" stroke="#f0f0f0" strokeWidth="3" />
+                      <circle cx="20" cy="20" r="16" fill="none" stroke="#F1F3F5" strokeWidth="3" />
                       <circle cx="20" cy="20" r="16" fill="none" stroke="#008080" strokeWidth="3"
                         strokeDasharray={`${progress * 1.005} 100.5`}
                         strokeLinecap="round" />
@@ -118,14 +118,14 @@ export default function MyJobs() {
                 </button>
 
                 {isExpanded && (
-                  <div className="border-t border-[#f0f0f0] px-4 pb-4">
+                  <div className="border-t border-[#F1F3F5] px-4 pb-4">
                     <div className="space-y-1 pt-3">
                       {job.stops
                         .sort((a, b) => a.stop_number - b.stop_number)
                         .map((stop, i) => (
                         <div
                           key={stop.id}
-                          className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${stop.completed ? "bg-[#f5f5f7] opacity-50" : "bg-white"}`}
+                          className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${stop.completed ? "bg-[#F1F3F5] opacity-50" : "bg-white"}`}
                         >
                           <div className="flex flex-col items-center shrink-0 pt-0.5">
                             <span className="w-6 h-6 rounded-full bg-[#008080]/10 flex items-center justify-center text-[10px] font-bold text-[#008080]">
@@ -136,10 +136,10 @@ export default function MyJobs() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-[13px] font-medium ${stop.completed ? "text-[#aeaeb2] line-through" : "text-[#1d1d1f]"}`}>
+                            <p className={`text-[13px] font-medium ${stop.completed ? "text-[#ADB5BD] line-through" : "text-[#111315]"}`}>
                               {stop.customer_name || "Customer"}
                             </p>
-                            <p className="text-[11px] text-[#86868b] leading-relaxed mt-0.5">{stop.address}</p>
+                            <p className="text-[11px] text-[#868E96] leading-relaxed mt-0.5">{stop.address}</p>
                             <div className="flex flex-wrap gap-3 mt-1.5">
                               {stop.phone && (
                                 <a href={`tel:${stop.phone}`} className="flex items-center gap-1 text-[11px] text-[#008080] font-medium">
@@ -147,7 +147,7 @@ export default function MyJobs() {
                                 </a>
                               )}
                               {stop.notes && (
-                                <span className="flex items-center gap-1 text-[11px] text-[#86868b]">
+                                <span className="flex items-center gap-1 text-[11px] text-[#868E96]">
                                   <FileText size={10} /> {stop.notes}
                                 </span>
                               )}
@@ -183,15 +183,15 @@ export default function MyJobs() {
 
           {completedJobs.length > 0 && (
             <div className="pt-4">
-              <p className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider mb-2 px-1">Completed</p>
+              <p className="text-[12px] font-semibold text-[#868E96] uppercase tracking-wider mb-2 px-1">Completed</p>
               {completedJobs.map((job) => (
                 <div key={job.id} className="apple-card p-4 flex items-center gap-3 opacity-50 mb-2">
                   <div className="w-8 h-8 rounded-xl bg-[#34c759]/10 flex items-center justify-center shrink-0">
                     <CheckCircle2 size={14} className="text-[#34c759]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[#1d1d1f]">{job.area}</p>
-                    <p className="text-[11px] text-[#86868b]">{job.total_stops} stops &middot; {job.total_distance_km.toFixed(1)} km</p>
+                    <p className="text-[13px] font-medium text-[#111315]">{job.area}</p>
+                    <p className="text-[11px] text-[#868E96]">{job.total_stops} stops &middot; {job.total_distance_km.toFixed(1)} km</p>
                   </div>
                 </div>
               ))}

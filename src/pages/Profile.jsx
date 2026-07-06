@@ -14,16 +14,16 @@ export default function Profile() {
   return (
     <div className="animate-fade-in max-w-lg">
       <div className="mb-8">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Profile</h1>
-        <p className="text-[14px] text-[#86868b] mt-1">Your account details</p>
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Profile</h1>
+        <p className="text-[14px] text-[#868E96] mt-1">Your account details</p>
       </div>
 
       <div className="apple-card p-6 mb-4">
         <div className="flex items-center gap-4 mb-6">
           <img src="/default-avatar.png" alt="Profile" className="w-16 h-16 rounded-full object-cover shrink-0" />
           <div className="min-w-0">
-            <p className="text-[18px] font-semibold text-[#1d1d1f] truncate">{user?.name || "—"}</p>
-            <p className="text-[13px] text-[#86868b] truncate">{user?.email || "—"}</p>
+            <p className="text-[18px] font-semibold text-[#111315] truncate">{user?.name || "—"}</p>
+            <p className="text-[13px] text-[#868E96] truncate">{user?.email || "—"}</p>
           </div>
         </div>
 
@@ -37,7 +37,7 @@ export default function Profile() {
 
       <button
         onClick={handleLogout}
-        className="apple-btn apple-btn-secondary w-full text-[#86868b]"
+        className="apple-btn apple-btn-secondary w-full text-[#868E96]"
       >
         <LogOut size={15} />
         Sign out
@@ -48,10 +48,10 @@ export default function Profile() {
 
 function ProfileRow({ icon: Icon, label, value, last }) {
   return (
-    <div className={`flex items-center gap-3 py-3.5 ${!last ? "border-b border-[#f0f0f0]" : ""}`}>
+    <div className={`flex items-center gap-3 py-3.5 ${!last ? "border-b border-[#F1F3F5]" : ""}`}>
       <Icon size={16} className="text-[#c7c7cc] shrink-0" strokeWidth={1.8} />
-      <span className="text-[13px] text-[#86868b] w-20 shrink-0">{label}</span>
-      <span className="text-[13px] text-[#1d1d1f] font-medium truncate">{value || "—"}</span>
+      <span className="text-[13px] text-[#868E96] w-20 shrink-0">{label}</span>
+      <span className="text-[13px] text-[#111315] font-medium truncate">{value || "—"}</span>
     </div>
   );
 }

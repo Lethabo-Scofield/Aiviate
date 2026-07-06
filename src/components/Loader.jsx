@@ -28,7 +28,7 @@ export function PageLoader({ message = "Loading..." }) {
     <div className="flex items-center justify-center h-[60vh]">
       <div className="text-center">
         <LogoSpinner size={48} />
-        <p className="text-sm text-[#86868b] mt-4 font-medium">{message}</p>
+        <p className="text-sm text-[#868E96] mt-4 font-medium">{message}</p>
       </div>
     </div>
   );
@@ -39,7 +39,7 @@ export function FullScreenLoader({ message = "Loading..." }) {
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <LogoSpinner size={44} />
-        <p className="text-[13px] text-[#86868b] font-medium">{message}</p>
+        <p className="text-[13px] text-[#868E96] font-medium">{message}</p>
       </div>
     </div>
   );

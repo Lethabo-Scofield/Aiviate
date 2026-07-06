@@ -39,8 +39,8 @@ export default function Register() {
           <div className="flex justify-center mb-5">
             <img src="/logo.png" alt="Aiviate" className="w-14 h-14" />
           </div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Get started</h1>
-          <p className="text-[15px] text-[#86868b] mt-1">Create your dispatch account</p>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Get started</h1>
+          <p className="text-[15px] text-[#868E96] mt-1">Create your dispatch account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -51,7 +51,7 @@ export default function Register() {
           )}
 
           <div>
-            <label className="block text-[13px] font-medium text-[#1d1d1f] mb-1.5">Company name</label>
+            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Company name</label>
             <input
               type="text"
               value={companyName}
@@ -63,7 +63,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#1d1d1f] mb-1.5">Your name</label>
+            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Your name</label>
             <input
               type="text"
               value={name}
@@ -75,7 +75,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#1d1d1f] mb-1.5">Email</label>
+            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Email</label>
             <input
               type="email"
               value={email}
@@ -87,7 +87,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#1d1d1f] mb-1.5">Password</label>
+            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -100,7 +100,7 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c7c7cc] hover:text-[#86868b] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c7c7cc] hover:text-[#868E96] transition-colors"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -121,9 +121,9 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="text-center mt-6 text-[13px] text-[#86868b]">
+        <p className="text-center mt-6 text-[13px] text-[#868E96]">
           Already have an account?{" "}
-          <Link to="/login" className="text-[#1d1d1f] font-semibold hover:underline">
+          <Link to="/login" className="text-[#111315] font-semibold hover:underline">
             Sign in
           </Link>
         </p>

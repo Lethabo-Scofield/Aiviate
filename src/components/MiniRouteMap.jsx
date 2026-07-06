@@ -7,7 +7,7 @@ const COLORS = ["#008080", "#ff9500", "#5e5ce6", "#ff3b30", "#34c759", "#af52de"
 
 const driverIcon = L.divIcon({
   className: "",
-  html: `<div style="width:14px;height:14px;border-radius:50%;background:#1d1d1f;border:2px solid #fff;box-shadow:0 0 0 2px #1d1d1f"></div>`,
+  html: `<div style="width:14px;height:14px;border-radius:50%;background:#111315;border:2px solid #fff;box-shadow:0 0 0 2px #111315"></div>`,
   iconSize: [14, 14],
   iconAnchor: [7, 7],
 });
@@ -25,7 +25,7 @@ export default function MiniRouteMap({ routes = [], height = 240 }) {
   if (allPoints.length === 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-xl bg-[#f5f5f7] text-[12px] text-[#86868b]"
+        className="flex items-center justify-center rounded-xl bg-[#F1F3F5] text-[12px] text-[#868E96]"
         style={{ height }}
       >
         No geocoded stops to map
@@ -81,7 +81,7 @@ export default function MiniRouteMap({ routes = [], height = 240 }) {
                 <Tooltip>
                   <div className="text-[11px]">
                     <strong>#{s.stop_number}</strong> {s.customer_name || s.id}
-                    {s.address && <div className="text-[10px] text-[#86868b]">{s.address}</div>}
+                    {s.address && <div className="text-[10px] text-[#868E96]">{s.address}</div>}
                   </div>
                 </Tooltip>
               </CircleMarker>

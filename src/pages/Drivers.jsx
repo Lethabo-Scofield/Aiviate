@@ -5,7 +5,7 @@ import { getDrivers, addDriver, removeDriver, getJobs, getDriverDetail, toggleBl
 
 const VEHICLE_ICONS = { van: Container, truck: Truck, car: Car, bike: Bike };
 
-function VehicleIcon({ type, size = 17, className = "text-[#86868b]" }) {
+function VehicleIcon({ type, size = 17, className = "text-[#868E96]" }) {
   const Icon = VEHICLE_ICONS[type] || Truck;
   return <Icon size={size} className={className} strokeWidth={1.8} />;
 }
@@ -76,7 +76,7 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
   if (loading) {
     return (
       <div className="animate-fade-in">
-        <button onClick={onClose} className="flex items-center gap-1.5 text-[13px] text-[#86868b] hover:text-[#1d1d1f] mb-6 transition-colors">
+        <button onClick={onClose} className="flex items-center gap-1.5 text-[13px] text-[#868E96] hover:text-[#111315] mb-6 transition-colors">
           <ArrowLeft size={14} /> Back to drivers
         </button>
         <div className="skeleton h-8 w-48 mb-4" />
@@ -89,11 +89,11 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
   if (!detail) {
     return (
       <div className="animate-fade-in">
-        <button onClick={onClose} className="flex items-center gap-1.5 text-[13px] text-[#86868b] hover:text-[#1d1d1f] mb-6 transition-colors">
+        <button onClick={onClose} className="flex items-center gap-1.5 text-[13px] text-[#868E96] hover:text-[#111315] mb-6 transition-colors">
           <ArrowLeft size={14} /> Back to drivers
         </button>
         <div className="apple-card p-10 text-center">
-          <p className="text-[14px] text-[#86868b]">Driver not found</p>
+          <p className="text-[14px] text-[#868E96]">Driver not found</p>
         </div>
       </div>
     );
@@ -101,23 +101,23 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
 
   return (
     <div className="animate-fade-in">
-      <button onClick={onClose} className="flex items-center gap-1.5 text-[13px] text-[#86868b] hover:text-[#1d1d1f] mb-6 transition-colors">
+      <button onClick={onClose} className="flex items-center gap-1.5 text-[13px] text-[#868E96] hover:text-[#111315] mb-6 transition-colors">
         <ArrowLeft size={14} /> Back to drivers
       </button>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-[#F1F3F5] flex items-center justify-center shrink-0">
             <VehicleIcon type={detail.vehicle_type} size={24} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">{detail.name}</h1>
+              <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">{detail.name}</h1>
               {detail.blocked && (
                 <span className="px-2 py-0.5 rounded-md bg-[#ff3b30]/10 text-[11px] font-semibold text-[#ff3b30]">BLOCKED</span>
               )}
             </div>
-            <p className="text-[14px] text-[#86868b]">{detail.email} &middot; {detail.vehicle_type}</p>
+            <p className="text-[14px] text-[#868E96]">{detail.email} &middot; {detail.vehicle_type}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -128,13 +128,13 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
         </div>
       </div>
 
-      <div className="flex gap-1 mb-6 bg-[#f5f5f7] rounded-xl p-1">
+      <div className="flex gap-1 mb-6 bg-[#F1F3F5] rounded-xl p-1">
         {[
           { id: "info", label: "Info & Login" },
           { id: "deliveries", label: "Deliveries" },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 py-2 px-3 rounded-lg text-[13px] font-medium transition-all ${tab === t.id ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#86868b] hover:text-[#1d1d1f]'}`}>
+            className={`flex-1 py-2 px-3 rounded-lg text-[13px] font-medium transition-all ${tab === t.id ? 'bg-white text-[#111315] shadow-sm' : 'text-[#868E96] hover:text-[#111315]'}`}>
             {t.label}
           </button>
         ))}
@@ -144,59 +144,59 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
         <div className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="stat-card p-4 rounded-2xl">
-              <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider mb-1">Total Jobs</p>
-              <p className="text-[22px] font-semibold text-[#1d1d1f]">{detail.total_jobs}</p>
+              <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider mb-1">Total Jobs</p>
+              <p className="text-[22px] font-semibold text-[#111315]">{detail.total_jobs}</p>
             </div>
             <div className="stat-card p-4 rounded-2xl">
-              <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider mb-1">Completed</p>
-              <p className="text-[22px] font-semibold text-[#1d1d1f]">{detail.completed_jobs}</p>
+              <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider mb-1">Completed</p>
+              <p className="text-[22px] font-semibold text-[#111315]">{detail.completed_jobs}</p>
             </div>
             <div className="stat-card p-4 rounded-2xl">
-              <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider mb-1">Active</p>
-              <p className="text-[22px] font-semibold text-[#1d1d1f]">{detail.active_jobs}</p>
+              <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider mb-1">Active</p>
+              <p className="text-[22px] font-semibold text-[#111315]">{detail.active_jobs}</p>
             </div>
             <div className="stat-card p-4 rounded-2xl">
-              <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider mb-1">Stops Done</p>
-              <p className="text-[22px] font-semibold text-[#1d1d1f]">{detail.total_stops_completed}<span className="text-[14px] text-[#86868b] font-normal">/{detail.total_stops_assigned}</span></p>
+              <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider mb-1">Stops Done</p>
+              <p className="text-[22px] font-semibold text-[#111315]">{detail.total_stops_completed}<span className="text-[14px] text-[#868E96] font-normal">/{detail.total_stops_assigned}</span></p>
             </div>
           </div>
 
           <div className="apple-card p-5">
-            <h3 className="text-[15px] font-semibold text-[#1d1d1f] mb-4">Login Credentials</h3>
-            <div className="space-y-3 bg-[#f5f5f7] rounded-xl p-4">
+            <h3 className="text-[15px] font-semibold text-[#111315] mb-4">Login Credentials</h3>
+            <div className="space-y-3 bg-[#F1F3F5] rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider">Email</p>
-                  <p className="text-[14px] text-[#1d1d1f] font-mono">{detail.email}</p>
+                  <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider">Email</p>
+                  <p className="text-[14px] text-[#111315] font-mono">{detail.email}</p>
                 </div>
                 <button onClick={() => copyToClipboard(detail.email, "email")}
                   className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/80 transition-colors">
-                  {copiedField === "email" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#86868b]" />}
+                  {copiedField === "email" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#868E96]" />}
                 </button>
               </div>
               <div className="h-px bg-black/[0.06]" />
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider">Password</p>
+                  <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider">Password</p>
                   {detail.last_generated_password ? (
                     <div className="flex items-center gap-2">
-                      <p className="text-[14px] text-[#1d1d1f] font-mono">
+                      <p className="text-[14px] text-[#111315] font-mono">
                         {showPassword ? detail.last_generated_password : "••••••••"}
                       </p>
                       <button onClick={() => setShowPassword(!showPassword)}
                         className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/80 transition-colors">
-                        {showPassword ? <EyeOff size={12} className="text-[#86868b]" /> : <Eye size={12} className="text-[#86868b]" />}
+                        {showPassword ? <EyeOff size={12} className="text-[#868E96]" /> : <Eye size={12} className="text-[#868E96]" />}
                       </button>
                     </div>
                   ) : (
-                    <p className="text-[13px] text-[#aeaeb2] italic">Not available</p>
+                    <p className="text-[13px] text-[#ADB5BD] italic">Not available</p>
                   )}
                 </div>
                 <div className="flex gap-1">
                   {detail.last_generated_password && (
                     <button onClick={() => copyToClipboard(detail.last_generated_password, "password")}
                       className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/80 transition-colors">
-                      {copiedField === "password" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#86868b]" />}
+                      {copiedField === "password" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#868E96]" />}
                     </button>
                   )}
                 </div>
@@ -209,25 +209,25 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
           </div>
 
           <div className="apple-card p-5">
-            <h3 className="text-[15px] font-semibold text-[#1d1d1f] mb-3">Details</h3>
+            <h3 className="text-[15px] font-semibold text-[#111315] mb-3">Details</h3>
             <div className="space-y-2.5">
               <div className="flex justify-between">
-                <span className="text-[13px] text-[#86868b]">Driver ID</span>
-                <span className="text-[13px] text-[#1d1d1f] font-mono">{detail.id}</span>
+                <span className="text-[13px] text-[#868E96]">Driver ID</span>
+                <span className="text-[13px] text-[#111315] font-mono">{detail.id}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[13px] text-[#86868b]">Vehicle</span>
-                <span className="text-[13px] text-[#1d1d1f] capitalize">{detail.vehicle_type}</span>
+                <span className="text-[13px] text-[#868E96]">Vehicle</span>
+                <span className="text-[13px] text-[#111315] capitalize">{detail.vehicle_type}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[13px] text-[#86868b]">Status</span>
+                <span className="text-[13px] text-[#868E96]">Status</span>
                 <span className={`text-[13px] font-medium ${detail.blocked ? 'text-[#ff3b30]' : 'text-[#34c759]'}`}>
                   {detail.blocked ? "Blocked" : "Active"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[13px] text-[#86868b]">Created</span>
-                <span className="text-[13px] text-[#1d1d1f]">{detail.created_at ? new Date(detail.created_at).toLocaleDateString() : "—"}</span>
+                <span className="text-[13px] text-[#868E96]">Created</span>
+                <span className="text-[13px] text-[#111315]">{detail.created_at ? new Date(detail.created_at).toLocaleDateString() : "—"}</span>
               </div>
             </div>
           </div>
@@ -238,29 +238,29 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
         <div className="space-y-3 animate-fade-in">
           {!deliveries || deliveries.length === 0 ? (
             <div className="apple-card p-10 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-3">
                 <Package size={20} className="text-[#c7c7cc]" strokeWidth={1.5} />
               </div>
-              <p className="text-[14px] text-[#86868b]">No deliveries yet</p>
-              <p className="text-[12px] text-[#aeaeb2] mt-1">Assign jobs to this driver to see their delivery history</p>
+              <p className="text-[14px] text-[#868E96]">No deliveries yet</p>
+              <p className="text-[12px] text-[#ADB5BD] mt-1">Assign jobs to this driver to see their delivery history</p>
             </div>
           ) : (
             deliveries.map((d, i) => (
               <div key={d.job.id} className="apple-card p-4 animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${d.job.status === 'completed' ? 'bg-[#34c759]' : d.job.status === 'assigned' ? 'bg-[#007aff]' : 'bg-[#aeaeb2]'}`} />
-                    <p className="text-[14px] font-semibold text-[#1d1d1f]">{d.job.area || "Job"}</p>
+                    <span className={`w-2 h-2 rounded-full ${d.job.status === 'completed' ? 'bg-[#34c759]' : d.job.status === 'assigned' ? 'bg-[#007aff]' : 'bg-[#ADB5BD]'}`} />
+                    <p className="text-[14px] font-semibold text-[#111315]">{d.job.area || "Job"}</p>
                   </div>
                   <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                     d.job.status === 'completed' ? 'bg-[#34c759]/10 text-[#34c759]' :
                     d.job.status === 'assigned' ? 'bg-[#007aff]/10 text-[#007aff]' :
-                    'bg-[#f5f5f7] text-[#86868b]'
+                    'bg-[#F1F3F5] text-[#868E96]'
                   }`}>
                     {d.job.status}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-[12px] text-[#86868b]">
+                <div className="flex items-center gap-4 text-[12px] text-[#868E96]">
                   <span className="flex items-center gap-1">
                     <MapPin size={12} /> {d.completed_stops}/{d.total_stops} stops
                   </span>
@@ -275,10 +275,10 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
                 </div>
                 {d.total_stops > 0 && (
                   <div className="mt-3">
-                    <div className="h-1.5 bg-[#f5f5f7] rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-[#F1F3F5] rounded-full overflow-hidden">
                       <div className="h-full bg-[#008080] rounded-full transition-all" style={{ width: `${d.completion_pct}%` }} />
                     </div>
-                    <p className="text-[11px] text-[#aeaeb2] mt-1">{d.completion_pct}% complete</p>
+                    <p className="text-[11px] text-[#ADB5BD] mt-1">{d.completion_pct}% complete</p>
                   </div>
                 )}
               </div>
@@ -381,8 +381,8 @@ export default function Drivers({ embedded = false }) {
       <div className={`flex flex-col sm:flex-row sm:items-center gap-4 mb-8 ${embedded ? "justify-end" : "justify-between"}`}>
         {!embedded && (
           <div>
-            <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Drivers</h1>
-            <p className="text-[14px] text-[#86868b] mt-1">{drivers.length} drivers in your fleet</p>
+            <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Drivers</h1>
+            <p className="text-[14px] text-[#868E96] mt-1">{drivers.length} drivers in your fleet</p>
           </div>
         )}
         <button onClick={() => { setShowForm(!showForm); setNewDriverCredentials(null); }} className="apple-btn apple-btn-primary w-full sm:w-auto">
@@ -397,44 +397,44 @@ export default function Drivers({ embedded = false }) {
               <KeyRound size={18} className="text-[#34c759]" />
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#1d1d1f]">Driver account created</h3>
-              <p className="text-[12px] text-[#86868b] mt-0.5">
-                Share these login details with <span className="font-medium text-[#1d1d1f]">{newDriverCredentials.name}</span> so they can sign in on their device.
+              <h3 className="text-[15px] font-semibold text-[#111315]">Driver account created</h3>
+              <p className="text-[12px] text-[#868E96] mt-0.5">
+                Share these login details with <span className="font-medium text-[#111315]">{newDriverCredentials.name}</span> so they can sign in on their device.
               </p>
             </div>
           </div>
 
-          <div className="space-y-2 bg-[#f5f5f7] rounded-xl p-4">
+          <div className="space-y-2 bg-[#F1F3F5] rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider">Email</p>
-                <p className="text-[14px] text-[#1d1d1f] font-mono">{newDriverCredentials.email}</p>
+                <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider">Email</p>
+                <p className="text-[14px] text-[#111315] font-mono">{newDriverCredentials.email}</p>
               </div>
               <button
                 onClick={() => copyToClipboard(newDriverCredentials.email, "email")}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/80 transition-colors"
               >
-                {copiedField === "email" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#86868b]" />}
+                {copiedField === "email" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#868E96]" />}
               </button>
             </div>
             <div className="h-px bg-black/[0.06]" />
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wider">Password</p>
-                <p className="text-[14px] text-[#1d1d1f] font-mono">{newDriverCredentials.password}</p>
+                <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wider">Password</p>
+                <p className="text-[14px] text-[#111315] font-mono">{newDriverCredentials.password}</p>
               </div>
               <button
                 onClick={() => copyToClipboard(newDriverCredentials.password, "password")}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/80 transition-colors"
               >
-                {copiedField === "password" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#86868b]" />}
+                {copiedField === "password" ? <Check size={14} className="text-[#34c759]" /> : <Copy size={14} className="text-[#868E96]" />}
               </button>
             </div>
           </div>
 
           <button
             onClick={() => setNewDriverCredentials(null)}
-            className="text-[12px] text-[#86868b] hover:text-[#1d1d1f] mt-3 transition-colors"
+            className="text-[12px] text-[#868E96] hover:text-[#111315] mt-3 transition-colors"
           >
             Dismiss
           </button>
@@ -444,37 +444,37 @@ export default function Drivers({ embedded = false }) {
       {showForm && (
         <div className="apple-card p-6 mb-6 max-w-lg animate-slide-up">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[15px] font-semibold text-[#1d1d1f]">New Driver</h3>
-            <button onClick={() => setShowForm(false)} className="w-7 h-7 rounded-full bg-[#f5f5f7] flex items-center justify-center hover:bg-[#e5e5ea] transition-colors">
-              <X size={14} className="text-[#86868b]" />
+            <h3 className="text-[15px] font-semibold text-[#111315]">New Driver</h3>
+            <button onClick={() => setShowForm(false)} className="w-7 h-7 rounded-full bg-[#F1F3F5] flex items-center justify-center hover:bg-[#e5e5ea] transition-colors">
+              <X size={14} className="text-[#868E96]" />
             </button>
           </div>
 
-          <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-[#f5f5f7] mb-4">
-            <Shield size={14} className="text-[#86868b] shrink-0 mt-0.5" />
-            <p className="text-[11px] text-[#86868b] leading-relaxed">
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-[#F1F3F5] mb-4">
+            <Shield size={14} className="text-[#868E96] shrink-0 mt-0.5" />
+            <p className="text-[11px] text-[#868E96] leading-relaxed">
               A login account is automatically created so the driver can sign in and view assigned jobs on their device.
             </p>
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="text-[12px] text-[#86868b] font-medium mb-1 block">Name</label>
+              <label className="text-[12px] text-[#868E96] font-medium mb-1 block">Name</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="e.g. Sipho Ndlovu" className="apple-input" />
             </div>
             <div>
-              <label className="text-[12px] text-[#86868b] font-medium mb-1 block">Email (used for login)</label>
+              <label className="text-[12px] text-[#868E96] font-medium mb-1 block">Email (used for login)</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="sipho@gmail.com" className="apple-input" />
             </div>
             <div>
-              <label className="text-[12px] text-[#86868b] font-medium mb-1 block">Password (optional)</label>
+              <label className="text-[12px] text-[#868E96] font-medium mb-1 block">Password (optional)</label>
               <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
                 placeholder="Auto-generated" className="apple-input" />
             </div>
             <div>
-              <label className="text-[12px] text-[#86868b] font-medium mb-1.5 block">Vehicle type</label>
+              <label className="text-[12px] text-[#868E96] font-medium mb-1.5 block">Vehicle type</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { value: "van", label: "Van", icon: Container },
@@ -489,16 +489,16 @@ export default function Drivers({ embedded = false }) {
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
                       form.vehicle_type === value
                         ? "border-[#008080] bg-[#008080]/[0.04]"
-                        : "border-transparent bg-[#f5f5f7] hover:bg-[#ebebed]"
+                        : "border-transparent bg-[#F1F3F5] hover:bg-[#ebebed]"
                     }`}
                   >
                     <VIcon
                       size={22}
                       strokeWidth={1.6}
-                      className={form.vehicle_type === value ? "text-[#008080]" : "text-[#86868b]"}
+                      className={form.vehicle_type === value ? "text-[#008080]" : "text-[#868E96]"}
                     />
                     <span className={`text-[11px] font-medium ${
-                      form.vehicle_type === value ? "text-[#008080]" : "text-[#86868b]"
+                      form.vehicle_type === value ? "text-[#008080]" : "text-[#868E96]"
                     }`}>{label}</span>
                   </button>
                 ))}
@@ -521,11 +521,11 @@ export default function Drivers({ embedded = false }) {
         </div>
       ) : drivers.length === 0 ? (
         <div className="apple-card p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-4">
             <Truck size={24} className="text-[#c7c7cc]" strokeWidth={1.5} />
           </div>
-          <p className="text-[14px] text-[#86868b] mb-1">No drivers yet</p>
-          <p className="text-[12px] text-[#aeaeb2] mb-4">Add drivers to assign them jobs. Each driver gets a login account.</p>
+          <p className="text-[14px] text-[#868E96] mb-1">No drivers yet</p>
+          <p className="text-[12px] text-[#ADB5BD] mb-4">Add drivers to assign them jobs. Each driver gets a login account.</p>
           <button onClick={() => setShowForm(true)} className="apple-btn apple-btn-primary">
             Add your first driver
           </button>
@@ -540,12 +540,12 @@ export default function Drivers({ embedded = false }) {
                 onClick={() => setSelectedDriverId(driver.id)}
                 className="apple-card p-4 flex items-center gap-4 animate-fade-in cursor-pointer hover:shadow-md transition-shadow"
                 style={{ animationDelay: `${i * 40}ms` }}>
-                <div className="w-10 h-10 rounded-xl bg-[#f5f5f7] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#F1F3F5] flex items-center justify-center shrink-0">
                   <VehicleIcon type={driver.vehicle_type} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-semibold text-[#1d1d1f]">{driver.name}</p>
+                    <p className="text-[14px] font-semibold text-[#111315]">{driver.name}</p>
                     {driver.blocked && (
                       <span className="px-1.5 py-0.5 rounded-md bg-[#ff3b30]/10 text-[10px] font-semibold text-[#ff3b30]">BLOCKED</span>
                     )}
@@ -553,7 +553,7 @@ export default function Drivers({ embedded = false }) {
                       <span className="px-1.5 py-0.5 rounded-md bg-[#34c759]/10 text-[10px] font-semibold text-[#34c759]">APP</span>
                     )}
                   </div>
-                  <p className="text-[12px] text-[#aeaeb2]">
+                  <p className="text-[12px] text-[#ADB5BD]">
                     {driver.vehicle_type}
                     {driver.email && <span className="hidden sm:inline"> &middot; {driver.email}</span>}
                   </p>
@@ -561,19 +561,19 @@ export default function Drivers({ embedded = false }) {
                 <div className="flex items-center gap-3 sm:gap-4">
                   {driverJobs.length > 0 ? (
                     <div className="text-right hidden sm:block">
-                      <span className="text-[12px] font-semibold text-[#1d1d1f]">{driverJobs.length} job{driverJobs.length !== 1 ? "s" : ""}</span>
+                      <span className="text-[12px] font-semibold text-[#111315]">{driverJobs.length} job{driverJobs.length !== 1 ? "s" : ""}</span>
                       {completedJobs.length > 0 && (
-                        <p className="text-[11px] text-[#86868b]">{completedJobs.length} completed</p>
+                        <p className="text-[11px] text-[#868E96]">{completedJobs.length} completed</p>
                       )}
                     </div>
                   ) : (
-                    <span className="text-[12px] text-[#aeaeb2] hidden sm:inline">No jobs</span>
+                    <span className="text-[12px] text-[#ADB5BD] hidden sm:inline">No jobs</span>
                   )}
                   <button onClick={(e) => handleRemove(e, driver.id)}
                     className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#ff3b30]/10 transition-colors">
-                    <Trash2 size={14} className="text-[#d1d1d6]" />
+                    <Trash2 size={14} className="text-[#DEE2E6]" />
                   </button>
-                  <ChevronRight size={16} className="text-[#d1d1d6]" />
+                  <ChevronRight size={16} className="text-[#DEE2E6]" />
                 </div>
               </div>
             );

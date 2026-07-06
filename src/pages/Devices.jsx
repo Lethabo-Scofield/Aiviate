@@ -60,7 +60,7 @@ function SignalBars({ strength }) {
           className="w-1 rounded-sm"
           style={{
             height: `${b * 25}%`,
-            background: b <= bars ? "#34c759" : "#e5e5e7",
+            background: b <= bars ? "#34c759" : "#E9ECEF",
           }}
         />
       ))}
@@ -86,7 +86,7 @@ function readinessTier(score) {
   if (score >= 85) return { label: "Ready", color: "#34c759" };
   if (score >= 65) return { label: "Degraded", color: "#ff9500" };
   if (score > 0) return { label: "Faulty", color: "#ff3b30" };
-  return { label: "Offline", color: "#86868b" };
+  return { label: "Offline", color: "#868E96" };
 }
 
 // Back-compat aliases used widely below
@@ -175,7 +175,7 @@ function Device3DCard({ device, driverName }) {
               <span
                 className="w-1.5 h-1.5 rounded-full"
                 style={{
-                  background: online ? "#ff3b30" : "#3a3a3c",
+                  background: online ? "#ff3b30" : "#343A40",
                   boxShadow: online ? "0 0 6px #ff3b30" : "none",
                 }}
                 title="IR camera"
@@ -279,24 +279,24 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
             }}
           >
             <Device3DCard device={device} driverName={driverName} />
-            <p className="absolute bottom-3 text-[10px] text-[#aeaeb2] tracking-wide uppercase">Hover to tilt</p>
+            <p className="absolute bottom-3 text-[10px] text-[#ADB5BD] tracking-wide uppercase">Hover to tilt</p>
           </div>
 
           {/* Details */}
           <div className="p-6 sm:p-8">
             <div className="flex items-start justify-between mb-5">
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-[#86868b] font-semibold">{device.id}</p>
-                <h2 id={titleId} className="text-[22px] font-semibold text-[#1d1d1f] tracking-tight mt-0.5">{device.name}</h2>
-                <p className="text-[13px] text-[#86868b]">{device.model}</p>
+                <p className="text-[11px] uppercase tracking-wider text-[#868E96] font-semibold">{device.id}</p>
+                <h2 id={titleId} className="text-[22px] font-semibold text-[#111315] tracking-tight mt-0.5">{device.name}</h2>
+                <p className="text-[13px] text-[#868E96]">{device.model}</p>
               </div>
               <button
                 onClick={onClose}
                 aria-label="Close"
                 autoFocus
-                className="w-8 h-8 rounded-full bg-[#f0f0f0] hover:bg-[#e5e5e7] flex items-center justify-center tap"
+                className="w-8 h-8 rounded-full bg-[#F1F3F5] hover:bg-[#E9ECEF] flex items-center justify-center tap"
               >
-                <X size={14} className="text-[#86868b]" />
+                <X size={14} className="text-[#868E96]" />
               </button>
             </div>
 
@@ -309,7 +309,7 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
                     <div>
                       <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.color }}>Guardian readiness</p>
                       <p className="text-[28px] font-semibold mt-0.5" style={{ color: t.color }}>{device.status === "online" ? a : "—"}<span className="text-[14px] opacity-60 ml-1">/100</span></p>
-                      <p className="text-[12px] text-[#86868b] mt-0.5">{t.label} · drowsy-v{device.firmware_version}</p>
+                      <p className="text-[12px] text-[#868E96] mt-0.5">{t.label} · drowsy-v{device.firmware_version}</p>
                     </div>
                     <Eye size={36} style={{ color: t.color, opacity: 0.3 }} />
                   </div>
@@ -318,43 +318,43 @@ function DeviceDetailSheet({ device, driverName, onClose, onOta, onRemove, otaBu
             })()}
 
             <div className="grid grid-cols-3 gap-2 mb-5">
-              <div className="rounded-2xl bg-[#f5f5f7] p-3">
-                <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Camera</p>
-                <p className="text-[13px] font-semibold text-[#1d1d1f]">{device.camera_status === "ok" ? "Live" : "Faulty"}</p>
+              <div className="rounded-2xl bg-[#F1F3F5] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-[#868E96] font-semibold mb-1">Camera</p>
+                <p className="text-[13px] font-semibold text-[#111315]">{device.camera_status === "ok" ? "Live" : "Faulty"}</p>
               </div>
-              <div className="rounded-2xl bg-[#f5f5f7] p-3">
-                <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Battery</p>
+              <div className="rounded-2xl bg-[#F1F3F5] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-[#868E96] font-semibold mb-1">Battery</p>
                 <p className="text-[13px] font-semibold" style={{ color: device.battery_pct < 20 ? "#ff3b30" : device.battery_pct < 40 ? "#ff9500" : "#34c759" }}>{device.battery_pct}%</p>
               </div>
-              <div className="rounded-2xl bg-[#f5f5f7] p-3">
-                <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold mb-1">Signal</p>
-                <p className="text-[13px] font-semibold text-[#1d1d1f]">{device.signal_strength}%</p>
+              <div className="rounded-2xl bg-[#F1F3F5] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-[#868E96] font-semibold mb-1">Signal</p>
+                <p className="text-[13px] font-semibold text-[#111315]">{device.signal_strength}%</p>
               </div>
             </div>
 
             <div className="space-y-2 mb-6">
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Status</span>
-                <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#1d1d1f]">
-                  <span className={`w-2 h-2 rounded-full ${device.status === "online" ? "bg-[#34c759]" : "bg-[#aeaeb2]"}`} />
+                <span className="text-[12px] text-[#868E96]">Status</span>
+                <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#111315]">
+                  <span className={`w-2 h-2 rounded-full ${device.status === "online" ? "bg-[#34c759]" : "bg-[#ADB5BD]"}`} />
                   {device.status === "online" ? "Online" : "Offline"}
                 </span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Last seen</span>
-                <span className="text-[13px] text-[#1d1d1f]">{timeAgo(device.last_seen)}</span>
+                <span className="text-[12px] text-[#868E96]">Last seen</span>
+                <span className="text-[13px] text-[#111315]">{timeAgo(device.last_seen)}</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Motion sensor</span>
-                <span className="text-[13px] text-[#1d1d1f]">{device.accel_status === "ok" ? "OK" : "Faulty"}</span>
+                <span className="text-[12px] text-[#868E96]">Motion sensor</span>
+                <span className="text-[13px] text-[#111315]">{device.accel_status === "ok" ? "OK" : "Faulty"}</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Fatigue model</span>
-                <span className="text-[13px] font-mono text-[#1d1d1f]">drowsy-v{device.firmware_version}</span>
+                <span className="text-[12px] text-[#868E96]">Fatigue model</span>
+                <span className="text-[13px] font-mono text-[#111315]">drowsy-v{device.firmware_version}</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-[#86868b]">Driver</span>
-                <span className="text-[13px] text-[#1d1d1f]">{driverName || "Unassigned"}</span>
+                <span className="text-[12px] text-[#868E96]">Driver</span>
+                <span className="text-[13px] text-[#111315]">{driverName || "Unassigned"}</span>
               </div>
             </div>
 
@@ -454,8 +454,8 @@ export default function Devices({ embedded = false }) {
       <div className={`mb-6 sm:mb-8 flex items-start flex-wrap gap-4 ${embedded ? "justify-end" : "justify-between"}`}>
         {!embedded && (
           <div>
-            <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Devices</h1>
-            <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+            <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Devices</h1>
+            <p className="text-[13px] sm:text-[14px] text-[#868E96] mt-1">
               Telemetry layer — every Guardian unit, its health, and which driver it's watching.
             </p>
           </div>
@@ -467,13 +467,13 @@ export default function Devices({ embedded = false }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
-          { label: "Total devices", value: devices.length, color: "#1d1d1f" },
+          { label: "Total devices", value: devices.length, color: "#111315" },
           { label: "Online now", value: onlineCount, color: "#34c759" },
           { label: "Drivers covered", value: devices.filter((d) => d.driver_id).length, color: "#008080" },
           { label: "Need attention", value: lowBattery + updatesAvailable, color: "#ff9500" },
         ].map((s) => (
           <div key={s.label} className="stat-card">
-            <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">{s.label}</p>
+            <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wide mb-2">{s.label}</p>
             <p className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: s.color }}>
               {s.value}
             </p>
@@ -492,11 +492,11 @@ export default function Devices({ embedded = false }) {
         </div>
       ) : devices.length === 0 ? (
         <div className="apple-card p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck size={22} className="text-[#86868b]" strokeWidth={1.5} />
+          <div className="w-14 h-14 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck size={22} className="text-[#868E96]" strokeWidth={1.5} />
           </div>
-          <p className="text-[14px] font-semibold text-[#1d1d1f] mb-1">No Guardians paired yet</p>
-          <p className="text-[13px] text-[#86868b] mb-4">Pair a Guardian unit to start watching your drivers.</p>
+          <p className="text-[14px] font-semibold text-[#111315] mb-1">No Guardians paired yet</p>
+          <p className="text-[13px] text-[#868E96] mb-4">Pair a Guardian unit to start watching your drivers.</p>
           <button onClick={() => setShowAdd(true)} className="apple-btn apple-btn-primary">
             <Plus size={15} /> Pair Guardian
           </button>
@@ -506,7 +506,7 @@ export default function Devices({ embedded = false }) {
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-[#86868b] font-semibold border-b border-black/[0.06]">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-[#868E96] font-semibold border-b border-black/[0.06]">
                   <th className="px-5 py-3">Guardian</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Readiness</th>
@@ -536,8 +536,8 @@ export default function Devices({ embedded = false }) {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <div>
-                          <p className="font-semibold text-[#1d1d1f]">{d.name}</p>
-                          <p className="text-[11px] text-[#aeaeb2]">{d.model} • {d.id}</p>
+                          <p className="font-semibold text-[#111315]">{d.name}</p>
+                          <p className="text-[11px] text-[#ADB5BD]">{d.model} • {d.id}</p>
                         </div>
                         <ChevronRight size={14} className="text-[#c7c7cc] ml-1" />
                       </div>
@@ -545,12 +545,12 @@ export default function Devices({ embedded = false }) {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`w-2 h-2 rounded-full ${d.status === "online" ? "bg-[#34c759]" : "bg-[#aeaeb2]"}`}
+                          className={`w-2 h-2 rounded-full ${d.status === "online" ? "bg-[#34c759]" : "bg-[#ADB5BD]"}`}
                           style={d.status === "online" ? { animation: "pulseGlow 2s ease-in-out infinite" } : undefined}
                         />
-                        <span className="text-[12px] font-medium text-[#3a3a3c] capitalize">{d.status}</span>
+                        <span className="text-[12px] font-medium text-[#343A40] capitalize">{d.status}</span>
                       </div>
-                      <p className="text-[10px] text-[#aeaeb2] mt-1">last seen {timeAgo(d.last_seen)}</p>
+                      <p className="text-[10px] text-[#ADB5BD] mt-1">last seen {timeAgo(d.last_seen)}</p>
                     </td>
                     <td className="px-5 py-3">
                       {(() => {
@@ -560,7 +560,7 @@ export default function Devices({ embedded = false }) {
                           <div className="flex items-center gap-2">
                             <Eye size={13} style={{ color: t.color }} />
                             <span className="text-[12px] font-semibold" style={{ color: t.color }}>{d.status === "online" ? a : "—"}</span>
-                            <span className="text-[10px] text-[#aeaeb2]">{t.label}</span>
+                            <span className="text-[10px] text-[#ADB5BD]">{t.label}</span>
                           </div>
                         );
                       })()}
@@ -568,11 +568,11 @@ export default function Devices({ embedded = false }) {
                     <td className="px-5 py-3"><BatteryBadge pct={d.battery_pct} /></td>
                     <td className="px-5 py-3">
                       {d.status === "offline" ? (
-                        <WifiOff size={14} className="text-[#aeaeb2]" />
+                        <WifiOff size={14} className="text-[#ADB5BD]" />
                       ) : (
                         <div className="flex items-center gap-2">
                           <SignalBars strength={d.signal_strength} />
-                          <span className="text-[11px] text-[#86868b]">{d.signal_strength}</span>
+                          <span className="text-[11px] text-[#868E96]">{d.signal_strength}</span>
                         </div>
                       )}
                     </td>
@@ -580,7 +580,7 @@ export default function Devices({ embedded = false }) {
                       <select
                         value={d.driver_id || ""}
                         onChange={(e) => handleAssign(d.id, e.target.value)}
-                        className="text-[12px] bg-[#f5f5f7] border-0 rounded-lg px-2 py-1.5 max-w-[140px]"
+                        className="text-[12px] bg-[#F1F3F5] border-0 rounded-lg px-2 py-1.5 max-w-[140px]"
                       >
                         <option value="">— Unassigned —</option>
                         {drivers.map((dr) => (
@@ -590,8 +590,8 @@ export default function Devices({ embedded = false }) {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[12px] text-[#3a3a3c]">{d.model}</span>
-                        <span className="text-[10px] font-mono text-[#aeaeb2]">v{d.firmware_version}</span>
+                        <span className="text-[12px] text-[#343A40]">{d.model}</span>
+                        <span className="text-[10px] font-mono text-[#ADB5BD]">v{d.firmware_version}</span>
                         {d.ota_status === "update_available" && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0a84ff]/10 text-[#0a84ff] font-semibold">
                             UPDATE
@@ -617,7 +617,7 @@ export default function Devices({ embedded = false }) {
                         <button
                           onClick={() => handleRemove(d.id)}
                           title="Remove"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30]"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#ff3b30]/10 text-[#868E96] hover:text-[#ff3b30]"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -654,21 +654,21 @@ export default function Devices({ embedded = false }) {
             <div className="ios-sheet-handle sm:hidden" />
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">Pair a Guardian</h2>
+                <h2 className="text-[18px] font-semibold text-[#111315] tracking-tight">Pair a Guardian</h2>
                 <button
                   onClick={() => setShowAdd(false)}
-                  className="w-8 h-8 rounded-full bg-[#f0f0f0] hover:bg-[#e5e5e7] flex items-center justify-center tap"
+                  className="w-8 h-8 rounded-full bg-[#F1F3F5] hover:bg-[#E9ECEF] flex items-center justify-center tap"
                 >
-                  <X size={14} className="text-[#86868b]" />
+                  <X size={14} className="text-[#868E96]" />
                 </button>
               </div>
               <form onSubmit={handleAdd} className="space-y-3">
                 <div>
-                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Unit label</label>
+                  <label className="text-[12px] font-semibold text-[#343A40] mb-1 block">Unit label</label>
                   <input className="apple-input" placeholder="e.g. Cab #4 — Hilux GP-123" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
                 </div>
                 <div>
-                  <label className="text-[12px] font-semibold text-[#3a3a3c] mb-1 block">Hardware model</label>
+                  <label className="text-[12px] font-semibold text-[#343A40] mb-1 block">Hardware model</label>
                   <input className="apple-input" value={newModel} onChange={(e) => setNewModel(e.target.value)} />
                 </div>
                 <div className="flex gap-2 justify-end pt-2">

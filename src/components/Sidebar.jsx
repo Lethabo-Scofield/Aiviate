@@ -34,7 +34,7 @@ export default function Sidebar() {
         onClick={() => setOpen(true)}
         className="fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-white/90 backdrop-blur-lg border border-black/[0.06] flex items-center justify-center lg:hidden shadow-sm active:scale-95 transition-transform"
       >
-        <Menu size={18} className="text-[#1d1d1f]" strokeWidth={1.8} />
+        <Menu size={18} className="text-[#111315]" strokeWidth={1.8} />
       </button>
 
       {open && (
@@ -50,11 +50,11 @@ export default function Sidebar() {
         <div className="px-5 pt-7 pb-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Aiviate" className="w-7 h-7" />
-            <h1 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">Aiviate</h1>
+            <h1 className="text-[15px] font-semibold text-[#111315] tracking-tight">Aiviate</h1>
           </div>
           <button onClick={() => setOpen(false)}
                   className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/[0.04] transition-colors lg:hidden">
-            <X size={16} className="text-[#86868b]" />
+            <X size={16} className="text-[#868E96]" />
           </button>
         </div>
 
@@ -64,8 +64,8 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
                   isActive
-                    ? "bg-[#f0f0f0] text-[#1d1d1f] font-medium"
-                    : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.03]"
+                    ? "bg-[#F1F3F5] text-[#111315] font-medium"
+                    : "text-[#868E96] hover:text-[#111315] hover:bg-black/[0.03]"
                 }`
               }>
               <Icon size={16} strokeWidth={1.8} />
@@ -73,11 +73,11 @@ export default function Sidebar() {
             </NavLink>
           ))}
 
-          <div className="px-3 pt-6 pb-1 text-[10px] uppercase tracking-wider text-[#aeaeb2] font-semibold">
+          <div className="px-3 pt-6 pb-1 text-[10px] uppercase tracking-wider text-[#ADB5BD] font-semibold">
             Tip
           </div>
-          <div className="px-3 py-2 text-[11px] text-[#86868b] leading-snug">
-            Press <span className="font-mono text-[#1d1d1f] bg-[#f5f5f7] px-1 rounded">⌘K</span> anywhere to ask Aiviate a question or run a command.
+          <div className="px-3 py-2 text-[11px] text-[#868E96] leading-snug">
+            Press <span className="font-mono text-[#111315] bg-[#F1F3F5] px-1 rounded">⌘K</span> anywhere to ask Aiviate a question or run a command.
           </div>
         </nav>
 
@@ -85,8 +85,8 @@ export default function Sidebar() {
           className={({ isActive }) =>
             `mx-3 mb-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
               isActive
-                ? "bg-[#f0f0f0] text-[#1d1d1f] font-medium"
-                : "text-[#aeaeb2] hover:text-[#1d1d1f] hover:bg-black/[0.03]"
+                ? "bg-[#F1F3F5] text-[#111315] font-medium"
+                : "text-[#ADB5BD] hover:text-[#111315] hover:bg-black/[0.03]"
             }`
           }>
           <Settings size={15} strokeWidth={1.8} />
@@ -98,8 +98,8 @@ export default function Sidebar() {
             className="mx-3 mb-5 mt-2 flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-black/[0.03] transition-colors">
             <UserAvatar size={28} />
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-medium text-[#1d1d1f] truncate leading-tight">{user.name}</p>
-              <p className="text-[11px] text-[#aeaeb2] truncate leading-tight mt-0.5">{user.email}</p>
+              <p className="text-[12px] font-medium text-[#111315] truncate leading-tight">{user.name}</p>
+              <p className="text-[11px] text-[#ADB5BD] truncate leading-tight mt-0.5">{user.email}</p>
             </div>
           </NavLink>
         )}

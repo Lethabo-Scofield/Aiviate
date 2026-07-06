@@ -1,2 +1,3 @@
 - [JWT_SECRET token churn](jwt-secret-token-churn.md) — unset JWT_SECRET → random per-boot key → browser tokens 401 after every backend restart; set it as a shared env var.
 - [Sidebar IA & dispatch intent](sidebar-ia-and-dispatch-intent.md) — 5 lean nav tabs; Jobs/Fleet are tab containers with `embedded` children; keep the state-changing dispatch NLP pattern narrow.
+- [Olyxee design system](olyxee-design-system.md) — tokens live in index.css; motion restrained not elastic; neutral-50 shell bg with white cards; teal #008080 accent.

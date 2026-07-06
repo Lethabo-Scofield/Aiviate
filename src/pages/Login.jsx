@@ -82,8 +82,8 @@ export default function Login() {
           <div className="flex justify-center mb-5">
             <img src="/logo.png" alt="Aiviate" className="w-14 h-14" />
           </div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Aiviate</h1>
-          <p className="text-[15px] text-[#86868b] mt-1">The AI operations brain for your fleet.</p>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Aiviate</h1>
+          <p className="text-[15px] text-[#868E96] mt-1">The AI operations brain for your fleet.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -94,7 +94,7 @@ export default function Login() {
           )}
 
           <div>
-            <label className="block text-[13px] font-medium text-[#1d1d1f] mb-1.5">Email</label>
+            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Email</label>
             <input
               type="email"
               value={email}
@@ -106,7 +106,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#1d1d1f] mb-1.5">Password</label>
+            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -119,7 +119,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c7c7cc] hover:text-[#86868b] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c7c7cc] hover:text-[#868E96] transition-colors"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -142,7 +142,7 @@ export default function Login() {
 
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 h-px bg-black/[0.06]" />
-          <span className="text-[11px] uppercase tracking-wider text-[#aeaeb2] font-semibold">or</span>
+          <span className="text-[11px] uppercase tracking-wider text-[#ADB5BD] font-semibold">or</span>
           <div className="flex-1 h-px bg-black/[0.06]" />
         </div>
 
@@ -155,13 +155,13 @@ export default function Login() {
           <Sparkles size={15} />
           {demoLoading ? "Loading demo..." : "Try the demo"}
         </button>
-        <p className="text-center text-[11px] text-[#aeaeb2] mt-2">
-          Or sign in with <span className="font-mono text-[#86868b]">demo</span> / <span className="font-mono text-[#86868b]">demo</span>
+        <p className="text-center text-[11px] text-[#ADB5BD] mt-2">
+          Or sign in with <span className="font-mono text-[#868E96]">demo</span> / <span className="font-mono text-[#868E96]">demo</span>
         </p>
 
-        <p className="text-center mt-6 text-[13px] text-[#86868b]">
+        <p className="text-center mt-6 text-[13px] text-[#868E96]">
           Don't have an account?{" "}
-          <Link to="/register" className="text-[#1d1d1f] font-semibold hover:underline">
+          <Link to="/register" className="text-[#111315] font-semibold hover:underline">
             Create one
           </Link>
         </p>

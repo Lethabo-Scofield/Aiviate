@@ -17,21 +17,21 @@ export default function JobsCenter() {
   return (
     <div className="animate-fade-in">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Jobs</h1>
-        <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Jobs</h1>
+        <p className="text-[13px] sm:text-[14px] text-[#868E96] mt-1">
           Assign and track jobs, or upload new deliveries to build fresh routes.
         </p>
       </div>
 
-      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#f0f0f0] mb-6 sm:mb-8">
+      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#F1F3F5] mb-6 sm:mb-8">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActive(id)}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-all ${
               active === id
-                ? "bg-white text-[#1d1d1f] shadow-sm"
-                : "text-[#86868b] hover:text-[#1d1d1f]"
+                ? "bg-white text-[#111315] shadow-sm"
+                : "text-[#868E96] hover:text-[#111315]"
             }`}
           >
             <Icon size={14} strokeWidth={1.8} />

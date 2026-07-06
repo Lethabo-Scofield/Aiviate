@@ -17,8 +17,8 @@ const EVENT_META = {
   fatigue: { label: "Drowsiness", icon: Eye, color: "#ff3b30" },
   harsh_brake: { label: "Harsh brake", icon: AlertTriangle, color: "#ff9500" },
   speeding: { label: "Speeding", icon: Gauge, color: "#ff9500" },
-  phone_use: { label: "Phone use", icon: Smartphone, color: "#86868b" },
-  sharp_turn: { label: "Sharp turn", icon: CornerUpRight, color: "#86868b" },
+  phone_use: { label: "Phone use", icon: Smartphone, color: "#868E96" },
+  sharp_turn: { label: "Sharp turn", icon: CornerUpRight, color: "#868E96" },
 };
 
 function isToday(iso) {
@@ -115,8 +115,8 @@ export default function SafetyCenter({ embedded = false }) {
     <div className="animate-fade-in">
       {!embedded && (
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">Safety</h1>
-          <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1">
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Safety</h1>
+          <p className="text-[13px] sm:text-[14px] text-[#868E96] mt-1">
             Live fatigue picture across your fleet — driven by your Guardian cameras.
           </p>
         </div>
@@ -148,8 +148,8 @@ export default function SafetyCenter({ embedded = false }) {
             <Shield size={16} className="text-[#34c759]" />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-[#1d1d1f]">All clear right now</p>
-            <p className="text-[12px] text-[#86868b]">No severe drowsiness in the last hour</p>
+            <p className="text-[13px] font-semibold text-[#111315]">All clear right now</p>
+            <p className="text-[12px] text-[#868E96]">No severe drowsiness in the last hour</p>
           </div>
         </div>
       )}
@@ -157,28 +157,28 @@ export default function SafetyCenter({ embedded = false }) {
       {/* Headline stats — fatigue-first */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <div className="stat-card">
-          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Drowsy now</p>
+          <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wide mb-2">Drowsy now</p>
           <p className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: severeNow.length > 0 ? "#ff3b30" : "#34c759" }}>
             {severeNow.length}
           </p>
-          <p className="text-[11px] text-[#aeaeb2] mt-2">drivers in last hour</p>
+          <p className="text-[11px] text-[#ADB5BD] mt-2">drivers in last hour</p>
         </div>
         <div className="stat-card">
-          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Caught today</p>
-          <p className="text-[28px] font-semibold tracking-tight leading-none text-[#1d1d1f]">{fatigueToday.length}</p>
-          <p className="text-[11px] text-[#aeaeb2] mt-2">drowsiness events</p>
+          <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wide mb-2">Caught today</p>
+          <p className="text-[28px] font-semibold tracking-tight leading-none text-[#111315]">{fatigueToday.length}</p>
+          <p className="text-[11px] text-[#ADB5BD] mt-2">drowsiness events</p>
         </div>
         <div className="stat-card">
-          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">Cameras watching</p>
+          <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wide mb-2">Cameras watching</p>
           <p className="text-[28px] font-semibold tracking-tight leading-none text-[#008080]">{drivers.length}</p>
-          <p className="text-[11px] text-[#aeaeb2] mt-2">drivers protected</p>
+          <p className="text-[11px] text-[#ADB5BD] mt-2">drivers protected</p>
         </div>
         <div className="stat-card">
-          <p className="text-[11px] text-[#86868b] font-medium uppercase tracking-wide mb-2">At-risk drivers</p>
+          <p className="text-[11px] text-[#868E96] font-medium uppercase tracking-wide mb-2">At-risk drivers</p>
           <p className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: atRiskNow.length > 0 ? "#ff9500" : "#34c759" }}>
             {atRiskNow.length}
           </p>
-          <p className="text-[11px] text-[#aeaeb2] mt-2">risk score below 65</p>
+          <p className="text-[11px] text-[#ADB5BD] mt-2">risk score below 65</p>
         </div>
       </div>
 
@@ -187,30 +187,30 @@ export default function SafetyCenter({ embedded = false }) {
         <div className="apple-card p-5 lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Driver risk</h2>
-              <p className="text-[11px] text-[#aeaeb2] mt-0.5">Weighted by recent drowsiness events</p>
+              <h2 className="text-[14px] font-semibold text-[#111315]">Driver risk</h2>
+              <p className="text-[11px] text-[#ADB5BD] mt-0.5">Weighted by recent drowsiness events</p>
             </div>
-            <Eye size={16} className="text-[#86868b]" />
+            <Eye size={16} className="text-[#868E96]" />
           </div>
           {driversByAlertness.length === 0 ? (
-            <p className="text-[13px] text-[#aeaeb2] py-8 text-center">No drivers yet</p>
+            <p className="text-[13px] text-[#ADB5BD] py-8 text-center">No drivers yet</p>
           ) : (
             <div className="space-y-1.5">
               {driversByAlertness.map((d) => {
                 const t = tier(d.alertness);
                 return (
-                  <div key={d.driver_id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f5f5f7] transition-colors">
+                  <div key={d.driver_id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#F1F3F5] transition-colors">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${t.color}1A`, color: t.color }}>
                       <Eye size={14} strokeWidth={1.8} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[#1d1d1f] truncate">{d.driver_name}</p>
-                      <p className="text-[11px] text-[#aeaeb2]">
+                      <p className="text-[13px] font-medium text-[#111315] truncate">{d.driver_name}</p>
+                      <p className="text-[11px] text-[#ADB5BD]">
                         {d.fatigue || 0} drowsy · {d.total_events || 0} total events
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-24 h-1.5 rounded-full bg-[#f0f0f0] overflow-hidden">
+                      <div className="w-24 h-1.5 rounded-full bg-[#F1F3F5] overflow-hidden">
                         <div className="h-full" style={{ width: `${d.alertness}%`, background: t.color }} />
                       </div>
                       <span className="text-[13px] font-semibold w-8 text-right" style={{ color: t.color }}>
@@ -230,10 +230,10 @@ export default function SafetyCenter({ embedded = false }) {
         <div className="apple-card p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Where they nod off</h2>
-              <p className="text-[11px] text-[#aeaeb2] mt-0.5">Drowsiness hotspots</p>
+              <h2 className="text-[14px] font-semibold text-[#111315]">Where they nod off</h2>
+              <p className="text-[11px] text-[#ADB5BD] mt-0.5">Drowsiness hotspots</p>
             </div>
-            <span className="text-[11px] text-[#aeaeb2]">{fatigueHeatmap.length} events</span>
+            <span className="text-[11px] text-[#ADB5BD]">{fatigueHeatmap.length} events</span>
           </div>
           <div className="rounded-xl overflow-hidden h-[280px]">
             <MapContainer center={[-26.2041, 28.0473]} zoom={10} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
@@ -261,24 +261,24 @@ export default function SafetyCenter({ embedded = false }) {
       {/* Recent drowsiness events */}
       <div className="apple-card p-5 mb-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[14px] font-semibold text-[#1d1d1f]">Recent drowsiness catches</h2>
-          <Camera size={14} className="text-[#86868b]" />
+          <h2 className="text-[14px] font-semibold text-[#111315]">Recent drowsiness catches</h2>
+          <Camera size={14} className="text-[#868E96]" />
         </div>
         {fatigueEvents.length === 0 ? (
-          <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No drowsiness detected yet — your drivers are wide awake.</p>
+          <p className="text-[13px] text-[#ADB5BD] py-6 text-center">No drowsiness detected yet — your drivers are wide awake.</p>
         ) : (
           <div className="space-y-1.5 max-h-[360px] overflow-y-auto">
             {fatigueEvents.slice(0, 25).map((e) => (
-              <div key={e.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f5f5f7]">
+              <div key={e.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#F1F3F5]">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#ff3b30]/10 text-[#ff3b30]">
                   <Eye size={14} strokeWidth={1.8} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-[#1d1d1f]">
+                  <p className="text-[13px] font-medium text-[#111315]">
                     {e.driver_name}
-                    <span className="text-[#86868b] font-normal"> — eye closure / yawn detected</span>
+                    <span className="text-[#868E96] font-normal"> — eye closure / yawn detected</span>
                   </p>
-                  <p className="text-[11px] text-[#aeaeb2]">severity {e.severity}/5 · {timeAgo(e.created_at)}</p>
+                  <p className="text-[11px] text-[#ADB5BD]">severity {e.severity}/5 · {timeAgo(e.created_at)}</p>
                 </div>
                 {e.severity >= 4 && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ff3b30] text-white font-semibold">CRITICAL</span>
@@ -293,10 +293,10 @@ export default function SafetyCenter({ embedded = false }) {
       <div className="apple-card p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-[13px] font-semibold text-[#1d1d1f]">Other safety signals</h2>
-            <p className="text-[11px] text-[#aeaeb2] mt-0.5">Secondary telemetry — fatigue is what we hunt</p>
+            <h2 className="text-[13px] font-semibold text-[#111315]">Other safety signals</h2>
+            <p className="text-[11px] text-[#ADB5BD] mt-0.5">Secondary telemetry — fatigue is what we hunt</p>
           </div>
-          <TrendingDown size={14} className="text-[#aeaeb2]" />
+          <TrendingDown size={14} className="text-[#ADB5BD]" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Object.entries(EVENT_META)
@@ -305,11 +305,11 @@ export default function SafetyCenter({ embedded = false }) {
               const Icon = meta.icon;
               const count = overview?.event_type_counts?.[key] || 0;
               return (
-                <div key={key} className="rounded-xl bg-[#f5f5f7] p-3 flex items-center gap-3">
-                  <Icon size={14} className="text-[#86868b]" />
+                <div key={key} className="rounded-xl bg-[#F1F3F5] p-3 flex items-center gap-3">
+                  <Icon size={14} className="text-[#868E96]" />
                   <div className="min-w-0">
-                    <p className="text-[16px] font-semibold text-[#1d1d1f] leading-none">{count}</p>
-                    <p className="text-[10px] text-[#86868b] mt-1">{meta.label}</p>
+                    <p className="text-[16px] font-semibold text-[#111315] leading-none">{count}</p>
+                    <p className="text-[10px] text-[#868E96] mt-1">{meta.label}</p>
                   </div>
                 </div>
               );

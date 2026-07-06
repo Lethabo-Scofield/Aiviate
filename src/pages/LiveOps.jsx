@@ -29,7 +29,7 @@ const ALERT_ICONS = {
 const ALERT_COLOR = { critical: "#ff3b30", warning: "#ff9500", info: "#0a84ff" };
 
 function driverIcon(status, label) {
-  const color = status === "on_route" ? "#34c759" : status === "blocked" ? "#ff3b30" : "#aeaeb2";
+  const color = status === "on_route" ? "#34c759" : status === "blocked" ? "#ff3b30" : "#ADB5BD";
   return L.divIcon({
     className: "custom-marker",
     html: `
@@ -97,11 +97,11 @@ export default function LiveOps() {
   return (
     <div className="animate-fade-in">
       <div className="mb-5 flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">
           Live Ops
-          <span className="text-[14px] font-normal text-[#86868b] ml-3">{activeCount}/{drivers.length} on-route</span>
+          <span className="text-[14px] font-normal text-[#868E96] ml-3">{activeCount}/{drivers.length} on-route</span>
         </h1>
-        <div className="flex items-center gap-2 text-[12px] text-[#86868b]">
+        <div className="flex items-center gap-2 text-[12px] text-[#868E96]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#34c759] animate-pulse" />
           Live
         </div>
@@ -112,7 +112,7 @@ export default function LiveOps() {
           <div className="h-[560px]">
             {loading && !data ? (
               <div className="h-full flex items-center justify-center">
-                <Activity size={28} className="text-[#aeaeb2] animate-pulse" />
+                <Activity size={28} className="text-[#ADB5BD] animate-pulse" />
               </div>
             ) : (
               <MapContainer center={center} zoom={11} style={{ height: "100%", width: "100%" }}>
@@ -129,9 +129,9 @@ export default function LiveOps() {
                   >
                     <Popup>
                       <div className="text-[12px]">
-                        <p className="font-semibold text-[#1d1d1f]">{d.driver_name}</p>
-                        <p className="text-[#86868b]">{d.speed_kmh} km/h • {d.progress_pct}% complete</p>
-                        {d.active_job_area && <p className="text-[#86868b]">Route: {d.active_job_area}</p>}
+                        <p className="font-semibold text-[#111315]">{d.driver_name}</p>
+                        <p className="text-[#868E96]">{d.speed_kmh} km/h • {d.progress_pct}% complete</p>
+                        {d.active_job_area && <p className="text-[#868E96]">Route: {d.active_job_area}</p>}
                       </div>
                     </Popup>
                   </Marker>
@@ -161,32 +161,32 @@ export default function LiveOps() {
 
         <div className="space-y-4">
           <div className="apple-card p-5">
-            <h2 className="text-[14px] font-semibold text-[#1d1d1f] mb-3">Drivers</h2>
+            <h2 className="text-[14px] font-semibold text-[#111315] mb-3">Drivers</h2>
             {drivers.length === 0 ? (
-              <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No drivers active</p>
+              <p className="text-[13px] text-[#ADB5BD] py-6 text-center">No drivers active</p>
             ) : (
               <div className="space-y-1 max-h-[260px] overflow-y-auto">
                 {drivers.map((d, i) => {
                   const active = selected === d.driver_id;
-                  const dotColor = d.status === "on_route" ? "#34c759" : d.status === "blocked" ? "#ff3b30" : "#aeaeb2";
+                  const dotColor = d.status === "on_route" ? "#34c759" : d.status === "blocked" ? "#ff3b30" : "#ADB5BD";
                   return (
                     <button
                       key={d.driver_id}
                       onClick={() => setSelected(d.driver_id)}
-                      className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 transition-colors ${active ? "bg-[#e8e8ed]" : "hover:bg-[#f5f5f7]"}`}
+                      className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 transition-colors ${active ? "bg-[#e8e8ed]" : "hover:bg-[#F1F3F5]"}`}
                     >
-                      <div className="w-7 h-7 rounded-full bg-[#f0f0f0] text-[11px] font-semibold text-[#3a3a3c] flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-[#F1F3F5] text-[11px] font-semibold text-[#343A40] flex items-center justify-center">
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-[#1d1d1f] truncate">{d.driver_name}</p>
-                        <p className="text-[11px] text-[#86868b]">
+                        <p className="text-[13px] font-medium text-[#111315] truncate">{d.driver_name}</p>
+                        <p className="text-[11px] text-[#868E96]">
                           {d.active_job_area || "Idle"} • {d.progress_pct}%
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
-                        <span className="text-[11px] font-semibold text-[#3a3a3c]">{d.speed_kmh}<span className="text-[#aeaeb2] font-normal"> km/h</span></span>
+                        <span className="text-[11px] font-semibold text-[#343A40]">{d.speed_kmh}<span className="text-[#ADB5BD] font-normal"> km/h</span></span>
                       </div>
                     </button>
                   );
@@ -198,18 +198,18 @@ export default function LiveOps() {
           {selectedDriver && (
             <div className="apple-card p-5">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[14px] font-semibold text-[#1d1d1f]">{selectedDriver.driver_name}</h2>
-                <button onClick={() => setSelected(null)} className="text-[12px] text-[#86868b] hover:text-[#1d1d1f]">close</button>
+                <h2 className="text-[14px] font-semibold text-[#111315]">{selectedDriver.driver_name}</h2>
+                <button onClick={() => setSelected(null)} className="text-[12px] text-[#868E96] hover:text-[#111315]">close</button>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#f5f5f7] rounded-xl p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold">Speed</p>
-                  <p className="text-[20px] font-semibold text-[#1d1d1f]">{selectedDriver.speed_kmh}<span className="text-[12px] text-[#86868b] font-normal"> km/h</span></p>
+                <div className="bg-[#F1F3F5] rounded-xl p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-[#868E96] font-semibold">Speed</p>
+                  <p className="text-[20px] font-semibold text-[#111315]">{selectedDriver.speed_kmh}<span className="text-[12px] text-[#868E96] font-normal"> km/h</span></p>
                 </div>
-                <div className="bg-[#f5f5f7] rounded-xl p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#86868b] font-semibold">Progress</p>
-                  <p className="text-[20px] font-semibold text-[#1d1d1f]">{selectedDriver.progress_pct}%</p>
-                  <p className="text-[11px] text-[#aeaeb2]">{selectedDriver.stops_completed}/{selectedDriver.stops_total} stops</p>
+                <div className="bg-[#F1F3F5] rounded-xl p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-[#868E96] font-semibold">Progress</p>
+                  <p className="text-[20px] font-semibold text-[#111315]">{selectedDriver.progress_pct}%</p>
+                  <p className="text-[11px] text-[#ADB5BD]">{selectedDriver.stops_completed}/{selectedDriver.stops_total} stops</p>
                 </div>
               </div>
               {selectedDriver.next_stop && (
@@ -218,28 +218,28 @@ export default function LiveOps() {
                     <Navigation size={12} className="text-[#0a84ff]" />
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0a84ff]">Next stop</p>
                   </div>
-                  <p className="text-[13px] font-medium text-[#1d1d1f]">{selectedDriver.next_stop.customer_name}</p>
-                  <p className="text-[11px] text-[#86868b] truncate">{selectedDriver.next_stop.address}</p>
+                  <p className="text-[13px] font-medium text-[#111315]">{selectedDriver.next_stop.customer_name}</p>
+                  <p className="text-[11px] text-[#868E96] truncate">{selectedDriver.next_stop.address}</p>
                 </div>
               )}
             </div>
           )}
 
           <div className="apple-card p-5">
-            <h2 className="text-[14px] font-semibold text-[#1d1d1f] mb-3">Alerts</h2>
+            <h2 className="text-[14px] font-semibold text-[#111315] mb-3">Alerts</h2>
             {alerts.length === 0 ? (
-              <p className="text-[13px] text-[#aeaeb2] py-6 text-center">No alerts</p>
+              <p className="text-[13px] text-[#ADB5BD] py-6 text-center">No alerts</p>
             ) : (
               <div className="space-y-0.5 max-h-[260px] overflow-y-auto">
                 {alerts.map((a) => {
                   const Icon = ALERT_ICONS[a.type] || Bell;
-                  const color = ALERT_COLOR[a.severity] || "#86868b";
+                  const color = ALERT_COLOR[a.severity] || "#868E96";
                   return (
                     <div key={a.id} className="flex items-start gap-2.5 py-2">
                       <Icon size={14} strokeWidth={1.8} style={{ color }} className="mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-medium text-[#1d1d1f] truncate">{a.title}</p>
-                        <p className="text-[11px] text-[#aeaeb2] truncate">
+                        <p className="text-[12px] font-medium text-[#111315] truncate">{a.title}</p>
+                        <p className="text-[11px] text-[#ADB5BD] truncate">
                           {a.driver_name ? `${a.driver_name} • ` : ""}{timeAgo(a.created_at)}
                         </p>
                       </div>

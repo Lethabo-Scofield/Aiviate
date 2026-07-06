@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 /** iOS-feel spring used for tap feedback (matches Operations.jsx). */
-const TAP_SPRING = { type: "spring", stiffness: 420, damping: 26 };
+const TAP_SPRING = { type: "tween", duration: 0.14, ease: [0.2, 0, 0, 1] };
 
 const STORAGE_KEY = "deliverySources";
 
@@ -67,22 +67,22 @@ export default function DataSources() {
       {/* Back link */}
       <Link
         to="/settings"
-        className="inline-flex items-center gap-1 text-[12.5px] text-[#86868b] hover:text-[#1d1d1f] mb-3"
+        className="inline-flex items-center gap-1 text-[12.5px] text-[#868E96] hover:text-[#111315] mb-3"
       >
         <ChevronLeft size={14} /> Settings
       </Link>
 
-      <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1d1d1f] tracking-tight">
+      <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">
         Delivery data sources
       </h1>
-      <p className="text-[13px] sm:text-[14px] text-[#86868b] mt-1 mb-6 sm:mb-8">
+      <p className="text-[13px] sm:text-[14px] text-[#868E96] mt-1 mb-6 sm:mb-8">
         Tell Aiviate where your stops come from. You can mix and match — connect an API, drop a CSV, or watch a folder.
       </p>
 
       {/* Honest scope notice */}
       <div className="mb-6 rounded-xl border border-[#008080]/20 bg-[#008080]/[0.04] p-3 flex items-start gap-2">
         <AlertTriangle size={14} className="text-[#008080] mt-0.5 shrink-0" />
-        <p className="text-[12px] text-[#1d1d1f] leading-snug">
+        <p className="text-[12px] text-[#111315] leading-snug">
           <span className="font-semibold">Heads up:</span> sources you add here are saved
           on this device. Automatic syncing into your job list will turn on once your
           team confirms the connection details — we don't pull data silently.
@@ -90,14 +90,14 @@ export default function DataSources() {
       </div>
 
       {/* Configured sources */}
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#86868b] mb-2">
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">
         Configured sources
       </p>
       <div className="apple-card divide-y divide-black/[0.06] mb-6">
         {sources.length === 0 ? (
           <div className="p-5 text-center">
-            <p className="text-[13px] text-[#86868b]">No sources yet.</p>
-            <p className="text-[12px] text-[#aeaeb2] mt-1">Add one below to get started.</p>
+            <p className="text-[13px] text-[#868E96]">No sources yet.</p>
+            <p className="text-[12px] text-[#ADB5BD] mt-1">Add one below to get started.</p>
           </div>
         ) : (
           <AnimatePresence initial={false}>
@@ -110,27 +110,27 @@ export default function DataSources() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: 24 }}
-                  transition={{ type: "spring", stiffness: 360, damping: 28 }}
+                  transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
                   className="flex items-center gap-4 px-5 py-4 first:rounded-t-2xl last:rounded-b-2xl"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#f5f5f7] flex items-center justify-center shrink-0">
-                    <T.Icon size={16} className="text-[#1d1d1f]" strokeWidth={1.8} />
+                  <div className="w-9 h-9 rounded-xl bg-[#F1F3F5] flex items-center justify-center shrink-0">
+                    <T.Icon size={16} className="text-[#111315]" strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium text-[#1d1d1f] truncate">{s.name}</p>
-                    <p className="text-[11.5px] text-[#86868b] mt-0.5 truncate">
+                    <p className="text-[14px] font-medium text-[#111315] truncate">{s.name}</p>
+                    <p className="text-[11.5px] text-[#868E96] mt-0.5 truncate">
                       {T.label}
                       {s.detail ? <> · <span className="font-mono">{s.detail}</span></> : null}
                       {s.row_count != null ? <> · {s.row_count.toLocaleString()} rows</> : null}
                     </p>
-                    <p className="text-[10.5px] text-[#aeaeb2] mt-0.5">Added {fmtDate(s.created_at)}</p>
+                    <p className="text-[10.5px] text-[#ADB5BD] mt-0.5">Added {fmtDate(s.created_at)}</p>
                   </div>
                   <motion.button
                     onClick={() => removeSource(s.id)}
                     aria-label={`Remove ${s.name}`}
                     whileTap={{ scale: 0.88 }}
                     transition={TAP_SPRING}
-                    className="w-8 h-8 rounded-full hover:bg-[#ff3b30]/[0.08] text-[#86868b] hover:text-[#ff3b30] flex items-center justify-center shrink-0"
+                    className="w-8 h-8 rounded-full hover:bg-[#ff3b30]/[0.08] text-[#868E96] hover:text-[#ff3b30] flex items-center justify-center shrink-0"
                   >
                     <Trash2 size={14} />
                   </motion.button>
@@ -142,7 +142,7 @@ export default function DataSources() {
       </div>
 
       {/* Add new source */}
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#86868b] mb-2">
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">
         Add a source
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-8">
@@ -157,12 +157,12 @@ export default function DataSources() {
               className="apple-card p-4 text-left hover:border-[#008080]/30 hover:bg-[#008080]/[0.02] transition-colors"
             >
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center">
-                  <Icon size={15} className="text-[#1d1d1f]" strokeWidth={1.8} />
+                <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] flex items-center justify-center">
+                  <Icon size={15} className="text-[#111315]" strokeWidth={1.8} />
                 </div>
-                <p className="text-[13px] font-semibold text-[#1d1d1f]">{t.label}</p>
+                <p className="text-[13px] font-semibold text-[#111315]">{t.label}</p>
               </div>
-              <p className="text-[11.5px] text-[#86868b] leading-snug">{t.blurb}</p>
+              <p className="text-[11.5px] text-[#868E96] leading-snug">{t.blurb}</p>
               <p className="text-[11.5px] text-[#008080] mt-2 inline-flex items-center gap-1">
                 <Plus size={11} /> Add
               </p>
@@ -189,12 +189,12 @@ export default function DataSources() {
             initial={{ y: 60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] pointer-events-none"
           >
             <div className={`rounded-full px-4 py-2 text-[13px] shadow-lg flex items-center gap-2 ${
               toast.tone === "warn"
-                ? "bg-[#1d1d1f] text-white"
+                ? "bg-[#111315] text-white"
                 : "bg-[#008080] text-white"
             }`}>
               <Check size={14} />
@@ -224,16 +224,16 @@ function SourceFormSheet({ type, onCancel, onSave }) {
         initial={{ y: 60, opacity: 0, scale: 0.98 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 40, opacity: 0, scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+        transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
         className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-black/[0.06] p-5 sm:p-6"
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 rounded-xl bg-[#f5f5f7] flex items-center justify-center">
-            <t.Icon size={16} className="text-[#1d1d1f]" strokeWidth={1.8} />
+          <div className="w-9 h-9 rounded-xl bg-[#F1F3F5] flex items-center justify-center">
+            <t.Icon size={16} className="text-[#111315]" strokeWidth={1.8} />
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-[#1d1d1f]">Add {t.label.toLowerCase()}</p>
-            <p className="text-[12px] text-[#86868b]">{t.blurb}</p>
+            <p className="text-[15px] font-semibold text-[#111315]">Add {t.label.toLowerCase()}</p>
+            <p className="text-[12px] text-[#868E96]">{t.blurb}</p>
           </div>
         </div>
 
@@ -253,7 +253,7 @@ function FormActions({ onCancel, canSave, saveLabel = "Save source" }) {
         onClick={onCancel}
         whileTap={{ scale: 0.95 }}
         transition={TAP_SPRING}
-        className="text-[13px] font-medium px-3.5 py-2 rounded-full text-[#1d1d1f] hover:bg-[#f5f5f7]"
+        className="text-[13px] font-medium px-3.5 py-2 rounded-full text-[#111315] hover:bg-[#F1F3F5]"
       >
         Cancel
       </motion.button>
@@ -265,7 +265,7 @@ function FormActions({ onCancel, canSave, saveLabel = "Save source" }) {
         className={`text-[13px] font-medium px-3.5 py-2 rounded-full ${
           canSave
             ? "bg-[#008080] hover:bg-[#006666] text-white"
-            : "bg-[#f5f5f7] text-[#aeaeb2] cursor-not-allowed"
+            : "bg-[#F1F3F5] text-[#ADB5BD] cursor-not-allowed"
         }`}
       >
         {saveLabel}
@@ -327,7 +327,7 @@ function ApiForm({ onCancel, onSave }) {
           placeholder='e.g. "Bearer sk-abc123…"'
           className="apple-input font-mono text-[12.5px]"
         />
-        <p className="text-[11px] text-[#86868b] mt-1">
+        <p className="text-[11px] text-[#868E96] mt-1">
           Stored on this device only. Your team will move it to a secret when wiring the live sync.
         </p>
       </Field>
@@ -428,11 +428,11 @@ function CsvForm({ onCancel, onSave }) {
           onDrop={(e) => { e.preventDefault(); pickFile(e.dataTransfer.files?.[0]); }}
           className="rounded-xl border border-dashed border-black/15 hover:border-[#008080]/40 hover:bg-[#008080]/[0.02] p-5 text-center cursor-pointer transition-colors"
         >
-          <Upload size={18} className="text-[#86868b] mx-auto mb-1.5" />
-          <p className="text-[13px] text-[#1d1d1f]">
+          <Upload size={18} className="text-[#868E96] mx-auto mb-1.5" />
+          <p className="text-[13px] text-[#111315]">
             {file ? <span className="font-medium">{file.name}</span> : "Click to pick a file, or drop one here"}
           </p>
-          <p className="text-[11px] text-[#86868b] mt-0.5">
+          <p className="text-[11px] text-[#868E96] mt-0.5">
             .csv with a header row · stays on your device
           </p>
           <input
@@ -443,20 +443,20 @@ function CsvForm({ onCancel, onSave }) {
             onChange={(e) => pickFile(e.target.files?.[0])}
           />
         </div>
-        {parsing && <p className="text-[11.5px] text-[#86868b] mt-2">Reading…</p>}
+        {parsing && <p className="text-[11.5px] text-[#868E96] mt-2">Reading…</p>}
         {error && (
           <p className="text-[11.5px] text-[#ff3b30] mt-2 flex items-start gap-1.5">
             <AlertTriangle size={11} className="mt-0.5 shrink-0" /> {error}
           </p>
         )}
         {preview && !error && (
-          <div className="mt-3 rounded-lg bg-[#f5f5f7] p-2.5 text-[11.5px] text-[#1d1d1f]">
+          <div className="mt-3 rounded-lg bg-[#F1F3F5] p-2.5 text-[11.5px] text-[#111315]">
             <p className="flex items-center gap-1.5 mb-1.5">
               <FileText size={11} className="text-[#008080]" />
               <span className="font-medium">{preview.rows.toLocaleString()} rows</span>
-              <span className="text-[#86868b]">· {preview.fields.length} columns</span>
+              <span className="text-[#868E96]">· {preview.fields.length} columns</span>
             </p>
-            <p className="text-[10.5px] text-[#86868b] font-mono truncate">
+            <p className="text-[10.5px] text-[#868E96] font-mono truncate">
               {preview.fields.slice(0, 6).join(" · ")}
               {preview.fields.length > 6 ? ` · +${preview.fields.length - 6}` : ""}
             </p>
@@ -503,7 +503,7 @@ function FolderForm({ onCancel, onSave }) {
       <div>
         <div className="rounded-xl border border-[#ff9500]/30 bg-[#ff9500]/[0.04] p-3 flex items-start gap-2">
           <AlertTriangle size={14} className="text-[#ff9500] mt-0.5 shrink-0" />
-          <p className="text-[12px] text-[#1d1d1f]">
+          <p className="text-[12px] text-[#111315]">
             <span className="font-semibold">Your browser can't open folders.</span>{" "}
             This needs a Chromium-based browser (Chrome, Edge, Arc). On Safari and Firefox,
             please upload a CSV instead.
@@ -515,7 +515,7 @@ function FolderForm({ onCancel, onSave }) {
             onClick={onCancel}
             whileTap={{ scale: 0.95 }}
             transition={TAP_SPRING}
-            className="text-[13px] font-medium px-3.5 py-2 rounded-full bg-[#f5f5f7] text-[#1d1d1f]"
+            className="text-[13px] font-medium px-3.5 py-2 rounded-full bg-[#F1F3F5] text-[#111315]"
           >
             Close
           </motion.button>
@@ -543,11 +543,11 @@ function FolderForm({ onCancel, onSave }) {
           transition={TAP_SPRING}
           className="w-full rounded-xl border border-dashed border-black/15 hover:border-[#008080]/40 hover:bg-[#008080]/[0.02] p-5 text-center transition-colors"
         >
-          <FolderOpen size={18} className="text-[#86868b] mx-auto mb-1.5" />
-          <p className="text-[13px] text-[#1d1d1f]">
+          <FolderOpen size={18} className="text-[#868E96] mx-auto mb-1.5" />
+          <p className="text-[13px] text-[#111315]">
             {folderName ? <span className="font-mono">{folderName}</span> : "Pick a folder"}
           </p>
-          <p className="text-[11px] text-[#86868b] mt-0.5">
+          <p className="text-[11px] text-[#868E96] mt-0.5">
             Aiviate will only see files in this folder, with your permission.
           </p>
         </motion.button>
@@ -556,7 +556,7 @@ function FolderForm({ onCancel, onSave }) {
             <AlertTriangle size={11} className="mt-0.5 shrink-0" /> {error}
           </p>
         )}
-        <p className="text-[11px] text-[#86868b] mt-2">
+        <p className="text-[11px] text-[#868E96] mt-2">
           Note: browsers don't let us keep watching a folder after you close this tab.
           For always-on syncing, your team should add a server-side connector.
         </p>
@@ -570,7 +570,7 @@ function FolderForm({ onCancel, onSave }) {
 function Field({ label, children }) {
   return (
     <label className="block mb-3.5">
-      <span className="block text-[11.5px] uppercase tracking-wider font-semibold text-[#86868b] mb-1.5">
+      <span className="block text-[11.5px] uppercase tracking-wider font-semibold text-[#868E96] mb-1.5">
         {label}
       </span>
       {children}

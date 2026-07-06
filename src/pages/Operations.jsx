@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 /** Shared iOS-feel spring used for tactile press feedback throughout this page. */
-const TAP_SPRING = { type: "spring", stiffness: 420, damping: 26 };
+const TAP_SPRING = { type: "tween", duration: 0.14, ease: [0.2, 0, 0, 1] };
 import { useAuth } from "../contexts/AuthContext";
 import {
   acknowledgeRecommendation,
@@ -126,9 +126,9 @@ function Toast({ toast, onClose }) {
           initial={{ opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 360, damping: 28 }}
+          transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3"
-          style={{ background: toast.kind === "error" ? "#ff3b30" : "#1d1d1f", color: "white" }}
+          style={{ background: toast.kind === "error" ? "#ff3b30" : "#111315", color: "white" }}
         >
           <span className="text-[13px]">{toast.message}</span>
           <motion.button
@@ -185,7 +185,7 @@ function InboxRow({ rec, onAck, onDismiss }) {
       initial={{ opacity: 0, y: 10, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.94, x: 40 }}
-      transition={{ type: "spring", stiffness: 360, damping: 30 }}
+      transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
       className="rounded-xl bg-white/[0.06] hover:bg-white/[0.09] transition-colors p-3"
     >
       <div className="flex items-center gap-2 mb-1.5">
@@ -540,10 +540,10 @@ export default function Operations() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16, height: 0, marginBottom: 0 }}
-            transition={{ type: "spring", stiffness: 360, damping: 30 }}
+            transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
             className="text-center pt-6 sm:pt-10 mb-5 overflow-hidden"
           >
-            <h1 className="text-[24px] sm:text-[30px] font-semibold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
+            <h1 className="text-[24px] sm:text-[30px] font-semibold text-[#111315] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
               <img src="/logo.png" alt="" className="w-6 h-6 sm:w-7 sm:h-7" />
               Hi {firstName}, what can Aiviate cross off your list?
             </h1>
@@ -558,7 +558,7 @@ export default function Operations() {
         {mode === "idle" ? (
           <motion.div
             layoutId="ask-aiviate-prompt"
-            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
             className="max-w-[680px] mx-auto mb-4 flex items-center gap-3 px-5 py-3.5 rounded-full bg-white border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.04)] focus-within:border-[#008080]/40 focus-within:shadow-[0_2px_22px_rgba(0,128,128,0.10)]"
           >
             <motion.button
@@ -568,7 +568,7 @@ export default function Operations() {
               aria-label="More commands"
               whileTap={{ scale: 0.9 }}
               transition={TAP_SPRING}
-              className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] flex items-center justify-center shrink-0"
+              className="w-7 h-7 rounded-full bg-[#F1F3F5] hover:bg-[#ebebed] text-[#111315] flex items-center justify-center shrink-0"
             >
               <Plus size={14} />
             </motion.button>
@@ -578,7 +578,7 @@ export default function Operations() {
               onChange={(e) => setAskText(e.target.value)}
               placeholder='Ask Aiviate, "show me today&rsquo;s routes."'
               aria-label="Ask Aiviate"
-              className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
+              className="flex-1 bg-transparent outline-none text-[14px] text-[#111315] placeholder:text-[#868E96]"
             />
             <motion.button
               type="submit"
@@ -589,7 +589,7 @@ export default function Operations() {
               className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
                 askText.trim()
                   ? "bg-[#008080] hover:bg-[#006666] text-white"
-                  : "bg-[#f5f5f7] text-[#aeaeb2]"
+                  : "bg-[#F1F3F5] text-[#ADB5BD]"
               }`}
             >
               <ArrowRight size={15} />
@@ -598,7 +598,7 @@ export default function Operations() {
         ) : (
           <motion.div
             layoutId="ask-aiviate-prompt"
-            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
             className="sticky top-14 lg:top-3 z-20 max-w-[760px] mx-auto mb-4 flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-white/95 backdrop-blur border border-black/[0.08] shadow-[0_2px_18px_rgba(0,0,0,0.05)] focus-within:border-[#008080]/40"
           >
             <img src="/logo.png" alt="" className="w-4 h-4 shrink-0" />
@@ -608,7 +608,7 @@ export default function Operations() {
               onChange={(e) => setAskText(e.target.value)}
               placeholder={chatBusy ? "Thinking…" : "Ask a follow-up…"}
               aria-label="Ask Aiviate"
-              className="flex-1 bg-transparent outline-none text-[14px] text-[#1d1d1f] placeholder:text-[#86868b]"
+              className="flex-1 bg-transparent outline-none text-[14px] text-[#111315] placeholder:text-[#868E96]"
             />
             <motion.button
               type="button"
@@ -616,7 +616,7 @@ export default function Operations() {
               whileTap={{ scale: 0.92 }}
               transition={TAP_SPRING}
               title="Start a new chat"
-              className="text-[11.5px] font-medium px-2.5 py-1 rounded-full text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7]"
+              className="text-[11.5px] font-medium px-2.5 py-1 rounded-full text-[#868E96] hover:text-[#111315] hover:bg-[#F1F3F5]"
             >
               New chat
             </motion.button>
@@ -629,7 +629,7 @@ export default function Operations() {
               className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                 askText.trim() && !chatBusy
                   ? "bg-[#008080] hover:bg-[#006666] text-white"
-                  : "bg-[#f5f5f7] text-[#aeaeb2]"
+                  : "bg-[#F1F3F5] text-[#ADB5BD]"
               }`}
             >
               <ArrowRight size={14} />
@@ -647,7 +647,7 @@ export default function Operations() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
           >
             {/* Quick-question pills */}
             <div className="flex flex-wrap gap-2 justify-center mb-10">
@@ -658,8 +658,8 @@ export default function Operations() {
                   whileTap={{ scale: 0.94 }}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.04 + i * 0.03, type: "spring", stiffness: 380, damping: 28 }}
-                  className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#ebebed]"
+                  transition={{ delay: 0.04 + i * 0.03, type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
+                  className="text-[12.5px] px-3.5 py-1.5 rounded-full bg-[#F1F3F5] text-[#111315] hover:bg-[#ebebed]"
                 >
                   {q}
                 </motion.button>
@@ -670,7 +670,7 @@ export default function Operations() {
             {loadError && (
               <div className="max-w-[680px] mx-auto mb-6 rounded-xl border border-[#ff9500]/30 bg-[#ff9500]/[0.04] p-3 flex items-start gap-2">
                 <AlertTriangle size={14} className="text-[#ff9500] mt-0.5 shrink-0" />
-                <p className="text-[12px] text-[#1d1d1f]">
+                <p className="text-[12px] text-[#111315]">
                   <span className="font-semibold">Heads up:</span> {loadError}. Treat those sections as unknown, not safe.
                 </p>
               </div>
@@ -810,7 +810,7 @@ export default function Operations() {
                   className={`text-[11px] capitalize font-medium px-2.5 py-1.5 rounded-lg ${
                     autopilotSettings?.mode === mode
                       ? "bg-[#008080] text-white"
-                      : "bg-[#f5f5f7] text-[#3a3a3c] hover:bg-[#ebebed]"
+                      : "bg-[#F1F3F5] text-[#343A40] hover:bg-[#ebebed]"
                   }`}
                 >
                   {mode}
@@ -822,7 +822,7 @@ export default function Operations() {
                 disabled={autopilotBusy}
                 whileTap={{ scale: 0.94 }}
                 transition={TAP_SPRING}
-                className="ml-auto text-[11px] font-medium px-2.5 py-1.5 rounded-lg bg-[#1d1d1f] text-white disabled:opacity-50"
+                className="ml-auto text-[11px] font-medium px-2.5 py-1.5 rounded-lg bg-[#111315] text-white disabled:opacity-50"
               >
                 {autopilotBusy ? "Running..." : "Run now"}
               </motion.button>
@@ -837,24 +837,24 @@ export default function Operations() {
               <div className="space-y-2.5 flex-1">
                 {pendingApprovals.slice(0, 3).map((a) => (
                   <div key={a.id} className="rounded-xl bg-[#ff9500]/[0.07] border border-[#ff9500]/20 p-3">
-                    <p className="text-[12.5px] font-medium text-[#1d1d1f] leading-snug">{a.summary}</p>
-                    <p className="text-[11px] text-[#86868b] mt-1">
+                    <p className="text-[12.5px] font-medium text-[#111315] leading-snug">{a.summary}</p>
+                    <p className="text-[11px] text-[#868E96] mt-1">
                       Confidence {Math.round((a.confidence || 0) * 100)}% · awaiting operator approval
                     </p>
                   </div>
                 ))}
               </div>
             ) : recentAutoActions.length === 0 ? (
-              <p className="text-[13px] text-[#86868b]">
+              <p className="text-[13px] text-[#868E96]">
                 Nothing automated yet. Once jobs, telemetry, or route changes appear, Autopilot will act or ask for approval here.
               </p>
             ) : (
               <div className="space-y-2.5 flex-1">
                 {recentAutoActions.map((a, i) => (
-                  <div key={i} className="flex items-start gap-2 text-[13px] text-[#1d1d1f]">
+                  <div key={i} className="flex items-start gap-2 text-[13px] text-[#111315]">
                     <span className="text-[#008080] mt-0.5">▸</span>
                     <span className="flex-1 leading-snug">{a.summary}</span>
-                    <span className="text-[11px] text-[#aeaeb2] shrink-0 mt-0.5">{timeAgo(a.at)}</span>
+                    <span className="text-[11px] text-[#ADB5BD] shrink-0 mt-0.5">{timeAgo(a.at)}</span>
                   </div>
                 ))}
               </div>
@@ -873,15 +873,15 @@ export default function Operations() {
         {/* ───── Quick looks — tiled list like "Popular content" ───── */}
         <div className="rounded-3xl bg-white border border-black/[0.05] p-5 sm:p-6 flex flex-col min-h-[340px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-[13px] font-semibold text-[#1d1d1f]">Quick looks</p>
+            <p className="text-[13px] font-semibold text-[#111315]">Quick looks</p>
             <motion.button
               onClick={() => askHere("how are we doing?")}
               aria-label="Ask for a full briefing"
               whileTap={{ scale: 0.88 }}
               transition={TAP_SPRING}
-              className="w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-[#ebebed] flex items-center justify-center"
+              className="w-7 h-7 rounded-full bg-[#F1F3F5] hover:bg-[#ebebed] flex items-center justify-center"
             >
-              <ArrowUpRight size={13} className="text-[#1d1d1f]" />
+              <ArrowUpRight size={13} className="text-[#111315]" />
             </motion.button>
           </div>
 
@@ -931,7 +931,7 @@ export default function Operations() {
                 const metaColor =
                   tone === "alert" ? "text-[#ff3b30]" :
                   tone === "warn" ? "text-[#ff9500]" :
-                  "text-[#86868b]";
+                  "text-[#868E96]";
                 return (
                   <motion.button
                     key={title}
@@ -939,10 +939,10 @@ export default function Operations() {
                     whileTap={{ scale: 0.97 }}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.04 + i * 0.04, type: "spring", stiffness: 360, damping: 28 }}
+                    transition={{ delay: 0.04 + i * 0.04, type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
                     className="w-full text-left rounded-xl border border-black/[0.05] hover:border-[#008080]/30 hover:bg-[#008080]/[0.02] p-3"
                   >
-                    <p className="text-[13px] font-medium text-[#1d1d1f] leading-snug">{title}</p>
+                    <p className="text-[13px] font-medium text-[#111315] leading-snug">{title}</p>
                     <p className={`text-[11.5px] mt-1 flex items-center gap-1.5 ${metaColor}`}>
                       <Icon size={11} />
                       <span>{meta}</span>
@@ -961,7 +961,7 @@ export default function Operations() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
             className="max-w-[760px] mx-auto pb-12"
           >
             <div className="space-y-5">
@@ -973,7 +973,7 @@ export default function Operations() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    transition={{ type: "tween", duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
                     className="space-y-2.5"
                   >
                     {/* Your question — right-aligned bubble */}
@@ -986,7 +986,7 @@ export default function Operations() {
                     <div className="flex justify-start">
                       <div className="max-w-[92%] w-full rounded-2xl rounded-bl-md bg-white border border-black/[0.06] px-4 py-3 shadow-[0_2px_14px_rgba(0,0,0,0.03)]">
                         {turn.busy ? (
-                          <div className="flex items-center gap-2 text-[12.5px] text-[#86868b]">
+                          <div className="flex items-center gap-2 text-[12.5px] text-[#868E96]">
                             <motion.span
                               animate={{ opacity: [0.3, 1, 0.3] }}
                               transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
