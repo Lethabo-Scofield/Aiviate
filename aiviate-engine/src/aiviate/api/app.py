@@ -13,7 +13,7 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from sqlalchemy.orm import Session, sessionmaker
 
-from aiviate.api.routers import events, fleet, orders, plans
+from aiviate.api.routers import config, events, fleet, orders, plans
 from aiviate.config import Settings, get_settings
 from aiviate.db.base import Base, _make_engine
 from aiviate.engine import PlanningError, create_plan
@@ -60,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(plans.router)
     app.include_router(fleet.router)
     app.include_router(events.router)
+    app.include_router(config.router)
 
     @app.get("/healthz", tags=["system"])
     def healthz():

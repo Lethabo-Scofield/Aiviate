@@ -23,6 +23,10 @@ args = "Start application"
 task = "workflow.run"
 args = "Backend API"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "AI Engine"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -47,6 +51,18 @@ task = "shell.exec"
 args = "python3 backend/app.py"
 waitForPort = 8000
 
+[[workflows.workflow]]
+name = "AI Engine"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd aiviate-engine && PYTHONPATH=src python -m uvicorn replit_app:app --host 0.0.0.0 --port 8080"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[ports]]
 localPort = 3001
 externalPort = 3001
@@ -58,6 +74,10 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
 
 [deployment]
 deploymentTarget = "autoscale"

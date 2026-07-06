@@ -20,6 +20,7 @@ import CommandCenter from "./pages/CommandCenter";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 import DataSources from "./pages/DataSources";
+import AIPlanner from "./pages/AIPlanner";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ function AppRoutes() {
           <>
             <Route path="/" element={<Operations />} />
             <Route path="/map" element={<MapView />} />
+            <Route path="/ai-planner" element={<AIPlanner />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/data-sources" element={<DataSources />} />
             <Route path="/profile" element={<Profile />} />

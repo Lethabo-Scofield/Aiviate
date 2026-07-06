@@ -40,3 +40,8 @@ pnpm-debug.log*
 # Replit internals
 .local/
 .cache/
+
+# Aiviate engine (local runtime)
+.aiviate_engine_key
+aiviate-engine/aiviate.db
+aiviate-engine/*.db

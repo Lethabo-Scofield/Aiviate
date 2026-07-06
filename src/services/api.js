@@ -457,3 +457,17 @@ export async function seedDemoData() {
   });
   return handleResponse(res);
 }
+
+export async function getEngineStatus() {
+  const res = await fetch(`${API_BASE}/engine/status`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function optimizeWithEngine() {
+  const res = await fetch(`${API_BASE}/engine/optimize`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({}),
+  });
+  return handleResponse(res);
+}
