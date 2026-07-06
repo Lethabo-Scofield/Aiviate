@@ -459,15 +459,62 @@ export async function seedDemoData() {
 }
 
 export async function getEngineStatus() {
+  if (isLocalDemo()) return { available: true };
   const res = await fetch(`${API_BASE}/engine/status`, { headers: getAuthHeaders() });
   return handleResponse(res);
 }
 
 export async function optimizeWithEngine() {
+  if (isLocalDemo()) return localDemoEnginePlan();
   const res = await fetch(`${API_BASE}/engine/optimize`, {
     method: 'POST',
     headers: getAuthHeaders('application/json'),
     body: JSON.stringify({}),
   });
   return handleResponse(res);
+}
+
+function localDemoEnginePlan() {
+  const base = new Date();
+  base.setHours(8, 0, 0, 0);
+  const eta = (min) => new Date(base.getTime() + min * 60000).toISOString();
+  return {
+    success: true,
+    plan_id: "demo-plan",
+    plan_status: "pending_approval",
+    solver_status: "optimal",
+    confidence: 0.92,
+    total_distance_km: 67.2,
+    total_duration_min: 138,
+    total_stops_planned: 5,
+    routes: [
+      {
+        route_number: 1,
+        distance_km: 23.9,
+        duration_min: 51,
+        stops: [
+          { sequence: 1, order_id: "d1", customer_name: "Thabo Mokoena", address: "12 Rivonia Rd, Sandton", lat: -26.106, lng: 28.056, eta: eta(18) },
+          { sequence: 2, order_id: "d2", customer_name: "Naledi Botha", address: "5 Oxford Rd, Rosebank", lat: -26.145, lng: 28.041, eta: eta(46) },
+        ],
+      },
+      {
+        route_number: 2,
+        distance_km: 26.2,
+        duration_min: 51,
+        stops: [
+          { sequence: 1, order_id: "d3", customer_name: "Sipho Khumalo", address: "88 Main St, Marshalltown", lat: -26.205, lng: 28.041, eta: eta(22) },
+        ],
+      },
+      {
+        route_number: 3,
+        distance_km: 17.1,
+        duration_min: 37,
+        stops: [
+          { sequence: 1, order_id: "d4", customer_name: "Lerato Dlamini", address: "3 Grayston Dr, Sandton", lat: -26.101, lng: 28.061, eta: eta(15) },
+          { sequence: 2, order_id: "d5", customer_name: "Kagiso Sithole", address: "21 Jan Smuts Ave, Parktown", lat: -26.171, lng: 28.034, eta: eta(38) },
+        ],
+      },
+    ],
+    unassigned: [],
+  };
 }

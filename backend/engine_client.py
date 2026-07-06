@@ -7,7 +7,7 @@ browser never sees the key or calls the engine directly.
 
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -131,7 +131,7 @@ def optimize_stops(stops):
         depot_lng += _EPSILON
     _set_depot(depot_lat, depot_lng)
 
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     window_start = today.isoformat()
     window_end = (today + timedelta(days=1)).isoformat()
     run_id = f"{int(time.time())}"
@@ -196,10 +196,11 @@ def _shape_plan(plan, result, id_map):
     total_distance = 0.0
     total_duration = 0.0
     for idx, route in enumerate(routes_in, start=1):
-        distance_m = route.get("estimated_distance") or 0
-        duration_s = route.get("estimated_duration") or 0
-        total_distance += distance_m
-        total_duration += duration_s
+        # Engine already reports distance in km and duration in minutes.
+        distance_km = route.get("estimated_distance") or 0
+        duration_min = route.get("estimated_duration") or 0
+        total_distance += distance_km
+        total_duration += duration_min
         stops_out = []
         for rs in route.get("stops") or []:
             original = id_map.get(rs.get("order_id"))
@@ -217,8 +218,8 @@ def _shape_plan(plan, result, id_map):
         routes_out.append(
             {
                 "route_number": idx,
-                "distance_km": round(distance_m / 1000, 1),
-                "duration_min": round(duration_s / 60),
+                "distance_km": round(distance_km, 1),
+                "duration_min": round(duration_min),
                 "capacity_usage": route.get("capacity_usage"),
                 "stops": stops_out,
             }
@@ -242,8 +243,8 @@ def _shape_plan(plan, result, id_map):
         "plan_status": plan_obj.get("status") or result.get("plan_status"),
         "solver_status": result.get("solver_status"),
         "confidence": result.get("confidence"),
-        "total_distance_km": round(total_distance / 1000, 1),
-        "total_duration_min": round(total_duration / 60),
+        "total_distance_km": round(total_distance, 1),
+        "total_duration_min": round(total_duration),
         "total_stops_planned": sum(len(r["stops"]) for r in routes_out),
         "routes": routes_out,
         "unassigned": unassigned,
