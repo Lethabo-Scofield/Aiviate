@@ -64,8 +64,8 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
                   isActive
-                    ? "bg-[#F1F3F5] text-[#111315] font-medium"
-                    : "text-[#868E96] hover:text-[#111315] hover:bg-black/[0.03]"
+                    ? "text-[#008080] font-medium"
+                    : "text-[#868E96] hover:text-[#111315]"
                 }`
               }>
               <Icon size={16} strokeWidth={1.8} />
@@ -85,8 +85,8 @@ export default function Sidebar() {
           className={({ isActive }) =>
             `mx-3 mb-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
               isActive
-                ? "bg-[#F1F3F5] text-[#111315] font-medium"
-                : "text-[#ADB5BD] hover:text-[#111315] hover:bg-black/[0.03]"
+                ? "text-[#008080] font-medium"
+                : "text-[#ADB5BD] hover:text-[#111315]"
             }`
           }>
           <Settings size={15} strokeWidth={1.8} />
