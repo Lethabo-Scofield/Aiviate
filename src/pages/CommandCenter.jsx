@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Radar,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -67,13 +66,11 @@ function timeAgo(iso) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function ConsoleLabel({ children, accent = "#008080" }) {
+function SectionLabel({ children, color = "#008080" }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <span className="w-1.5 h-3.5 rounded-full" style={{ background: accent }} />
-      <span className="text-[11px] font-mono uppercase tracking-[0.18em] font-semibold text-[#5c636a]">
-        {children}
-      </span>
+      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+      <span className="text-[13px] font-semibold text-[#343a40]">{children}</span>
     </div>
   );
 }
@@ -83,10 +80,7 @@ function RecommendationCard({ rec, onAcknowledge, onDismiss, onOpen }) {
   const Icon = meta.icon;
   const sev = SEVERITY_LABEL[rec.severity] || SEVERITY_LABEL.medium;
   return (
-    <div
-      className="apple-card overflow-hidden relative"
-      style={{ boxShadow: "0 1px 2px rgba(16,19,21,0.04)" }}
-    >
+    <div className="apple-card overflow-hidden relative">
       <span
         className="absolute left-0 top-0 bottom-0 w-1"
         style={{ background: sev.color }}
@@ -102,11 +96,11 @@ function RecommendationCard({ rec, onAcknowledge, onDismiss, onOpen }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3 mb-1">
-              <span className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#adb5bd]">
+              <span className="text-[12px] text-[#adb5bd]">
                 {rec.category || "Signal"}
               </span>
               <span
-                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-wider"
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0"
                 style={{ background: `${sev.color}14`, color: sev.color }}
               >
                 {sev.label}
@@ -171,7 +165,6 @@ export default function CommandCenter() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [lastSyncAt, setLastSyncAt] = useState(null);
-  const [now, setNow] = useState(new Date());
   const [autoCount, setAutoCount] = useState(0);
   const processingRef = useRef(new Set());
   const failedRef = useRef(new Map());
@@ -210,11 +203,6 @@ export default function CommandCenter() {
     load();
     const id = setInterval(load, 20000);
     return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
   }, []);
 
   const dismiss = (id) => {
@@ -293,126 +281,100 @@ export default function CommandCenter() {
   };
 
   const visibleRecs = recs.filter((r) => !dismissed.has(r.id));
-  const clock = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const online = !loadError || !!lastSyncAt;
+  const pending = visibleRecs.length > 0;
+  const countColor = pending ? "#ff3b30" : "#34c759";
 
   return (
-    <div className="animate-fade-in max-w-4xl">
-      {/* Command deck */}
-      <div
-        className="relative overflow-hidden rounded-3xl text-white mb-6"
-        style={{ background: "linear-gradient(135deg,#0a1618 0%,#0d2024 55%,#0a1517 100%)" }}
-      >
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(0,128,128,0.10) 1px,transparent 1px),linear-gradient(90deg,rgba(0,128,128,0.10) 1px,transparent 1px)",
-            backgroundSize: "30px 30px",
-          }}
-        />
-        <div
-          className="absolute -top-24 -right-16 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(0,128,128,0.35) 0%, transparent 70%)" }}
-        />
+    <div className="animate-fade-in max-w-3xl">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">
+          Command Center
+        </h1>
+        <p className="text-[14px] text-[#868E96] mt-1">
+          Live dispatch and safety decisions, routed to you the moment they matter.
+        </p>
+      </div>
 
-        <div className="relative z-10 p-6 sm:p-7">
-          {/* status strip */}
-          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.16em]">
-            <span className="inline-flex items-center gap-2 text-[#4dd0c4]">
-              <span
-                className={`w-2 h-2 rounded-full ${online ? "animate-pulse" : ""}`}
-                style={{ background: online ? "#34c759" : "#ff3b30" }}
-              />
-              {online ? "System online" : "Signal lost"}
+      {/* Control strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+        <div className="apple-card p-5 flex items-center gap-4">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: `${countColor}14` }}
+          >
+            <span
+              className="text-[26px] font-semibold leading-none tabular-nums"
+              style={{ color: countColor }}
+            >
+              {visibleRecs.length}
             </span>
-            <span className="text-white/40 tabular-nums">{clock}</span>
           </div>
-
-          {/* title */}
-          <div className="mt-5 flex items-start gap-3">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-[#008080]/25 border border-[#008080]/40">
-              <Radar size={22} className="text-[#4dd0c4]" strokeWidth={1.8} />
-            </div>
-            <div>
-              <h1 className="text-[24px] sm:text-[28px] font-semibold tracking-tight leading-none">
-                Command Center
-              </h1>
-              <p className="text-[13px] text-white/55 mt-1.5 leading-snug max-w-md">
-                Live dispatch and safety decisions, routed to you the moment they matter.
-              </p>
-            </div>
+          <div>
+            <p className="text-[14px] font-semibold text-[#111315]">
+              {visibleRecs.length === 1 ? "Decision waiting" : "Decisions waiting"}
+            </p>
+            <p className="text-[12px] text-[#868E96] mt-0.5">
+              {autoCount > 0
+                ? `${autoCount} approved for you this session`
+                : pending
+                  ? "Approve, open, or dismiss each one"
+                  : "You are all caught up"}
+            </p>
           </div>
+        </div>
 
-          {/* readouts */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3.5 flex items-center gap-4">
-              <span
-                className="text-[34px] font-semibold leading-none tabular-nums"
-                style={{ color: visibleRecs.length > 0 ? "#ff6b60" : "#34c759" }}
+        <div className="apple-card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  background: autoApprove ? "rgba(0,128,128,0.10)" : "#f1f3f5",
+                  color: autoApprove ? "#008080" : "#adb5bd",
+                }}
               >
-                {visibleRecs.length}
-              </span>
+                <Zap size={16} />
+              </div>
               <div>
-                <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-white/45">
-                  {visibleRecs.length === 1 ? "Decision waiting" : "Decisions waiting"}
-                </p>
-                <p className="text-[12px] text-white/60 mt-0.5">
-                  {autoCount > 0
-                    ? `${autoCount} approved for you this session`
-                    : "Approve, open, or dismiss each one"}
+                <p className="text-[14px] font-semibold text-[#111315]">Auto-approve</p>
+                <p className="text-[12px] text-[#868E96] mt-0.5">
+                  {autoApprove ? "Approving decisions for you" : "Approve incoming decisions for you"}
                 </p>
               </div>
             </div>
-
-            {/* Auto-approve control */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3.5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Zap
-                    size={15}
-                    className={autoApprove ? "text-[#4dd0c4]" : "text-white/40"}
-                  />
-                  <span className="text-[13px] font-semibold">Auto-approve</span>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked={autoApprove}
-                  onClick={toggleAutoApprove}
-                  className="relative w-11 h-6 rounded-full transition-colors shrink-0"
-                  style={{ background: autoApprove ? "#008080" : "rgba(255,255,255,0.18)" }}
-                >
-                  <span
-                    className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform"
-                    style={{ transform: autoApprove ? "translateX(20px)" : "translateX(0)" }}
-                  />
-                </button>
-              </div>
-              <p className="text-[12px] text-white/55 mt-1.5 leading-snug">
-                {autoApprove
-                  ? "New decisions are approved automatically."
-                  : "Turn on to approve incoming decisions for you."}
-              </p>
-              {autoApprove && (
-                <label className="mt-2.5 flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeCritical}
-                    onChange={toggleIncludeCritical}
-                    className="w-3.5 h-3.5 rounded accent-[#008080]"
-                  />
-                  <span className="text-[12px] text-white/70">
-                    Also approve critical decisions
-                  </span>
-                </label>
-              )}
-              {autoApprove && !includeCritical && (
-                <p className="text-[11px] text-[#ffb84d] mt-1.5 leading-snug">
-                  Critical decisions still wait for you.
-                </p>
-              )}
-            </div>
+            <button
+              role="switch"
+              aria-checked={autoApprove}
+              aria-label="Toggle auto-approve"
+              onClick={toggleAutoApprove}
+              className="relative w-11 h-6 rounded-full transition-colors shrink-0"
+              style={{ background: autoApprove ? "#008080" : "#dee2e6" }}
+            >
+              <span
+                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
+                style={{ transform: autoApprove ? "translateX(20px)" : "translateX(0)" }}
+              />
+            </button>
           </div>
+          {autoApprove && (
+            <label className="mt-3 pt-3 border-t border-black/[0.06] flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={includeCritical}
+                onChange={toggleIncludeCritical}
+                className="w-3.5 h-3.5 rounded accent-[#008080]"
+              />
+              <span className="text-[12px] text-[#5c636a]">
+                Also approve critical decisions
+              </span>
+              {!includeCritical && (
+                <span className="text-[11px] text-[#ff9500] ml-auto">
+                  Critical still waits for you
+                </span>
+              )}
+            </label>
+          )}
         </div>
       </div>
 
@@ -428,7 +390,7 @@ export default function CommandCenter() {
       ) : (
         <>
           {/* Decisions list */}
-          <ConsoleLabel accent="#ff3b30">Needs your decision</ConsoleLabel>
+          <SectionLabel color="#ff3b30">Needs your decision</SectionLabel>
           {loadError && !lastSyncAt ? (
             <div className="apple-card p-10 text-center border-2 border-[#ff3b30]/20">
               <div className="w-14 h-14 rounded-2xl bg-[#ff3b30]/10 flex items-center justify-center mx-auto mb-4">
@@ -498,7 +460,7 @@ export default function CommandCenter() {
 
           {/* Running automatically */}
           <div className="mt-8">
-            <ConsoleLabel accent="#34c759">Running automatically</ConsoleLabel>
+            <SectionLabel color="#34c759">Running automatically</SectionLabel>
             <div className="apple-card p-5">
               <p className="text-[13px] text-[#868E96] mb-4">
                 These tasks happen on their own. You never have to approve them, they just show up in the log below.
@@ -532,11 +494,11 @@ export default function CommandCenter() {
 
           {/* Recently handled */}
           <div className="mt-8">
-            <ConsoleLabel accent="#008080">
+            <SectionLabel color="#008080">
               <span className="inline-flex items-center gap-1.5">
                 <History size={12} /> Recently handled
               </span>
-            </ConsoleLabel>
+            </SectionLabel>
             {auditEntries.length === 0 ? (
               <div className="apple-card p-5 text-center">
                 <p className="text-[13px] text-[#868E96]">
@@ -560,7 +522,7 @@ export default function CommandCenter() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] text-[#111315] leading-snug">{e.summary}</p>
-                        <p className="text-[11px] text-[#868E96] mt-0.5 font-mono uppercase tracking-wider">
+                        <p className="text-[11px] text-[#868E96] mt-0.5">
                           {label} · {timeAgo(e.at)}
                         </p>
                       </div>

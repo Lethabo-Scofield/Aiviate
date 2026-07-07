@@ -27,3 +27,6 @@ Non-obvious rules to keep:
 Apple-clone with bouncy iOS easings the doctrine explicitly forbids.
 **How to apply:** when adding UI, pull from the neutral/semantic/shadow/radius/motion tokens
 in index.css and reuse the shared classes; keep sentence case and ≤3 font weights per screen.
+
+## Command Center aesthetic (do not go dark)
+Keep the Command Center light and clean on the neutral-50 shell with white cards. Color comes from small accents (severity-colored left rail on decision cards, colored count tile, severity pills, colored section dots). Avoid the dark "mission-control / AI console" look: no dark gradient deck, grid texture, monospace readouts, or live clock. **Why:** the user explicitly rejected the dark console style as looking like generic AI UI and asked for something unique, clean, minimal, with color.
