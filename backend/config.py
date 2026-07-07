@@ -1,9 +1,9 @@
 import os
 import tempfile
 
-NEON_DATABASE_URL = os.environ.get("NEON_DATABASE_URL")
+NEON_DATABASE_URL = os.environ.get("NEON_DATABASE_URL") or os.environ.get("DATABASE_URL")
 if not NEON_DATABASE_URL:
-    raise RuntimeError("NEON_DATABASE_URL environment variable is not set")
+    raise RuntimeError("NEON_DATABASE_URL or DATABASE_URL environment variable is not set")
 
 JWT_SECRET = os.environ.get("JWT_SECRET")
 if not JWT_SECRET:

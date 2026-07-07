@@ -7,9 +7,9 @@ from sqlalchemy.pool import NullPool
 import ssl as _ssl
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-DATABASE_URL = os.environ.get("NEON_DATABASE_URL")
+DATABASE_URL = os.environ.get("NEON_DATABASE_URL") or os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("NEON_DATABASE_URL environment variable is not set")
+    raise RuntimeError("NEON_DATABASE_URL or DATABASE_URL environment variable is not set")
 
 _parsed = urlparse(DATABASE_URL)
 _params = parse_qs(_parsed.query)
