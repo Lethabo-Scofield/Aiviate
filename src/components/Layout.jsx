@@ -81,7 +81,7 @@ export default function Layout() {
                     ref={topInputRef}
                     value={topText}
                     onChange={(e) => setTopText(e.target.value)}
-                    placeholder='Ask Aiviate anything — try "show me today\u2019s routes"'
+                    placeholder='Ask Aiviate anything, like "show me today\u2019s routes"'
                     aria-label="Ask Aiviate"
                     className="flex-1 bg-transparent outline-none text-[13px] text-[#111315] placeholder:text-[#868E96]"
                   />

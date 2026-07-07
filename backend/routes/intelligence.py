@@ -570,9 +570,9 @@ def _exec_assign(db, company_id, job_id, driver_id):
         opt = {"status": "error", "reason": f"{type(exc).__name__}: {exc}"}
     msg = f"Assigned {job.id} to {driver.name}"
     if opt.get("status") == "ok":
-        msg += f" — auto-optimized, saved {opt['distance_saved_km']} km"
+        msg += f". Auto-optimized, saved {opt['distance_saved_km']} km"
     elif opt.get("status") == "error":
-        msg += f" — optimizer failed ({opt.get('reason')}); order unchanged"
+        msg += f". Optimizer failed ({opt.get('reason')}); order unchanged"
 
     # Auto-notify the driver about the new (and possibly re-ordered) route.
     notif = None
@@ -623,9 +623,9 @@ def _exec_optimize(db, company_id, job_id):
     )
     status = opt.get("status")
     if status == "ok":
-        msg = f"Optimized {job_id} — saved {opt['distance_saved_km']} km across {opt['stops_reordered']} stops"
+        msg = f"Optimized {job_id}, saved {opt['distance_saved_km']} km across {opt['stops_reordered']} stops"
     elif status == "no_improvement":
-        msg = f"Already optimal — current order is {opt['distance_after_km']} km"
+        msg = f"Already optimal. Current order is {opt['distance_after_km']} km"
     else:
         msg = f"Skipped: {opt.get('reason', status)}"
 
@@ -637,7 +637,7 @@ def _exec_optimize(db, company_id, job_id):
                 db, company_id=company_id, driver_id=driver.id,
                 driver_name=driver.name,
                 title=f"Route updated: {job_id}",
-                message=(f"Your stops on {job_id} were re-ordered — "
+                message=(f"Your stops on {job_id} were re-ordered. "
                          f"{opt['stops_reordered']} stop(s) changed, "
                          f"saving {opt['distance_saved_km']} km. "
                          "Open the app to see the new sequence."),
@@ -670,7 +670,7 @@ def _exec_optimize_all(db, company_id):
         results.append({"job_id": j.id, **r})
     return _resp(
         True,
-        f"Optimized {len(results)} jobs — total {round(saved_total, 2)} km saved",
+        f"Optimized {len(results)} jobs, total {round(saved_total, 2)} km saved",
         type="optimization_bulk",
         items=results,
     )

@@ -45,7 +45,7 @@ EVENT_TYPES = [
 ]
 
 ALERT_TEMPLATES = [
-    ("fatigue", "critical", "Fatigue Detected", "Driver shows signs of fatigue — recommend immediate break"),
+    ("fatigue", "critical", "Fatigue Detected", "Driver shows signs of fatigue. Recommend an immediate break"),
     ("route_deviation", "warning", "Route Deviation", "Driver is 1.4 km off the planned route"),
     ("delay", "warning", "Delivery Delayed", "Stop is running 18 min behind schedule"),
     ("harsh_braking", "warning", "Harsh Braking", "Multiple harsh-braking events in last 10 min"),
