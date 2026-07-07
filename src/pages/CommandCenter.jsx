@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  CheckCircle2,
   Clock,
   AlertTriangle,
   Camera,
   Eye,
   Radio,
-  X,
   ChevronRight,
-  History,
-  Zap,
 } from "lucide-react";
 import {
   getRecommendations,
@@ -34,22 +30,10 @@ const SEVERITY_LABEL = {
 };
 
 const AUTO_PILOT = [
-  {
-    title: "Route optimization",
-    body: "Every job is reordered the moment a driver is assigned.",
-  },
-  {
-    title: "Battery alerts",
-    body: "Any device under 20% battery is flagged automatically.",
-  },
-  {
-    title: "Anomaly detection",
-    body: "Watches for offline devices, driver fatigue, and blocked drivers.",
-  },
-  {
-    title: "Audit trail",
-    body: "Every automatic and manual action is recorded below.",
-  },
+  { title: "Route optimization", body: "Every job is reordered the moment a driver is assigned." },
+  { title: "Battery alerts", body: "Any device under 20% battery is flagged automatically." },
+  { title: "Anomaly detection", body: "Watches for offline devices, driver fatigue, and blocked drivers." },
+  { title: "Audit trail", body: "Every automatic and manual action is recorded below." },
 ];
 
 function isCriticalSeverity(sev) {
@@ -66,95 +50,74 @@ function timeAgo(iso) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function SectionLabel({ children, color = "#008080" }) {
+function SectionLabel({ children }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
-      <span className="text-[13px] font-semibold text-[#343a40]">{children}</span>
-    </div>
+    <p className="text-[11px] uppercase tracking-[0.18em] text-[#adb5bd] font-medium mb-6">
+      {children}
+    </p>
   );
 }
 
-function RecommendationCard({ rec, onAcknowledge, onDismiss, onOpen }) {
-  const meta = CATEGORY_META[rec.category] || CATEGORY_META["Delay"];
-  const Icon = meta.icon;
+function RecommendationRow({ rec, onAcknowledge, onDismiss, onOpen }) {
   const sev = SEVERITY_LABEL[rec.severity] || SEVERITY_LABEL.medium;
   return (
-    <div className="apple-card overflow-hidden relative">
-      <span
-        className="absolute left-0 top-0 bottom-0 w-1"
-        style={{ background: sev.color }}
-      />
-      <div className="p-4 sm:p-5 pl-5 sm:pl-6">
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: `${meta.color}1A`, color: meta.color }}
-          >
-            <Icon size={18} strokeWidth={1.8} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-3 mb-1">
-              <span className="text-[12px] text-[#adb5bd]">
-                {rec.category || "Signal"}
-              </span>
-              <span
-                className="text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0"
-                style={{ background: `${sev.color}14`, color: sev.color }}
-              >
-                {sev.label}
-              </span>
-            </div>
-
-            <p className="text-[15px] font-semibold text-[#111315] leading-snug">
-              {rec.what}
-            </p>
-
-            {rec.why && (
-              <p className="text-[13px] text-[#868E96] mt-1 leading-relaxed">
-                {rec.why}
-              </p>
-            )}
-
-            <div className="mt-3 rounded-xl bg-[#f8f9fa] border border-black/[0.04] p-3">
-              <p className="text-[11px] uppercase tracking-wider text-[#ADB5BD] font-semibold mb-1">
-                What to do
-              </p>
-              <p className="text-[13px] text-[#111315] leading-snug">{rec.action}</p>
-              {rec.expected_benefit && (
-                <p className="text-[12px] text-[#868E96] mt-1.5">
-                  Result: {rec.expected_benefit}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <button
-            onClick={() => onAcknowledge(rec)}
-            className="apple-btn apple-btn-primary text-[13px] py-2 px-4"
-          >
-            <CheckCircle2 size={14} /> Approve
-          </button>
-          {rec.link && (
-            <button
-              onClick={() => onOpen(rec.link)}
-              className="apple-btn apple-btn-secondary text-[13px] py-2 px-4"
-            >
-              Open <ChevronRight size={14} />
-            </button>
-          )}
-          <button
-            onClick={() => onDismiss(rec.id)}
-            className="text-[13px] text-[#ADB5BD] hover:text-[#868E96] ml-auto px-2 py-1"
-          >
-            <X size={13} className="inline" /> Dismiss
-          </button>
-        </div>
+    <article className="py-8 first:pt-0">
+      <div className="flex items-center gap-2.5 mb-3">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: sev.color }} />
+        <span
+          className="text-[11px] uppercase tracking-[0.14em] font-medium"
+          style={{ color: sev.color }}
+        >
+          {sev.label}
+        </span>
+        {rec.category && (
+          <span className="text-[12px] text-[#adb5bd]">· {rec.category}</span>
+        )}
       </div>
-    </div>
+
+      <h3 className="text-[18px] font-medium text-[#111315] tracking-tight leading-snug">
+        {rec.what}
+      </h3>
+
+      {rec.why && (
+        <p className="text-[14px] text-[#868E96] mt-2 leading-relaxed max-w-xl">
+          {rec.why}
+        </p>
+      )}
+
+      <div className="mt-4 pl-4 border-l border-[#e9ecef]">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[#adb5bd] mb-1">
+          Recommended
+        </p>
+        <p className="text-[14px] text-[#343a40] leading-snug">{rec.action}</p>
+        {rec.expected_benefit && (
+          <p className="text-[13px] text-[#adb5bd] mt-1">{rec.expected_benefit}</p>
+        )}
+      </div>
+
+      <div className="mt-5 flex items-center gap-5">
+        <button
+          onClick={() => onAcknowledge(rec)}
+          className="text-[13px] font-medium text-[#008080] border border-[#008080]/30 rounded-full px-4 py-1.5 hover:bg-[#008080]/[0.06] transition-colors"
+        >
+          Approve
+        </button>
+        {rec.link && (
+          <button
+            onClick={() => onOpen(rec.link)}
+            className="text-[13px] text-[#5c636a] hover:text-[#111315] transition-colors inline-flex items-center gap-1"
+          >
+            Open <ChevronRight size={13} />
+          </button>
+        )}
+        <button
+          onClick={() => onDismiss(rec.id)}
+          className="text-[13px] text-[#adb5bd] hover:text-[#868E96] transition-colors ml-auto"
+        >
+          Dismiss
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -237,7 +200,6 @@ export default function CommandCenter() {
       setAuditEntries(Array.isArray(fresh?.entries) ? fresh.entries : []);
     } catch (e) {
       console.warn("Approve failed:", e?.message);
-      // Surface the decision again so it is not silently lost.
       undoDismiss(rec.id);
       processingRef.current.delete(rec.id);
       if (auto) failedRef.current.set(rec.id, Date.now());
@@ -282,231 +244,193 @@ export default function CommandCenter() {
 
   const visibleRecs = recs.filter((r) => !dismissed.has(r.id));
   const pending = visibleRecs.length > 0;
-  const countColor = pending ? "#ff3b30" : "#34c759";
+  const autoActions = auditEntries.filter((e) => e.actor === "workflow_engine");
 
   return (
-    <div className="animate-fade-in max-w-3xl">
+    <div className="animate-fade-in max-w-2xl mx-auto px-1 pt-2">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">
+      <header className="mb-14">
+        <h1 className="text-[32px] sm:text-[38px] font-light text-[#111315] tracking-tight leading-none">
           Command Center
         </h1>
-        <p className="text-[14px] text-[#868E96] mt-1">
+        <p className="text-[15px] text-[#868E96] mt-4 leading-relaxed max-w-lg font-light">
           Live dispatch and safety decisions, routed to you the moment they matter.
         </p>
-      </div>
+      </header>
 
-      {/* Control strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-        <div className="apple-card p-5 flex items-center gap-4">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: `${countColor}14` }}
-          >
+      {/* Overview line */}
+      <div className="flex items-end justify-between gap-8 pb-8 border-b border-[#eceef0]">
+        <div>
+          <div className="flex items-center gap-2 mb-3">
             <span
-              className="text-[26px] font-semibold leading-none tabular-nums"
-              style={{ color: countColor }}
-            >
-              {visibleRecs.length}
-            </span>
-          </div>
-          <div>
-            <p className="text-[14px] font-semibold text-[#111315]">
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: pending ? "#ff3b30" : "#34c759" }}
+            />
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#adb5bd] font-medium">
               {visibleRecs.length === 1 ? "Decision waiting" : "Decisions waiting"}
             </p>
-            <p className="text-[12px] text-[#868E96] mt-0.5">
-              {autoCount > 0
-                ? `${autoCount} approved for you this session`
-                : pending
-                  ? "Approve, open, or dismiss each one"
-                  : "You are all caught up"}
-            </p>
           </div>
+          <p className="text-[52px] font-extralight text-[#111315] leading-none tracking-tight tabular-nums">
+            {visibleRecs.length}
+          </p>
+          {autoCount > 0 && (
+            <p className="text-[12px] text-[#adb5bd] mt-3">
+              {autoCount} approved for you this session
+            </p>
+          )}
         </div>
 
-        <div className="apple-card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: autoApprove ? "rgba(0,128,128,0.10)" : "#f1f3f5",
-                  color: autoApprove ? "#008080" : "#adb5bd",
-                }}
-              >
-                <Zap size={16} />
-              </div>
-              <div>
-                <p className="text-[14px] font-semibold text-[#111315]">Auto-approve</p>
-                <p className="text-[12px] text-[#868E96] mt-0.5">
-                  {autoApprove ? "Approving decisions for you" : "Approve incoming decisions for you"}
-                </p>
-              </div>
-            </div>
+        <div className="text-right shrink-0">
+          <div className="flex items-center gap-3 justify-end">
+            <span className="text-[13px] text-[#343a40] font-medium">Auto-approve</span>
             <button
               role="switch"
               aria-checked={autoApprove}
               aria-label="Toggle auto-approve"
               onClick={toggleAutoApprove}
-              className="relative w-11 h-6 rounded-full transition-colors shrink-0"
+              className="relative w-10 h-[22px] rounded-full transition-colors shrink-0"
               style={{ background: autoApprove ? "#008080" : "#dee2e6" }}
             >
               <span
-                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
-                style={{ transform: autoApprove ? "translateX(20px)" : "translateX(0)" }}
+                className="absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform"
+                style={{ transform: autoApprove ? "translateX(18px)" : "translateX(0)" }}
               />
             </button>
           </div>
+          <p className="text-[12px] text-[#adb5bd] mt-2.5 max-w-[220px] ml-auto leading-relaxed font-light">
+            {autoApprove
+              ? "New decisions are approved automatically."
+              : "Approve incoming decisions for you."}
+          </p>
           {autoApprove && (
-            <label className="mt-3 pt-3 border-t border-black/[0.06] flex items-center gap-2 cursor-pointer select-none">
+            <label className="mt-3 flex items-center gap-2 justify-end cursor-pointer select-none">
+              <span className="text-[12px] text-[#5c636a]">Include critical</span>
               <input
                 type="checkbox"
                 checked={includeCritical}
                 onChange={toggleIncludeCritical}
                 className="w-3.5 h-3.5 rounded accent-[#008080]"
               />
-              <span className="text-[12px] text-[#5c636a]">
-                Also approve critical decisions
-              </span>
-              {!includeCritical && (
-                <span className="text-[11px] text-[#ff9500] ml-auto">
-                  Critical still waits for you
-                </span>
-              )}
             </label>
           )}
         </div>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="mt-12 space-y-8">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="apple-card p-6">
-              <div className="skeleton h-4 w-2/3 mb-2" />
+            <div key={i}>
+              <div className="skeleton h-3 w-24 mb-3" />
+              <div className="skeleton h-5 w-2/3 mb-2" />
               <div className="skeleton h-3 w-full" />
             </div>
           ))}
         </div>
       ) : (
         <>
-          {/* Decisions list */}
-          <SectionLabel color="#ff3b30">Needs your decision</SectionLabel>
-          {loadError && !lastSyncAt ? (
-            <div className="apple-card p-10 text-center border-2 border-[#ff3b30]/20">
-              <div className="w-14 h-14 rounded-2xl bg-[#ff3b30]/10 flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle size={22} className="text-[#ff3b30]" />
-              </div>
-              <p className="text-[16px] font-semibold text-[#111315]">Intelligence service unreachable</p>
-              <p className="text-[13px] text-[#868E96] mt-1">
-                We cannot tell you what is happening right now. Treat this as unknown, not safe. ({loadError})
-              </p>
-              <button
-                onClick={() => { setLoading(true); load(); }}
-                className="apple-btn apple-btn-secondary text-[13px] py-2 px-4 mt-4"
-              >
-                Retry
-              </button>
-            </div>
-          ) : visibleRecs.length === 0 ? (
-            recs.length === 0 ? (
-              <div className="apple-card p-10 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#34c759]/10 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 size={22} className="text-[#34c759]" />
+          {/* Decisions */}
+          <section className="mt-12">
+            <SectionLabel>Needs your decision</SectionLabel>
+            {loadError && !lastSyncAt ? (
+              <div className="py-8">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff3b30]" />
+                  <span className="text-[11px] uppercase tracking-[0.14em] font-medium text-[#ff3b30]">
+                    Signal lost
+                  </span>
                 </div>
-                <p className="text-[16px] font-semibold text-[#111315]">You are all caught up</p>
-                <p className="text-[13px] text-[#868E96] mt-1">
-                  No drowsy drivers, no offline devices, no open critical alerts, and no blocked routes.
-                </p>
-                {loadError && (
-                  <p className="text-[11px] text-[#ff9500] mt-2">
-                    Last refresh failed. Showing the last known state from {timeAgo(lastSyncAt)}.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="apple-card p-10 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#ADB5BD]/10 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 size={22} className="text-[#868E96]" />
-                </div>
-                <p className="text-[16px] font-semibold text-[#111315]">
-                  All {recs.length} handled this session
-                </p>
-                <p className="text-[13px] text-[#868E96] mt-1">
-                  {autoApprove
-                    ? "Auto-approve is clearing decisions as they arrive."
-                    : "The underlying risks may still be active. Approving only hides the card."}
+                <h3 className="text-[18px] font-medium text-[#111315] tracking-tight">
+                  Intelligence service unreachable
+                </h3>
+                <p className="text-[14px] text-[#868E96] mt-2 leading-relaxed max-w-xl">
+                  We cannot tell you what is happening right now. Treat this as unknown, not safe. ({loadError})
                 </p>
                 <button
-                  onClick={() => { setDismissed(new Set()); sessionStorage.removeItem("dismissedRecs"); }}
-                  className="apple-btn apple-btn-secondary text-[13px] py-2 px-4 mt-4"
+                  onClick={() => { setLoading(true); load(); }}
+                  className="mt-5 text-[13px] font-medium text-[#008080] border border-[#008080]/30 rounded-full px-4 py-1.5 hover:bg-[#008080]/[0.06] transition-colors"
                 >
-                  Show dismissed
+                  Retry
                 </button>
               </div>
-            )
-          ) : (
-            <div className="space-y-3">
-              {visibleRecs.map((r) => (
-                <RecommendationCard
-                  key={r.id}
-                  rec={r}
-                  onAcknowledge={(rec) => acknowledge(rec, false)}
-                  onDismiss={dismiss}
-                  onOpen={(link) => navigate(link)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Running automatically */}
-          <div className="mt-8">
-            <SectionLabel color="#34c759">Running automatically</SectionLabel>
-            <div className="apple-card p-5">
-              <p className="text-[13px] text-[#868E96] mb-4">
-                These tasks happen on their own. You never have to approve them, they just show up in the log below.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {AUTO_PILOT.map((item) => (
-                  <div key={item.title} className="flex items-start gap-2.5">
-                    <CheckCircle2 size={16} className="text-[#34c759] mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-[13px] font-semibold text-[#111315]">{item.title}</p>
-                      <p className="text-[12px] text-[#868E96] leading-snug mt-0.5">{item.body}</p>
-                    </div>
-                  </div>
+            ) : visibleRecs.length === 0 ? (
+              recs.length === 0 ? (
+                <div className="py-8">
+                  <p className="text-[18px] font-light text-[#111315] tracking-tight">
+                    You are all caught up.
+                  </p>
+                  <p className="text-[14px] text-[#868E96] mt-2 leading-relaxed max-w-xl">
+                    No drowsy drivers, no offline devices, no open critical alerts, and no blocked routes.
+                  </p>
+                  {loadError && (
+                    <p className="text-[12px] text-[#ff9500] mt-3">
+                      Last refresh failed. Showing the last known state from {timeAgo(lastSyncAt)}.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="py-8">
+                  <p className="text-[18px] font-light text-[#111315] tracking-tight">
+                    All {recs.length} handled this session.
+                  </p>
+                  <p className="text-[14px] text-[#868E96] mt-2 leading-relaxed max-w-xl">
+                    {autoApprove
+                      ? "Auto-approve is clearing decisions as they arrive."
+                      : "The underlying risks may still be active. Approving only hides the card."}
+                  </p>
+                  <button
+                    onClick={() => { setDismissed(new Set()); sessionStorage.removeItem("dismissedRecs"); }}
+                    className="mt-5 text-[13px] text-[#5c636a] hover:text-[#111315] transition-colors"
+                  >
+                    Show dismissed
+                  </button>
+                </div>
+              )
+            ) : (
+              <div className="divide-y divide-[#eceef0]">
+                {visibleRecs.map((r) => (
+                  <RecommendationRow
+                    key={r.id}
+                    rec={r}
+                    onAcknowledge={(rec) => acknowledge(rec, false)}
+                    onDismiss={dismiss}
+                    onOpen={(link) => navigate(link)}
+                  />
                 ))}
               </div>
-              {auditEntries.filter((e) => e.actor === "workflow_engine").length > 0 && (
-                <div className="mt-4 pt-4 border-t border-black/[0.06]">
-                  <p className="text-[11px] uppercase tracking-wider text-[#ADB5BD] font-semibold mb-1">
-                    Latest automatic action
-                  </p>
-                  <p className="text-[13px] text-[#111315]">
-                    {auditEntries.filter((e) => e.actor === "workflow_engine")[0].summary}{" "}
-                    <span className="text-[#ADB5BD]">
-                      · {timeAgo(auditEntries.filter((e) => e.actor === "workflow_engine")[0].at)}
-                    </span>
-                  </p>
+            )}
+          </section>
+
+          {/* Running automatically */}
+          <section className="mt-16 pt-12 border-t border-[#eceef0]">
+            <SectionLabel>Running automatically</SectionLabel>
+            <p className="text-[14px] text-[#868E96] mb-7 leading-relaxed max-w-xl font-light">
+              These tasks happen on their own. You never have to approve them, they just show up in the log below.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6">
+              {AUTO_PILOT.map((item) => (
+                <div key={item.title} className="border-l border-[#e9ecef] pl-4">
+                  <p className="text-[14px] font-medium text-[#111315]">{item.title}</p>
+                  <p className="text-[13px] text-[#868E96] leading-relaxed mt-1 font-light">{item.body}</p>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
+            {autoActions.length > 0 && (
+              <p className="text-[13px] text-[#adb5bd] mt-8">
+                Latest: {autoActions[0].summary}
+                <span className="text-[#ced2d6]"> · {timeAgo(autoActions[0].at)}</span>
+              </p>
+            )}
+          </section>
 
           {/* Recently handled */}
-          <div className="mt-8">
-            <SectionLabel color="#008080">
-              <span className="inline-flex items-center gap-1.5">
-                <History size={12} /> Recently handled
-              </span>
-            </SectionLabel>
+          <section className="mt-16 pt-12 border-t border-[#eceef0]">
+            <SectionLabel>Recently handled</SectionLabel>
             {auditEntries.length === 0 ? (
-              <div className="apple-card p-5 text-center">
-                <p className="text-[13px] text-[#868E96]">
-                  Nothing logged yet. Automatic tasks and the actions you take will appear here.
-                </p>
-              </div>
+              <p className="text-[14px] text-[#868E96] font-light">
+                Nothing logged yet. Automatic tasks and the actions you take will appear here.
+              </p>
             ) : (
-              <div className="apple-card divide-y divide-black/[0.06]">
+              <div className="space-y-5">
                 {auditEntries.map((e) => {
                   const isAuto = e.actor === "workflow_engine";
                   const label =
@@ -516,22 +440,22 @@ export default function CommandCenter() {
                         ? "Automatic"
                         : "You";
                   return (
-                    <div key={e.id} className="px-5 py-3 flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-[#008080]/10 flex items-center justify-center shrink-0">
-                        <CheckCircle2 size={13} className="text-[#008080]" />
-                      </div>
+                    <div key={e.id} className="flex items-baseline gap-4">
+                      <span className="text-[11px] uppercase tracking-[0.12em] text-[#adb5bd] w-24 shrink-0">
+                        {label}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] text-[#111315] leading-snug">{e.summary}</p>
-                        <p className="text-[11px] text-[#868E96] mt-0.5">
-                          {label} · {timeAgo(e.at)}
-                        </p>
+                        <p className="text-[14px] text-[#343a40] leading-snug">{e.summary}</p>
+                        <p className="text-[12px] text-[#ced2d6] mt-0.5">{timeAgo(e.at)}</p>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </section>
+
+          <div className="h-16" />
         </>
       )}
     </div>
