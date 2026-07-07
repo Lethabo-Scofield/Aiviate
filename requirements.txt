@@ -4,16 +4,9 @@ flask
 flask-cors
 flask-sqlalchemy
 geopy
-gunicorn
 openpyxl
 pg8000
 psycopg2-binary
 PyJWT
 requests
 sqlalchemy
-alembic
-fastapi
-httpx
-ortools
-pydantic-settings
-uvicorn
