@@ -240,6 +240,20 @@ export async function uploadExcel(file) {
   return handleResponse(res);
 }
 
+export async function getStoreOrders() {
+  const res = await fetch(`${API_BASE}/store/orders`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function importStoreOrders(orderIds = null) {
+  const res = await fetch(`${API_BASE}/store/orders/import`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify(orderIds ? { order_ids: orderIds } : {}),
+  });
+  return handleResponse(res);
+}
+
 export async function optimizeStops(stops, numDrivers = 4, clusterRadius = 8) {
   const res = await fetch(`${API_BASE}/optimize`, {
     method: 'POST',

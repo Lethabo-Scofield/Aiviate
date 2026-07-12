@@ -9,7 +9,7 @@ from models import init_db, engine
 from routes import (
     auth_bp, jobs_bp, drivers_bp, stops_bp, optimization_bp, stats_bp,
     safety_bp, devices_bp, alerts_bp, liveops_bp, intelligence_bp, agents_bp,
-    autopilot_bp, engine_bp,
+    autopilot_bp, engine_bp, orders_bp,
 )
 
 
@@ -49,6 +49,7 @@ def create_app():
     app.register_blueprint(agents_bp)
     app.register_blueprint(autopilot_bp)
     app.register_blueprint(engine_bp)
+    app.register_blueprint(orders_bp)
 
     @app.route("/api/health")
     def health():
@@ -81,6 +82,15 @@ def _run_migrations():
         add_col_if_missing("drivers", "current_lng", "DOUBLE PRECISION")
         add_col_if_missing("drivers", "location_updated_at", "TIMESTAMP")
         add_col_if_missing("users", "driver_id", "VARCHAR")
+
+        # Prevent duplicate store-order imports per company (partial index so
+        # CSV-uploaded stops with recurring order_ids are unaffected)
+        if "stops" in table_names:
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_stops_company_store_order "
+                "ON stops (company_id, order_id) WHERE order_id LIKE 'STORE-%'"
+            ))
+            conn.commit()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, FlaskConical, ChevronDown, ChevronUp, ShoppingBag, RefreshCw } from "lucide-react";
 import { Spinner } from "../components/Loader";
-import { uploadExcel, optimizeStops, getStops, getJobs, loadTestData } from "../services/api";
+import { uploadExcel, optimizeStops, getStops, getJobs, loadTestData, getStoreOrders, importStoreOrders } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 export default function DispatchCenter({ embedded = false }) {
@@ -15,7 +15,24 @@ export default function DispatchCenter({ embedded = false }) {
   const [clusterRadius, setClusterRadius] = useState(8);
   const [loadingTest, setLoadingTest] = useState(false);
   const [showExample, setShowExample] = useState(false);
+  const [storeOrders, setStoreOrders] = useState(null);
+  const [storeConfigured, setStoreConfigured] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [refreshingOrders, setRefreshingOrders] = useState(false);
   const navigate = useNavigate();
+
+  const loadStoreOrders = async () => {
+    try {
+      setRefreshingOrders(true);
+      const res = await getStoreOrders();
+      setStoreConfigured(!!res.configured);
+      setStoreOrders(res.orders || []);
+    } catch (e) {
+      console.error("Failed to load store orders:", e);
+    } finally {
+      setRefreshingOrders(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -35,7 +52,33 @@ export default function DispatchCenter({ embedded = false }) {
       }
     };
     load();
+    loadStoreOrders();
   }, []);
+
+  const handleImportOrders = async () => {
+    setImporting(true);
+    setError("");
+    try {
+      const result = await importStoreOrders();
+      const [stopsRes] = await Promise.all([getStops(), loadStoreOrders()]);
+      const allStops = stopsRes.stops || result.stops || [];
+      if (allStops.length === 0) {
+        setError("No orders could be imported. Check that orders have shipping addresses.");
+        return;
+      }
+      setUploadResult({
+        total_rows: (result.imported || 0) + (result.failed?.length || 0),
+        geocoded: result.imported || 0,
+        failed: result.failed?.length || 0,
+      });
+      setStops(allStops);
+      setStep("optimize");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -134,6 +177,78 @@ export default function DispatchCenter({ embedded = false }) {
 
       {step === "upload" && (
         <div className="max-w-xl mx-auto sm:mx-0 animate-slide-up">
+          {storeConfigured && (
+            <div className="apple-card p-6 sm:p-7 mb-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#008080]/10 flex items-center justify-center">
+                    <ShoppingBag size={18} className="text-[#008080]" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 className="text-[15px] font-semibold text-[#111315]">Store orders</h2>
+                    <p className="text-[12px] text-[#868E96]">Live from your e-commerce database</p>
+                  </div>
+                </div>
+                <button
+                  onClick={loadStoreOrders}
+                  disabled={refreshingOrders}
+                  className="w-8 h-8 rounded-lg hover:bg-[#F1F3F5] flex items-center justify-center transition-colors"
+                  title="Refresh orders"
+                >
+                  <RefreshCw size={14} className={`text-[#868E96] ${refreshingOrders ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+
+              {storeOrders === null ? (
+                <div className="py-6 text-center"><Spinner size={20} className="mx-auto" /></div>
+              ) : storeOrders.length === 0 ? (
+                <p className="text-[13px] text-[#868E96] text-center py-4">No orders in your store yet.</p>
+              ) : (
+                <>
+                  <div className="max-h-56 overflow-y-auto space-y-1 mb-4">
+                    {storeOrders.map((o) => (
+                      <div key={o.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-[#F1F3F5] transition-colors">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#F1F3F5] text-[#868E96] font-semibold shrink-0">#{o.id}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-medium text-[#111315] truncate">
+                            {o.customer_name || "Unknown customer"}
+                            {o.item_count > 0 && <span className="text-[#ADB5BD] font-normal"> · {o.item_count} item{o.item_count !== 1 ? "s" : ""}</span>}
+                          </p>
+                          <p className="text-[11px] text-[#ADB5BD] truncate">{o.shipping_address || "No shipping address"}</p>
+                        </div>
+                        {o.imported ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#34c759]/10 text-[#34c759] font-semibold shrink-0">Imported</span>
+                        ) : !o.importable ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ff9500]/10 text-[#ff9500] font-semibold shrink-0">No address</span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#008080]/10 text-[#008080] font-semibold shrink-0">New</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {(() => {
+                    const newCount = storeOrders.filter((o) => !o.imported && o.importable).length;
+                    return (
+                      <button
+                        onClick={handleImportOrders}
+                        disabled={importing || newCount === 0}
+                        className="apple-btn apple-btn-primary w-full text-[13px]"
+                      >
+                        {importing ? (
+                          <><Spinner size={14} /> Importing orders...</>
+                        ) : newCount === 0 ? (
+                          "All orders imported"
+                        ) : (
+                          <>Import {newCount} new order{newCount !== 1 ? "s" : ""} for dispatch</>
+                        )}
+                      </button>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          )}
+
           <div className="apple-card p-8 sm:p-10">
             <div className="text-center mb-6">
               <div className="w-14 h-14 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-4">

@@ -39,7 +39,9 @@ Note: `JWT_SECRET` is stored as a shared environment variable (rotated during th
 - `backend/app.py` — Flask app factory, registers all blueprints, runs DB migrations
 - `backend/config.py` — Reads `NEON_DATABASE_URL`, `JWT_SECRET`, `ALLOWED_ORIGINS` from env
 - `backend/models.py` — SQLAlchemy models (NullPool for serverless compatibility): Companies, Users, Drivers, Jobs, Stops
-- `backend/routes/` — API blueprints: auth, jobs, drivers, stops, optimization, stats
+- `backend/routes/` — API blueprints: auth, jobs, drivers, stops, optimization, stats, orders
+- `backend/orders_source.py` — read-only connection to the external e-commerce orders DB (`ORDERS_DATABASE_KEY`)
+- `backend/routes/orders.py` — `GET /api/store/orders` (list store orders) and `POST /api/store/orders/import` (import as stops; geocodes missing coords, dedupe enforced by partial unique index on `stops(company_id, order_id)` for `STORE-%` order IDs). Access is restricted to the company in `ORDERS_COMPANY_ID` (falls back to allowing only single-company deployments).
 - `backend/optimize_route.py` — TSP route optimization using Google OR-Tools
 - `src/App.jsx` — React router: public (Login/Register) and protected routes
 - `src/services/api.js` — Centralized API client with JWT auth headers, supports `VITE_API_URL` env var
@@ -53,6 +55,8 @@ Note: `JWT_SECRET` is stored as a shared environment variable (rotated during th
 | `NEON_DATABASE_URL` | PostgreSQL connection string (Neon) |
 | `JWT_SECRET` | Secret key for signing JWT tokens |
 | `ALLOWED_ORIGINS` | CORS allowed origins (default: `*`) |
+| `ORDERS_DATABASE_KEY` | Connection string for the external e-commerce orders database (Neon, read-only usage) |
+| `ORDERS_COMPANY_ID` | Company allowed to access the store orders integration (dev: `CMP-DEMO0001`) |
 
 ## Dependencies
 
