@@ -17,6 +17,8 @@ import CommandCenter from "./pages/CommandCenter";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 import DataSources from "./pages/DataSources";
+import Orders from "./pages/Orders";
+import Integrations from "./pages/Integrations";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -36,6 +38,8 @@ function AppRoutes() {
           <>
             <Route path="/" element={<Operations />} />
             <Route path="/map" element={<MapView />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/integrations" element={<Integrations />} />
             <Route path="/jobs" element={<JobsCenter />} />
             <Route path="/fleet" element={<Fleet />} />
             <Route path="/command" element={<CommandCenter />} />

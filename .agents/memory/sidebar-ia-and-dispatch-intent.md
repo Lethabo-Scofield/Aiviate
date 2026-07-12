@@ -3,9 +3,14 @@ name: Sidebar IA consolidation & agent dispatch intent
 description: Why the nav is 5 lean tabs, how merged pages share children, and why the dispatch NLP pattern must stay narrow.
 ---
 
-# Lean 5-tab information architecture
+# Lean information architecture (updated 2026-07-12)
 
-The dispatcher nav is intentionally **5 destinations**: Home · Map · Jobs · Fleet · Command Center.
+The dispatcher nav was originally **5 destinations**: Home · Map · Jobs · Fleet · Command Center.
+On 2026-07-12 the user explicitly asked for two additions: **Orders** (main nav, store orders
+page with import→optimize handoff) and **Integrations** (secondary nav above Settings; presents
+the store DB connection as an API-style integration — the user wants it to *look like* an API
+even though it's a direct database read underneath). These are sanctioned exceptions to the
+lean-tabs rule; don't remove them in a future consolidation without asking.
 
 - **Jobs** and **Fleet** are tab *containers* that render other pages as children via an
   `embedded` prop. A child page, when `embedded`, suppresses its own `<h1>` header (and

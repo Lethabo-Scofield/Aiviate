@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Home, Map as MapIcon, Settings, Menu, X,
-  ClipboardList, Users, Radio,
+  ClipboardList, Users, Radio, ShoppingBag, Plug,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,6 +9,7 @@ import { useAuth } from "../contexts/AuthContext";
 const NAV = [
   { to: "/", icon: Home, label: "Home", end: true },
   { to: "/map", icon: MapIcon, label: "Map" },
+  { to: "/orders", icon: ShoppingBag, label: "Orders" },
   { to: "/jobs", icon: ClipboardList, label: "Jobs" },
   { to: "/fleet", icon: Users, label: "Fleet" },
   { to: "/command", icon: Radio, label: "Command Center" },
@@ -80,6 +81,18 @@ export default function Sidebar() {
             Press <span className="font-mono text-[#111315] bg-[#F1F3F5] px-1 rounded">⌘K</span> anywhere to ask Aiviate a question or run a command.
           </div>
         </nav>
+
+        <NavLink to="/integrations"
+          className={({ isActive }) =>
+            `mx-3 mb-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+              isActive
+                ? "text-[#008080] font-medium"
+                : "text-[#ADB5BD] hover:text-[#111315]"
+            }`
+          }>
+          <Plug size={15} strokeWidth={1.8} />
+          <span>Integrations</span>
+        </NavLink>
 
         <NavLink to="/settings"
           className={({ isActive }) =>

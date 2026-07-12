@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, FlaskConical, ChevronDown, ChevronUp, ShoppingBag, RefreshCw } from "lucide-react";
 import { Spinner } from "../components/Loader";
 import { uploadExcel, optimizeStops, getStops, getJobs, loadTestData, getStoreOrders, importStoreOrders } from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function DispatchCenter({ embedded = false }) {
   const [step, setStep] = useState("upload");
@@ -20,6 +20,7 @@ export default function DispatchCenter({ embedded = false }) {
   const [importing, setImporting] = useState(false);
   const [refreshingOrders, setRefreshingOrders] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const loadStoreOrders = async () => {
     try {
@@ -38,12 +39,14 @@ export default function DispatchCenter({ embedded = false }) {
     const load = async () => {
       try {
         const [stopsRes, jobsRes] = await Promise.all([getStops(), getJobs()]);
+        const forceOptimize = searchParams.get("mode") === "optimize";
         if (stopsRes.stops?.length > 0) {
           setStops(stopsRes.stops);
-          if (jobsRes.jobs?.length > 0) {
+          if (jobsRes.jobs?.length > 0 && !forceOptimize) {
             setJobs(jobsRes.jobs);
             setStep("results");
           } else {
+            if (jobsRes.jobs?.length > 0) setJobs(jobsRes.jobs);
             setStep("optimize");
           }
         }
