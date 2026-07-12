@@ -73,12 +73,6 @@ def determine_area_name(lat, lng):
     return best
 
 
-def load_test_stops():
-    filepath = os.path.join(DATA_DIR, "test_stops.json")
-    with open(filepath, "r") as f:
-        return json.load(f)
-
-
 def get_db_session():
     from models import SessionLocal
     return SessionLocal()

@@ -446,25 +446,6 @@ Run route optimization on uploaded stops. Groups stops into area clusters and so
 
 ---
 
-### POST /api/test-data
-
-Load sample delivery stops (Johannesburg area) for testing.
-
-**Auth:** Required (Admin only)
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "total_rows": 20,
-  "geocoded": 20,
-  "failed": 0,
-  "stops": [ ... ]
-}
-```
-
----
-
 ### POST /api/route
 
 Get road routing geometry between waypoints using OSRM.

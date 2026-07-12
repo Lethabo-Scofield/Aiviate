@@ -13,7 +13,7 @@ from routes import optimization_bp
 from middleware import require_auth, require_admin
 from models import Stop, Job
 from optimize_route import geocode_address, build_distance_matrix, solve_tsp, DEPOT
-from utils import cluster_stops, determine_area_name, load_test_stops, get_db_session
+from utils import cluster_stops, determine_area_name, get_db_session
 from config import UPLOAD_FOLDER
 
 
@@ -188,47 +188,6 @@ def upload_excel():
             os.remove(filepath)
         except OSError:
             pass
-
-
-@optimization_bp.route("/api/test-data", methods=["POST"])
-@require_auth
-@require_admin
-def load_test_data():
-    test_stops = load_test_stops()
-    company_id = g.company_id
-    unique_prefix = uuid.uuid4().hex[:4]
-
-    db = get_db_session()
-    try:
-        db.query(Stop).filter(Stop.job_id.is_(None), Stop.company_id == company_id).delete()
-        db.query(Stop).filter(Stop.id.like("test%"), Stop.company_id == company_id).delete()
-        db.flush()
-
-        for s in test_stops:
-            stop_id = f"{s['id']}_{unique_prefix}"
-            db.add(Stop(
-                id=stop_id, order_id=s["order_id"], customer_name=s["customer_name"],
-                address=s["address"], lat=s["lat"], lng=s["lng"], demand=s["demand"],
-                service_time=s["service_time"], phone=s["phone"], notes=s["notes"],
-                time_window_start=s["time_window_start"], time_window_end=s["time_window_end"],
-                company_id=company_id,
-            ))
-        db.commit()
-    except Exception:
-        db.rollback()
-        traceback.print_exc()
-        return jsonify({"error": "Failed to load test data"}), 500
-    finally:
-        db.close()
-
-    return jsonify({
-        "success": True,
-        "total_rows": len(test_stops),
-        "geocoded": len(test_stops),
-        "failed": 0,
-        "failed_details": [],
-        "stops": test_stops,
-    })
 
 
 @optimization_bp.route("/api/optimize", methods=["POST"])

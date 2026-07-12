@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, FlaskConical, ChevronDown, ChevronUp, ShoppingBag, RefreshCw } from "lucide-react";
+import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, ChevronDown, ChevronUp, ShoppingBag, RefreshCw } from "lucide-react";
 import { Spinner } from "../components/Loader";
-import { uploadExcel, optimizeStops, getStops, getJobs, loadTestData, getStoreOrders, importStoreOrders } from "../services/api";
+import { uploadExcel, optimizeStops, getStops, getJobs, getStoreOrders, importStoreOrders } from "../services/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function DispatchCenter({ embedded = false }) {
@@ -13,7 +13,6 @@ export default function DispatchCenter({ embedded = false }) {
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState("");
   const [clusterRadius, setClusterRadius] = useState(8);
-  const [loadingTest, setLoadingTest] = useState(false);
   const [showExample, setShowExample] = useState(false);
   const [storeOrders, setStoreOrders] = useState(null);
   const [storeConfigured, setStoreConfigured] = useState(false);
@@ -111,21 +110,6 @@ export default function DispatchCenter({ embedded = false }) {
       setError(err.message);
     } finally {
       setOptimizing(false);
-    }
-  };
-
-  const handleTestMode = async () => {
-    setLoadingTest(true);
-    setError("");
-    try {
-      const result = await loadTestData();
-      setUploadResult(result);
-      setStops(result.stops || []);
-      setStep("optimize");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingTest(false);
     }
   };
 
@@ -335,20 +319,6 @@ export default function DispatchCenter({ embedded = false }) {
               </div>
             )}
 
-            <div className="flex items-center gap-3 mt-4">
-              <div className="h-px flex-1 bg-[#e5e5ea]" />
-              <span className="text-[11px] text-[#c7c7cc] font-medium">or</span>
-              <div className="h-px flex-1 bg-[#e5e5ea]" />
-            </div>
-
-            <button
-              onClick={handleTestMode}
-              disabled={loadingTest || uploading}
-              className="apple-btn apple-btn-secondary w-full mt-4 text-[13px]"
-            >
-              {loadingTest ? <><Spinner size={14} /> Loading test data...</> : <><FlaskConical size={14} /> Load test data (Johannesburg)</>}
-            </button>
-            <p className="text-[11px] text-[#ADB5BD] text-center mt-2">20 pre-geocoded delivery addresses across Soweto, Hillbrow, Sandton, Alexandra & more</p>
           </div>
         </div>
       )}

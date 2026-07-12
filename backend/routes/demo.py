@@ -10,7 +10,7 @@ from flask import jsonify
 
 from routes import auth_bp
 from models import (
-    Company, User, Driver, Job, Stop, Device, Alert, SafetyEvent,
+    Company, User, Driver, Device, Alert, SafetyEvent,
 )
 from utils import generate_token, get_db_session
 
@@ -96,56 +96,8 @@ def _ensure_demo_tenant(db):
             drivers.append(d)
         db.flush()
 
-    # A couple of jobs with stops, one assigned and on-route
-    existing_jobs = db.query(Job).filter(Job.company_id == DEMO_COMPANY_ID).count()
-    if existing_jobs == 0:
-        statuses = ["assigned", "assigned", "unassigned", "completed"]
-        for i, status in enumerate(statuses):
-            area_name, clat, clng = rnd.choice(JHB_POINTS)
-            job_id = f"JOB-DEMO{i+1:03d}"
-            stops_n = rnd.randint(5, 9)
-            total_dist = round(rnd.uniform(20, 65), 1)
-            est_time = int(total_dist / 35 * 60) + stops_n * 15
-            driver = drivers[i % len(drivers)] if status != "unassigned" else None
-            job = Job(
-                id=job_id,
-                area=area_name,
-                total_stops=stops_n,
-                total_distance_km=total_dist,
-                estimated_time_min=est_time,
-                estimated_cost=round(total_dist * 12 + est_time * 2.5, 2),
-                center_lat=clat,
-                center_lng=clng,
-                status=status,
-                driver_id=driver.id if driver else None,
-                driver_name=driver.name if driver else None,
-                assigned_at=now - timedelta(hours=rnd.randint(1, 6)) if driver else None,
-                completed_at=now - timedelta(hours=1) if status == "completed" else None,
-                company_id=DEMO_COMPANY_ID,
-            )
-            db.add(job)
-            for s in range(stops_n):
-                lat = clat + rnd.uniform(-0.04, 0.04)
-                lng = clng + rnd.uniform(-0.04, 0.04)
-                db.add(Stop(
-                    id=f"STP-DEMO{i+1:02d}{s+1:02d}",
-                    order_id=f"ORD-{1000+i*10+s}",
-                    customer_name=rnd.choice([
-                        "Mandela Foods", "Joburg Pharmacy", "Highveld Hardware",
-                        "Township Spaza", "Gauteng Electrical", "Sasol Garage",
-                        "Pick n Pay", "Checkers Local", "Builders Express",
-                    ]),
-                    address=f"{rnd.randint(1, 250)} {rnd.choice(['Main','Oak','Acacia','Jacaranda','Vilakazi'])} St, {area_name}",
-                    lat=lat, lng=lng,
-                    demand=rnd.randint(1, 4),
-                    service_time=rnd.randint(10, 25),
-                    phone=f"+27 {rnd.randint(60,84)} {rnd.randint(100,999)} {rnd.randint(1000,9999)}",
-                    job_id=job_id,
-                    stop_number=s + 1,
-                    completed=status == "completed" or (status == "assigned" and s < 2),
-                    completed_at=now - timedelta(minutes=rnd.randint(10, 240)) if (status == "completed" or (status == "assigned" and s < 2)) else None,
-                    company_id=DEMO_COMPANY_ID,
-                ))
+    # NOTE: jobs and stops are never seeded — they come only from real
+    # store-order imports or spreadsheet uploads.
 
     # Devices (one per driver)
     existing_devices = db.query(Device).filter(Device.company_id == DEMO_COMPANY_ID).count()
