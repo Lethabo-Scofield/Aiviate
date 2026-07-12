@@ -21,10 +21,18 @@ The app deploys as a single Vercel project — frontend as static files and back
 
 Environment variables to set on Vercel: `NEON_DATABASE_URL`, `JWT_SECRET`
 
-### Local Development
-Two workflows run in parallel:
+### Replit (Development)
+Three workflows run in parallel:
 - **Start application** — Vite dev server (port 5000), proxies `/api` requests to the backend
 - **Backend API** — Flask server (port 8000)
+- **AI Engine** — FastAPI/uvicorn service (port 8080)
+
+Database: Replit built-in PostgreSQL (`DATABASE_URL`, used as fallback when `NEON_DATABASE_URL` is unset).
+
+### Replit (Publishing)
+Autoscale deployment: `npm run build` then `gunicorn main:app` on port 5000 — serves the built React app and Flask API from one process. Note: the AI Engine (port 8080) is NOT started in this deployment, so engine-backed routes will be unavailable in production until it is deployed as a separate service (set `ENGINE_URL` accordingly).
+
+Note: `JWT_SECRET` is stored as a shared environment variable (rotated during the Replit migration on 2026-07-12; the previous value committed in `.replit` git history should be considered leaked). The `aiviate-engine` package declares Python >=3.12 but currently runs fine on the installed Python 3.11.
 
 ## Key Files
 

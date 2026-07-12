@@ -87,4 +87,4 @@ build = ["bash", "-c", "npm run build"]
 [userenv]
 
 [userenv.shared]
-JWT_SECRET = "ed00c5f1c18a00f04baf8309029dfca81278da1781d8824fbb7df28d425b9a02572f49adaaaeb517e844027f633cc375"
+JWT_SECRET = "44984b4aa693de2d7e6dd2025fd357f832525b51a42a9a907a97b93aabc5732591e928a63b77dc9ffb9ceb06b2ff6133"
