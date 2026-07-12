@@ -265,10 +265,15 @@ def remove_driver(driver_id):
             job.driver_id = None
             job.driver_name = None
 
+        user = None
         if driver.user_id:
-            user = db.query(User).filter(User.id == driver.user_id).first()
-            if user:
-                db.delete(user)
+            user = db.query(User).filter(User.id == driver.user_id, User.company_id == g.company_id).first()
+        if not user:
+            user = db.query(User).filter(User.driver_id == driver.id, User.company_id == g.company_id).first()
+        if user:
+            user.driver_id = None
+            db.delete(user)
+            db.flush()
 
         db.delete(driver)
         db.commit()
