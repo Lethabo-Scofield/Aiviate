@@ -2,3 +2,4 @@
 - [Sidebar IA & dispatch intent](sidebar-ia-and-dispatch-intent.md) — lean nav + user-sanctioned Orders/Integrations additions; store DB must be presented as an API-style integration; keep dispatch NLP narrow.
 - [Olyxee design system](olyxee-design-system.md) — tokens live in index.css; motion restrained not elastic; neutral-50 shell bg with white cards; teal #008080 accent.
 - [Command Center auto-approve](command-center-auto-approve.md) — rec IDs are deterministic; auto-approve must track processed IDs to avoid re-approving standing recs each 20s poll.
+- [Vercel deploy gotchas](vercel-deploy-gotchas.md) — npm installs on Replit write proxy URLs into package-lock.json (breaks Vercel); keep root requirements.txt slim, no AI Engine deps.
