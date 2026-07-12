@@ -417,6 +417,32 @@ export default function DispatchCenter({ embedded = false }) {
 
       {step === "results" && (
         <div className="animate-slide-up">
+          {storeConfigured && storeOrders && storeOrders.filter((o) => !o.imported && o.importable).length > 0 && (
+            <div className="apple-card p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 border border-[#008080]/20">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#008080]/10 flex items-center justify-center shrink-0">
+                  <ShoppingBag size={16} className="text-[#008080]" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#111315]">
+                    {storeOrders.filter((o) => !o.imported && o.importable).length} new store order{storeOrders.filter((o) => !o.imported && o.importable).length !== 1 ? "s" : ""} waiting
+                  </p>
+                  <p className="text-[11px] text-[#868E96] truncate max-w-md">
+                    {storeOrders.filter((o) => !o.imported && o.importable).slice(0, 3).map((o) => o.customer_name || `Order ${o.id}`).join(", ")}
+                    {storeOrders.filter((o) => !o.imported && o.importable).length > 3 ? "…" : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleImportOrders}
+                disabled={importing}
+                className="apple-btn apple-btn-primary text-[13px] py-2 px-4 w-full sm:w-auto shrink-0"
+              >
+                {importing ? <><Spinner size={14} /> Importing...</> : "Import for dispatch"}
+              </button>
+            </div>
+          )}
+
           <div className="apple-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
             <div className="flex items-center gap-3">
               <CheckCircle size={20} className="text-[#34c759] shrink-0" />
