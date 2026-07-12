@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plug, ShoppingBag, RefreshCw, ArrowRight, Globe, Store, Package, Lock,
-  Pencil, Check, X, ImagePlus, Trash2,
+  Plug, ShoppingBag, RefreshCw, ArrowRight, Globe, Lock,
+  Pencil, Check, X, ImagePlus, Trash2, Code2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
 import { getStoreOrders, getStoreIntegration, updateStoreIntegration } from "../services/api";
+import { siShopify, siWoocommerce } from "simple-icons";
+
+function BrandIcon({ icon, size = 16 }) {
+  return (
+    <svg role="img" viewBox="0 0 24 24" width={size} height={size} fill={`#${icon.hex}`} xmlns="http://www.w3.org/2000/svg">
+      <path d={icon.path} />
+    </svg>
+  );
+}
 
 const LOGO_SIZE = 128;
 
@@ -33,8 +42,8 @@ function fileToLogoDataUrl(file) {
 }
 
 const AVAILABLE = [
-  { name: "Shopify", desc: "Pull orders straight from your Shopify store.", Icon: Store },
-  { name: "WooCommerce", desc: "Sync WooCommerce orders automatically.", Icon: Package },
+  { name: "Shopify", desc: "Pull orders straight from your Shopify store.", brand: siShopify },
+  { name: "WooCommerce", desc: "Sync WooCommerce orders automatically.", brand: siWoocommerce },
   { name: "Custom API", desc: "Connect any REST endpoint that serves orders.", Icon: Globe },
 ];
 
@@ -48,6 +57,7 @@ export default function Integrations() {
   const [draftLogo, setDraftLogo] = useState(null); // null = keep, "" = remove, string = new
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
+  const [showDevGuide, setShowDevGuide] = useState(false);
   const fileRef = useRef(null);
 
   const check = async (isRefresh = false) => {
@@ -276,12 +286,12 @@ export default function Integrations() {
       )}
 
       <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Available</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {AVAILABLE.map(({ name, desc, Icon }) => (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        {AVAILABLE.map(({ name, desc, Icon, brand }) => (
           <div key={name} className="apple-card p-4">
             <div className="flex items-center gap-2.5 mb-2">
               <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] flex items-center justify-center">
-                <Icon size={15} className="text-[#111315]" strokeWidth={1.8} />
+                {brand ? <BrandIcon icon={brand} size={16} /> : <Icon size={15} className="text-[#111315]" strokeWidth={1.8} />}
               </div>
               <p className="text-[13px] font-semibold text-[#111315]">{name}</p>
             </div>
@@ -289,6 +299,58 @@ export default function Integrations() {
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F1F3F5] text-[#ADB5BD] font-semibold">Coming soon</span>
           </div>
         ))}
+      </div>
+
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">No API? Integrate with code</p>
+      <div className="apple-card p-5 sm:p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-11 h-11 rounded-2xl bg-[#111315] flex items-center justify-center shrink-0">
+            <Code2 size={19} className="text-white" strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[15px] font-semibold text-[#111315]">Developer integration</h2>
+            <p className="text-[12px] text-[#868E96] mt-1 leading-snug">
+              If your system doesn't have a ready-made connector, you can push orders into Aiviate
+              with a few lines of code using the REST API.
+            </p>
+            <button
+              onClick={() => setShowDevGuide((v) => !v)}
+              className="apple-btn apple-btn-secondary text-[12px] py-1.5 px-3 mt-3"
+            >
+              {showDevGuide ? <>Hide instructions <ChevronUp size={13} /></> : <>View instructions <ChevronDown size={13} /></>}
+            </button>
+          </div>
+        </div>
+
+        {showDevGuide && (
+          <div className="mt-5 pt-5 border-t border-black/[0.06] space-y-4">
+            <div>
+              <p className="text-[12px] font-semibold text-[#111315] mb-1.5">1 · Get an access token</p>
+              <p className="text-[11.5px] text-[#868E96] mb-2">Log in with an admin account — the response includes a token to use in the next step.</p>
+              <pre className="bg-[#111315] text-[#E9ECEF] text-[11px] leading-relaxed rounded-xl p-3.5 overflow-x-auto font-mono">{`curl -X POST ${window.location.origin}/api/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"email": "you@company.com", "password": "•••"}'`}</pre>
+            </div>
+            <div>
+              <p className="text-[12px] font-semibold text-[#111315] mb-1.5">2 · Push your orders as a CSV</p>
+              <p className="text-[11.5px] text-[#868E96] mb-2">
+                Export orders from your system as a CSV with an <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">address</span> column
+                (optionally <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">order_id</span>, <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">customer_name</span>, <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">phone</span>, <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">notes</span>) and upload it.
+                Addresses are geocoded automatically.
+              </p>
+              <pre className="bg-[#111315] text-[#E9ECEF] text-[11px] leading-relaxed rounded-xl p-3.5 overflow-x-auto font-mono">{`curl -X POST ${window.location.origin}/api/upload \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -F "file=@orders.csv"`}</pre>
+            </div>
+            <div>
+              <p className="text-[12px] font-semibold text-[#111315] mb-1.5">3 · Optimize & dispatch</p>
+              <p className="text-[11.5px] text-[#868E96]">
+                The uploaded orders appear on the <Link to="/jobs?tab=dispatch" className="text-[#008080] font-medium hover:underline">Jobs page</Link> ready
+                to be optimized into routes — or trigger it from code with <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">POST /api/optimize</span>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
