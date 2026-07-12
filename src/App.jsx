@@ -13,7 +13,6 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import LiveOps from "./pages/LiveOps";
 import Alerts from "./pages/Alerts";
-import CommandCenter from "./pages/CommandCenter";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 import DataSources from "./pages/DataSources";
@@ -42,13 +41,13 @@ function AppRoutes() {
             <Route path="/integrations" element={<Integrations />} />
             <Route path="/jobs" element={<JobsCenter />} />
             <Route path="/fleet" element={<Fleet />} />
-            <Route path="/command" element={<CommandCenter />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/data-sources" element={<DataSources />} />
             <Route path="/profile" element={<Profile />} />
             {/* Legacy URLs kept for back-compat — planning now lives with the agent,
                 and Drivers/Devices/Safety now live under Fleet. */}
             <Route path="/ai-planner" element={<Navigate to="/" replace />} />
+            <Route path="/command" element={<Navigate to="/" replace />} />
             <Route path="/dispatch" element={<Navigate to="/jobs?tab=dispatch" replace />} />
             <Route path="/drivers" element={<Navigate to="/fleet" replace />} />
             <Route path="/devices" element={<Navigate to="/fleet?tab=devices" replace />} />

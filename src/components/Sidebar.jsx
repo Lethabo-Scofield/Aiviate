@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Home, Map as MapIcon, Settings, Menu, X,
-  ClipboardList, Users, Radio, ShoppingBag, Plug,
+  ClipboardList, Users, ShoppingBag, Plug,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,7 +12,6 @@ const NAV = [
   { to: "/orders", icon: ShoppingBag, label: "Orders" },
   { to: "/jobs", icon: ClipboardList, label: "Jobs" },
   { to: "/fleet", icon: Users, label: "Fleet" },
-  { to: "/command", icon: Radio, label: "Command Center" },
 ];
 
 function UserAvatar({ size = 28 }) {
