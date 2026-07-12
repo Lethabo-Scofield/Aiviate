@@ -245,6 +245,20 @@ export async function getStoreOrders() {
   return handleResponse(res);
 }
 
+export async function getStoreIntegration() {
+  const res = await fetch(`${API_BASE}/store/integration`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function updateStoreIntegration(payload) {
+  const res = await fetch(`${API_BASE}/store/integration`, {
+    method: "PUT",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
 export async function importStoreOrders(orderIds = null) {
   const res = await fetch(`${API_BASE}/store/orders/import`, {
     method: 'POST',

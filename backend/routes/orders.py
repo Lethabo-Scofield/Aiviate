@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from routes import orders_bp
 from middleware import require_auth, require_admin
-from models import Stop, Company
+from models import Stop, Company, IntegrationSettings
 from optimize_route import geocode_address, DEPOT
 from orders_source import fetch_orders, orders_db_configured
 from utils import get_db_session
@@ -164,3 +164,98 @@ def import_store_orders():
         "failed": failed,
         "stops": stops_out,
     })
+
+
+MAX_LOGO_CHARS = 400_000  # ~300KB image as a data URL
+ALLOWED_LOGO_PREFIXES = (
+    "data:image/png;base64,",
+    "data:image/jpeg;base64,",
+    "data:image/webp;base64,",
+)
+
+_integration_table_ready = False
+
+
+def _ensure_integration_table():
+    """Create integration_settings on first use.
+
+    Serverless runtimes (Vercel) skip init_db()/migrations at cold start,
+    so an existing production DB may not have this table yet. checkfirst
+    makes this a no-op once the table exists.
+    """
+    global _integration_table_ready
+    if _integration_table_ready:
+        return
+    from models import engine
+    IntegrationSettings.__table__.create(engine, checkfirst=True)
+    _integration_table_ready = True
+
+
+@orders_bp.route("/api/store/integration", methods=["GET"])
+@require_auth
+@require_admin
+def get_integration_settings():
+    try:
+        _ensure_integration_table()
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"settings": None})
+
+    db = get_db_session()
+    try:
+        settings = db.query(IntegrationSettings).filter(
+            IntegrationSettings.company_id == g.company_id
+        ).first()
+        return jsonify({"settings": settings.to_dict() if settings else None})
+    finally:
+        db.close()
+
+
+@orders_bp.route("/api/store/integration", methods=["PUT"])
+@require_auth
+@require_admin
+def update_integration_settings():
+    try:
+        _ensure_integration_table()
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"error": "Settings storage is unavailable right now"}), 503
+
+    data = request.get_json(silent=True) or {}
+
+    display_name = data.get("display_name")
+    if display_name is not None:
+        display_name = str(display_name).strip()[:80] or None
+
+    logo = data.get("logo")
+    if logo is not None and logo != "":
+        logo = str(logo)
+        if len(logo) > MAX_LOGO_CHARS:
+            return jsonify({"error": "Logo image is too large"}), 400
+        if not logo.startswith(ALLOWED_LOGO_PREFIXES):
+            return jsonify({"error": "Logo must be a PNG, JPEG, or WebP image"}), 400
+    elif logo == "":
+        logo = None
+
+    db = get_db_session()
+    try:
+        settings = db.query(IntegrationSettings).filter(
+            IntegrationSettings.company_id == g.company_id
+        ).first()
+        if not settings:
+            settings = IntegrationSettings(company_id=g.company_id)
+            db.add(settings)
+
+        if "display_name" in data:
+            settings.display_name = display_name
+        if "logo" in data:
+            settings.logo = logo
+
+        db.commit()
+        return jsonify({"success": True, "settings": settings.to_dict()})
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to save integration settings"}), 500
+    finally:
+        db.close()

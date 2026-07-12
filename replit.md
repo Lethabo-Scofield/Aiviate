@@ -41,7 +41,7 @@ Note: `JWT_SECRET` is stored as a shared environment variable (rotated during th
 - `backend/models.py` — SQLAlchemy models (NullPool for serverless compatibility): Companies, Users, Drivers, Jobs, Stops
 - `backend/routes/` — API blueprints: auth, jobs, drivers, stops, optimization, stats, orders
 - `backend/orders_source.py` — read-only connection to the external e-commerce orders DB (`ORDERS_DATABASE_KEY`)
-- `backend/routes/orders.py` — `GET /api/store/orders` (list store orders) and `POST /api/store/orders/import` (import as stops; geocodes missing coords, dedupe enforced by partial unique index on `stops(company_id, order_id)` for `STORE-%` order IDs). Access is restricted to the company in `ORDERS_COMPANY_ID` (falls back to allowing only single-company deployments).
+- `backend/routes/orders.py` — `GET /api/store/orders` (list store orders) and `POST /api/store/orders/import` (import as stops; geocodes missing coords, dedupe enforced by partial unique index on `stops(company_id, order_id)` for `STORE-%` order IDs). Access is restricted to the company in `ORDERS_COMPANY_ID` (falls back to allowing only single-company deployments). Also `GET/PUT /api/store/integration` — per-company display name + logo (data URL) for the connected store card; the `integration_settings` table is lazily created on first use so it works on serverless (Vercel) where DB init is skipped.
 - `backend/optimize_route.py` — TSP route optimization using Google OR-Tools
 - `src/App.jsx` — React router: public (Login/Register) and protected routes
 - `src/services/api.js` — Centralized API client with JWT auth headers, supports `VITE_API_URL` env var

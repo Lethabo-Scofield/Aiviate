@@ -349,6 +349,24 @@ class AutopilotSettings(Base):
         }
 
 
+class IntegrationSettings(Base):
+    """Per-company display settings for the store orders integration."""
+    __tablename__ = "integration_settings"
+
+    company_id = Column(String, ForeignKey("companies.id"), primary_key=True)
+    display_name = Column(String, nullable=True)
+    logo = Column(Text, nullable=True)  # data URL (small, downscaled client-side)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self):
+        return {
+            "company_id": self.company_id,
+            "display_name": self.display_name,
+            "logo": self.logo,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 def init_db():
     Base.metadata.create_all(engine)
 
