@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, ChevronDown, ChevronUp, ShoppingBag, RefreshCw } from "lucide-react";
+import { Upload, Zap, CheckCircle, AlertTriangle, FileSpreadsheet, ArrowLeft, MapPin, ShoppingBag, RefreshCw } from "lucide-react";
 import { Spinner } from "../components/Loader";
 import { uploadExcel, optimizeStops, getStops, getJobs, getStoreOrders, importStoreOrders } from "../services/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -13,7 +13,6 @@ export default function DispatchCenter({ embedded = false }) {
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState("");
   const [clusterRadius, setClusterRadius] = useState(8);
-  const [showExample, setShowExample] = useState(false);
   const [storeOrders, setStoreOrders] = useState(null);
   const [storeConfigured, setStoreConfigured] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -264,61 +263,9 @@ export default function DispatchCenter({ embedded = false }) {
               </label>
             </div>
 
-            <div className="mt-5 mb-1">
-              <button
-                onClick={() => setShowExample(!showExample)}
-                className="flex items-center gap-1.5 text-[12px] text-[#868E96] font-medium hover:text-[#111315] transition-colors mx-auto"
-              >
-                <FileSpreadsheet size={13} />
-                {showExample ? "Hide" : "View"} example data format
-                {showExample ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              </button>
-            </div>
-
-            {showExample && (
-              <div className="mt-3 animate-fade-in">
-                <div className="rounded-xl border border-[#e5e5ea] overflow-hidden">
-                  <div className="bg-[#F1F3F5] px-3 py-2 border-b border-[#e5e5ea]">
-                    <p className="text-[11px] font-semibold text-[#868E96] uppercase tracking-wider">Example Excel rows</p>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-[11px]">
-                      <thead>
-                        <tr className="bg-[#fafafa] border-b border-[#F1F3F5]">
-                          {["Full_Address", "Customer_Name", "Order_ID", "Phone", "Notes"].map((h) => (
-                            <th key={h} className={`px-2.5 py-2 text-left font-semibold whitespace-nowrap ${h === "Full_Address" ? "text-[#111315]" : "text-[#868E96]"}`}>
-                              {h}{h === "Full_Address" && <span className="text-[#ff3b30] ml-0.5">*</span>}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="text-[#111315]">
-                        {[
-                          ["Vilakazi Street, Orlando West, Soweto", "Sipho Ndlovu", "ORD-001", "+27 72 100 0001", "Ring bell twice"],
-                          ["Kotze Street, Hillbrow, Johannesburg", "James van der Merwe", "ORD-003", "+27 72 100 0003", ""],
-                          ["Sandton City Mall, Sandton", "Pieter Botha", "ORD-005", "+27 72 100 0005", "Deliver to concierge"],
-                          ["London Rd, Alexandra, Johannesburg", "Naledi Khumalo", "ORD-006", "+27 72 100 0006", ""],
-                        ].map((row, i) => (
-                          <tr key={i} className="border-b border-[#F1F3F5] last:border-0 hover:bg-[#fafafa]">
-                            {row.map((cell, ci) => (
-                              <td key={ci} className={`px-2.5 py-1.5 whitespace-nowrap ${ci === 0 ? "font-medium" : ""}`}>
-                                {cell || <span className="text-[#DEE2E6]">—</span>}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="bg-[#F1F3F5] px-3 py-2 border-t border-[#e5e5ea]">
-                    <p className="text-[10px] text-[#ADB5BD]">
-                      <span className="text-[#ff3b30]">*</span> Required — all other columns are optional and auto-generated if missing
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+            <p className="mt-5 text-[11px] text-[#ADB5BD] text-center">
+              Columns: <span className="font-medium text-[#868E96]">Full_Address</span> (required) · Customer_Name · Order_ID · Phone · Notes
+            </p>
           </div>
         </div>
       )}
