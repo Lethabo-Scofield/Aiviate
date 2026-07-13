@@ -41,7 +41,7 @@ def get_stats():
         all_stops = db.query(Stop).filter(Stop.company_id == g.company_id).all()
         stops_today = [s for s in all_stops if s.completed_at and s.completed_at.replace(tzinfo=timezone.utc) >= today]
         on_time_today = [s for s in stops_today if not s.time_window_end or s.completed_at.strftime("%H:%M") <= s.time_window_end]
-        on_time_rate = int(len(on_time_today) / len(stops_today) * 100) if stops_today else 98
+        on_time_rate = int(len(on_time_today) / len(stops_today) * 100) if stops_today else 100
 
         # Fleet safety score
         if drivers:

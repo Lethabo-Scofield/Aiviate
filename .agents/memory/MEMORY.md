@@ -3,3 +3,4 @@
 - [Olyxee design system](olyxee-design-system.md) — tokens live in index.css; motion restrained not elastic; neutral-50 shell bg with white cards; teal #008080 accent.
 - [Command Center auto-approve](command-center-auto-approve.md) — rec IDs are deterministic; auto-approve must track processed IDs to avoid re-approving standing recs each 20s poll.
 - [Vercel deploy gotchas](vercel-deploy-gotchas.md) — npm installs on Replit write proxy URLs into package-lock.json (breaks Vercel); keep root requirements.txt slim, no AI Engine deps.
+- [No dummy data policy](no-dummy-data-policy.md) — user mandated: no fake/demo data anywhere; honest empty states; demo login provisions a real empty tenant only.

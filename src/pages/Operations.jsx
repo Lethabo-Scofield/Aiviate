@@ -56,65 +56,6 @@ const SEV_COLOR = {
   warning: "#ff9500", info: "#008080",
 };
 
-const LOCAL_DEMO_TOKEN = "local-demo-token";
-const DISPATCH_BRIEFING_DETAILS = {
-  title: "Today's dispatch briefing",
-  status: "Completed",
-  owner: "Autopilot",
-  confidence: 99,
-  inputs: [
-    "23 stops scheduled for today",
-    "4 active drivers available",
-    "1 unassigned job waiting",
-    "3 unread operational alerts",
-  ],
-  steps: [
-    "Checked open routes and driver capacity",
-    "Compared unassigned work against available drivers",
-    "Scanned unread alerts for anything blocking dispatch",
-    "Prepared the first dispatch summary for the operator",
-  ],
-  outcome: "Briefing is ready. No high-risk change was made without approval.",
-  nextFocus: "Assign the 1 waiting job or ask Aiviate to show the best driver match.",
-};
-
-function isLocalDemo() {
-  return localStorage.getItem("aiviate_token") === LOCAL_DEMO_TOKEN;
-}
-
-function localDemoAutopilot() {
-  return {
-    settings: {
-      enabled: true,
-      mode: "autonomous",
-      max_actions_per_run: 5,
-      auto_assign: true,
-      auto_optimize: true,
-      auto_notify: true,
-      safety_approval_required: true,
-    },
-    recent_actions: [{
-      summary: "Prepared today's dispatch briefing",
-      action_type: "autopilot_dispatch_briefing",
-      at: new Date().toISOString(),
-      details: {
-        focus_action: true,
-        ...DISPATCH_BRIEFING_DETAILS,
-      },
-    }],
-    pending_approvals: [],
-  };
-}
-
-const LOCAL_DEMO_STATS = {
-  stops_today: 23,
-  active_drivers: 4,
-  total_drivers: 5,
-  unassigned: 1,
-  unread_alerts: 3,
-};
-
-
 /* ─────────────────────────── small bits ─────────────────────────── */
 function Toast({ toast, onClose }) {
   return (
@@ -340,16 +281,6 @@ export default function Operations() {
   };
 
   const load = useCallback(async () => {
-    if (isLocalDemo()) {
-      setRecs([]);
-      setAudit([]);
-      setStats(LOCAL_DEMO_STATS);
-      setAutopilot(localDemoAutopilot());
-      setLoadError(null);
-      setLoading(false);
-      return;
-    }
-
     const myReq = ++reqIdRef.current;
     try {
       const [recsRes, auditRes, statsRes, autopilotRes] = await Promise.allSettled([
@@ -380,10 +311,6 @@ export default function Operations() {
   }, [load]);
 
   const refreshAutopilot = useCallback(async () => {
-    if (isLocalDemo()) {
-      setAutopilot(localDemoAutopilot());
-      return;
-    }
     try {
       setAutopilot(await getAutopilotStatus());
     } catch {
@@ -394,14 +321,6 @@ export default function Operations() {
   const setAutopilotSettings = async (payload) => {
     setAutopilotBusy(true);
     try {
-      if (isLocalDemo()) {
-        setAutopilot((current) => ({
-          ...(current || localDemoAutopilot()),
-          settings: { ...localDemoAutopilot().settings, ...(current?.settings || {}), ...payload },
-        }));
-        notify(payload.enabled === false ? "Autopilot paused" : "Autopilot settings updated");
-        return;
-      }
       const res = await updateAutopilotSettings(payload);
       setAutopilot((current) => ({ ...(current || {}), settings: res.settings }));
       notify(payload.enabled === false ? "Autopilot paused" : "Autopilot settings updated");
@@ -416,11 +335,6 @@ export default function Operations() {
   const runAutopilotNow = async (force = false) => {
     setAutopilotBusy(true);
     try {
-      if (isLocalDemo()) {
-        setAutopilot(localDemoAutopilot());
-        notify("Autopilot completed 1 action");
-        return;
-      }
       const res = await runAutopilot(force);
       notify(res.summary || "Autopilot checked the operation");
       await load();
@@ -438,10 +352,6 @@ export default function Operations() {
     const launchAutonomous = async () => {
       setAutopilotBusy(true);
       try {
-        if (isLocalDemo()) {
-          setAutopilot(localDemoAutopilot());
-          return;
-        }
         const settings = autopilot?.settings || {};
         const needsAutonomous =
           !settings.enabled ||

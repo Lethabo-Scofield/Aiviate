@@ -6,15 +6,6 @@ const TOKEN_KEY = "aiviate_token";
 const USER_KEY = "aiviate_user";
 const LOCAL_DEMO_TOKEN = "local-demo-token";
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-const LOCAL_DEMO_ENABLED = import.meta.env.DEV;
-
-const LOCAL_DEMO_USER = {
-  id: "USR-LOCAL-DEMO",
-  email: "demo@aiviate.io",
-  name: "Demo Dispatcher",
-  role: "admin",
-  company_id: "CMP-LOCAL-DEMO",
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -49,31 +40,8 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    if (token === LOCAL_DEMO_TOKEN && LOCAL_DEMO_ENABLED) {
-      // A stale offline-demo session. Now that the backend is reachable, try to
-      // upgrade it to a real backend demo session so real data (jobs, drivers,
-      // engine plans) shows. Fall back to the offline demo if the backend is down.
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 2500);
-      fetch(`${API_BASE}/auth/demo-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.token && data.user) {
-            saveAuth(data.token, data.user);
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          window.clearTimeout(timeout);
-          setLoading(false);
-        });
-      return;
-    }
     if (token === LOCAL_DEMO_TOKEN) {
+      // Stale offline-demo session from an older build — discard it.
       logout();
       setLoading(false);
       return;
@@ -141,22 +109,13 @@ export function AuthProvider({ children }) {
 
   const loginDemo = async () => {
     let res;
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 2500);
     try {
       res = await fetch(`${API_BASE}/auth/demo-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
       });
     } catch {
-      if (LOCAL_DEMO_ENABLED) {
-        saveAuth(LOCAL_DEMO_TOKEN, LOCAL_DEMO_USER);
-        return LOCAL_DEMO_USER;
-      }
       throw new Error("Cannot connect to server. Please check that the backend is running.");
-    } finally {
-      window.clearTimeout(timeout);
     }
     const data = await parseJSON(res);
     if (!res.ok) throw new Error(data.error || "Demo login failed");
