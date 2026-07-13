@@ -5,6 +5,8 @@ connection string). All queries here are SELECT-only — the store database
 is never modified by the dispatch app.
 """
 import os
+import ssl as _ssl
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
@@ -22,7 +24,28 @@ def _get_engine():
         url = os.environ.get("ORDERS_DATABASE_KEY")
         if not url:
             raise RuntimeError("ORDERS_DATABASE_KEY environment variable is not set")
-        _engine = create_engine(url, poolclass=NullPool)
+
+        # Use the pg8000 driver (pure Python) — psycopg2 is not available in
+        # the slim serverless runtime. Mirrors the URL handling in models.py.
+        parsed = urlparse(url)
+        params = parse_qs(parsed.query)
+        use_ssl = params.pop("sslmode", [None])[0] in ("require", "verify-ca", "verify-full", None)
+        params.pop("channel_binding", None)
+        new_query = urlencode({k: v[0] for k, v in params.items()})
+        url = urlunparse(parsed._replace(
+            scheme="postgresql+pg8000",
+            query=new_query,
+        ))
+
+        connect_args = {}
+        if use_ssl:
+            ssl_ctx = _ssl.create_default_context()
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = _ssl.CERT_NONE
+            connect_args["ssl_context"] = ssl_ctx
+        connect_args["timeout"] = int(os.environ.get("DB_CONNECT_TIMEOUT", "10"))
+
+        _engine = create_engine(url, poolclass=NullPool, connect_args=connect_args)
     return _engine
 
 

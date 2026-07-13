@@ -87,7 +87,6 @@ build = ["bash", "-c", "npm run build"]
 [userenv]
 
 [userenv.shared]
-JWT_SECRET = "44984b4aa693de2d7e6dd2025fd357f832525b51a42a9a907a97b93aabc5732591e928a63b77dc9ffb9ceb06b2ff6133"
 
 [userenv.development]
 ORDERS_COMPANY_ID = "CMP-DEMO0001"
