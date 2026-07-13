@@ -32,7 +32,7 @@ Database: Replit built-in PostgreSQL (`DATABASE_URL`, used as fallback when `NEO
 ### Replit (Publishing)
 Autoscale deployment: `npm run build` then `gunicorn main:app` on port 5000 — serves the built React app and Flask API from one process. Note: the AI Engine (port 8080) is NOT started in this deployment, so engine-backed routes will be unavailable in production until it is deployed as a separate service (set `ENGINE_URL` accordingly).
 
-Note: `JWT_SECRET` is stored as a shared environment variable (rotated during the Replit migration on 2026-07-12; the previous value committed in `.replit` git history should be considered leaked). The `aiviate-engine` package declares Python >=3.12 but currently runs fine on the installed Python 3.11.
+Note: `JWT_SECRET` is no longer stored in `.replit` (previous values committed there should be considered leaked). On Replit, the backend falls back to the Replit-managed `SESSION_SECRET` secret for JWT signing when `JWT_SECRET` is unset; on Vercel, set `JWT_SECRET` explicitly. The `aiviate-engine` package declares Python >=3.12 but currently runs fine on the installed Python 3.11.
 
 ## Key Files
 
@@ -54,7 +54,7 @@ Note: `JWT_SECRET` is stored as a shared environment variable (rotated during th
 | Variable | Description |
 |---|---|
 | `NEON_DATABASE_URL` | PostgreSQL connection string (Neon) |
-| `JWT_SECRET` | Secret key for signing JWT tokens |
+| `JWT_SECRET` | Secret key for signing JWT tokens (optional on Replit — falls back to `SESSION_SECRET`) |
 | `ALLOWED_ORIGINS` | CORS allowed origins (default: `*`) |
 | `ORDERS_DATABASE_KEY` | Connection string for the external e-commerce orders database (Neon, read-only usage) |
 | `ORDERS_COMPANY_ID` | Company allowed to access the store orders integration (dev: `CMP-DEMO0001`) |
