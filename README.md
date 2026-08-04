@@ -33,7 +33,7 @@ It contains:
 
 The deterministic decision engine lives in `Website/aiviate-engine/` and should run as its own Python service. The APP backend calls it through `ENGINE_URL`.
 
-The Call Agent lives in `Call Agent/Backend/` and should run as its own Node service. It calls APP through `AIVIATE_API_URL` and `AIVIATE_SERVICE_TOKEN`.
+The Call Agent lives in `Call Agent/Backend/` and should run as its own Node service. It calls APP through `AIVIATE_API_URL` and `AIVIATE_SERVICE_TOKEN`. The old `Call Agent/Frontend/` folder is a deprecated local prototype, not a deployment target.
 
 The `DEVICE/` area is documentation only. It is not a runnable service.
 

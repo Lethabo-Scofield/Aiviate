@@ -188,13 +188,13 @@ Missing integrations:
 
 Tracked path: `Call Agent/`
 
-Current role: Retell web-call prototype with a static frontend and Express backend.
+Current role: Retell call-agent backend service. A separate static frontend exists but is deprecated and should not be deployed.
 
 Backend entry point:
 
 - `Call Agent/Backend/server.js`
 
-Frontend entry points:
+Deprecated frontend prototype entry points:
 
 - `Call Agent/Frontend/index.html`
 - `Call Agent/Frontend/js/main.js`
@@ -203,7 +203,7 @@ Frontend entry points:
 Package managers:
 
 - npm with `Call Agent/Backend/package.json`
-- npm with `Call Agent/Frontend/package.json`
+- npm with `Call Agent/Frontend/package.json` for the deprecated local prototype only
 
 Existing routes:
 
@@ -227,6 +227,7 @@ Current blockers:
 - The new `/tools/*` routes call the APP customer-support API with `AIVIATE_SERVICE_TOKEN`.
 - Retell webhook signature verification and webhook deduplication have a first implementation, but webhook persistence still needs durable storage.
 - Simulation mode is explicit through `CALL_AGENT_SIMULATION_MODE=true` or missing `AIVIATE_SERVICE_TOKEN`.
+- `Call Agent/Frontend` is not a production surface; browser voice support belongs in WEB and should call the Call Agent backend.
 
 ## Environment Variables Found
 

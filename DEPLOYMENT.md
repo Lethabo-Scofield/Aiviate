@@ -10,6 +10,7 @@ This document describes how to deploy the current repository without pretending 
 | Decision engine | `Website/aiviate-engine/` | Separate Python/FastAPI service | Required for real route planning |
 | Driver app | `App/` | Expo / EAS or local Expo runtime | Not a Vercel web service |
 | Call Agent | `Call Agent/Backend/` | Separate Node/Express service | Ready as a service shell with simulation mode |
+| Call Agent prototype frontend | `Call Agent/Frontend/` | None | Deprecated local prototype; do not deploy |
 | DEVICE | `DEVICE/` | None | Documentation only |
 
 ## Vercel: Website And APP API
@@ -93,6 +94,8 @@ The Call Agent backend is in:
 ```text
 Call Agent/Backend
 ```
+
+Do not deploy `Call Agent/Frontend`. That folder is an old standalone demo UI with hard-coded localhost calls. Customer-facing browser voice support should be implemented inside WEB and should call the Call Agent backend.
 
 Run it as a separate Node service:
 
