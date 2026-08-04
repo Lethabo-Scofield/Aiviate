@@ -1,23 +1,239 @@
 import os
 import traceback
 import uuid
+import hashlib
+import hmac
+import time
+from datetime import datetime, timezone
 
 from flask import request, jsonify, g
 from geopy.geocoders import Nominatim
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from routes import orders_bp
 from middleware import require_auth, require_admin
-from models import Stop, Company, IntegrationSettings
+from models import Stop, Company, IntegrationSettings, AuditLog
 from optimize_route import geocode_address, DEPOT
 from orders_source import fetch_orders, orders_db_configured
 from utils import get_db_session
 
 ORDER_ID_PREFIX = "STORE-"
+MERCHANT_ORDER_ID_PREFIX = "MERCH-"
+_merchant_rate_window = {}
 
 
 def _store_order_id(order_id):
     return f"{ORDER_ID_PREFIX}{order_id}"
+
+
+def _merchant_order_id(external_order_id):
+    return f"{MERCHANT_ORDER_ID_PREFIX}{external_order_id}"
+
+
+def _hash_api_key(api_key):
+    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
+
+def _correlation_id():
+    return request.headers.get("X-Correlation-ID") or f"corr-{uuid.uuid4().hex}"
+
+
+def _idempotency_key():
+    return request.headers.get("Idempotency-Key") or request.headers.get("X-Idempotency-Key")
+
+
+def _rate_limit_or_error(api_key_hash):
+    limit = int(os.environ.get("MERCHANT_API_RATE_LIMIT_PER_MINUTE", "120"))
+    now = time.time()
+    window = int(now // 60)
+    key = (api_key_hash, window)
+    count = _merchant_rate_window.get(key, 0) + 1
+    _merchant_rate_window[key] = count
+    for old_key in list(_merchant_rate_window):
+        if old_key[1] < window:
+            _merchant_rate_window.pop(old_key, None)
+    if count > limit:
+        return {"error": "Rate limit exceeded", "retry_after_seconds": 60 - int(now % 60)}
+    return None
+
+
+def _require_merchant():
+    api_key = (
+        request.headers.get("X-Aiviate-Merchant-Key")
+        or request.headers.get("X-Merchant-API-Key")
+        or ""
+    ).strip()
+    if not api_key:
+        return None, (jsonify({"error": "Merchant API key required"}), 401)
+
+    api_key_hash = _hash_api_key(api_key)
+    rate_error = _rate_limit_or_error(api_key_hash)
+    if rate_error:
+        return None, (jsonify(rate_error), 429)
+
+    try:
+        _ensure_integration_table()
+    except Exception:
+        traceback.print_exc()
+        return None, (jsonify({"error": "Merchant integration storage is unavailable"}), 503)
+
+    db = get_db_session()
+    try:
+        settings = db.query(IntegrationSettings).filter(
+            IntegrationSettings.merchant_api_key_hash == api_key_hash
+        ).first()
+        if not settings or not hmac.compare_digest(settings.merchant_api_key_hash, api_key_hash):
+            return None, (jsonify({"error": "Invalid merchant API key"}), 403)
+        return {"company_id": settings.company_id, "key_prefix": settings.merchant_api_key_prefix}, None
+    finally:
+        db.close()
+
+
+def _normalise_priority(value):
+    value = (value or "standard").strip().lower()
+    return value if value in {"standard", "high", "urgent"} else "standard"
+
+
+def _canonical_order(data):
+    errors = []
+    external_order_id = str(data.get("external_order_id") or data.get("order_id") or "").strip()
+    customer = data.get("customer") or {}
+    address = data.get("address") or {}
+    package = data.get("package") or {}
+    delivery_window = data.get("delivery_window") or {}
+
+    raw_address = str(
+        data.get("raw_address")
+        or address.get("raw")
+        or address.get("line1")
+        or data.get("shipping_address")
+        or ""
+    ).strip()
+    customer_name = str(data.get("customer_name") or customer.get("name") or "").strip()
+    customer_phone = str(data.get("customer_phone") or customer.get("phone") or "").strip()
+    customer_email = str(data.get("customer_email") or customer.get("email") or "").strip()
+
+    if not external_order_id:
+        errors.append({"field": "external_order_id", "message": "external_order_id is required"})
+    if not customer_name:
+        errors.append({"field": "customer_name", "message": "customer name is required"})
+    if not customer_phone:
+        errors.append({"field": "customer_phone", "message": "customer phone is required"})
+    if not raw_address:
+        errors.append({"field": "raw_address", "message": "delivery address is required"})
+
+    def float_or_none(*values):
+        for value in values:
+            if value is None or value == "":
+                continue
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    def int_or_default(value, default):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    lat = float_or_none(data.get("latitude"), address.get("latitude"), address.get("lat"))
+    lng = float_or_none(data.get("longitude"), address.get("longitude"), address.get("lng"))
+    status = "accepted" if lat is not None and lng is not None else "requires_address_review"
+
+    return {
+        "external_order_id": external_order_id,
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "customer_email": customer_email,
+        "raw_address": raw_address,
+        "normalised_address": data.get("normalised_address") or raw_address,
+        "latitude": lat,
+        "longitude": lng,
+        "geocoding_confidence": float_or_none(data.get("geocoding_confidence")),
+        "package_weight": float_or_none(data.get("package_weight"), package.get("weight")) or 1.0,
+        "package_volume": float_or_none(data.get("package_volume"), package.get("volume")) or 0.01,
+        "priority": _normalise_priority(data.get("priority")),
+        "delivery_window_start": data.get("delivery_window_start") or delivery_window.get("start") or "",
+        "delivery_window_end": data.get("delivery_window_end") or delivery_window.get("end") or "",
+        "service_time_minutes": int_or_default(data.get("service_time_minutes"), 15),
+        "notes": str(data.get("notes") or "")[:500],
+        "source": str(data.get("source") or "api").strip().lower(),
+        "status": status,
+        "errors": errors,
+    }
+
+
+def _canonical_from_stop(stop):
+    return {
+        "internal_order_id": stop.id,
+        "external_order_id": (stop.order_id or "").replace(MERCHANT_ORDER_ID_PREFIX, "", 1),
+        "tenant_id": stop.company_id,
+        "customer_name": stop.customer_name,
+        "customer_phone": stop.phone,
+        "raw_address": stop.address,
+        "normalised_address": stop.address,
+        "latitude": stop.lat,
+        "longitude": stop.lng,
+        "package_weight": stop.demand,
+        "package_volume": None,
+        "priority": "standard",
+        "delivery_window_start": stop.time_window_start,
+        "delivery_window_end": stop.time_window_end,
+        "service_time_minutes": stop.service_time,
+        "notes": stop.notes,
+        "status": "accepted" if stop.lat is not None and stop.lng is not None else "requires_address_review",
+        "source": "api",
+        "created_at": stop.created_at.isoformat() if stop.created_at else None,
+    }
+
+
+def _insert_canonical_order(db, company_id, canonical, correlation_id, idempotency=None):
+    order_id = _merchant_order_id(canonical["external_order_id"])
+    existing = db.query(Stop).filter(
+        Stop.company_id == company_id,
+        Stop.order_id == order_id,
+    ).first()
+    if existing:
+        return existing, "duplicate"
+
+    if canonical["errors"]:
+        return None, "rejected"
+
+    stop = Stop(
+        id=f"ORD-{uuid.uuid4().hex[:10].upper()}",
+        order_id=order_id,
+        customer_name=canonical["customer_name"],
+        address=canonical["normalised_address"],
+        lat=canonical["latitude"],
+        lng=canonical["longitude"],
+        demand=max(1, int(round(canonical["package_weight"]))),
+        service_time=canonical["service_time_minutes"],
+        phone=canonical["customer_phone"],
+        notes=canonical["notes"],
+        time_window_start=canonical["delivery_window_start"],
+        time_window_end=canonical["delivery_window_end"],
+        company_id=company_id,
+    )
+    db.add(stop)
+    db.add(AuditLog(
+        id=f"AUD-{uuid.uuid4().hex[:12].upper()}",
+        company_id=company_id,
+        action_type="order_imported",
+        summary=f"Merchant order {canonical['external_order_id']} imported",
+        actor="merchant_api",
+        related_id=stop.id,
+        details={
+            "external_order_id": canonical["external_order_id"],
+            "correlation_id": correlation_id,
+            "idempotency_key": idempotency,
+            "status": canonical["status"],
+            "source": canonical["source"],
+        },
+    ))
+    return stop, "created"
 
 
 def _company_owns_store(company_id):
@@ -188,6 +404,16 @@ def _ensure_integration_table():
         return
     from models import engine
     IntegrationSettings.__table__.create(engine, checkfirst=True)
+    inspector = inspect(engine)
+    cols = [c["name"] for c in inspector.get_columns("integration_settings")]
+    with engine.connect() as conn:
+        if "merchant_api_key_hash" not in cols:
+            conn.execute(text("ALTER TABLE integration_settings ADD COLUMN merchant_api_key_hash VARCHAR"))
+        if "merchant_api_key_prefix" not in cols:
+            conn.execute(text("ALTER TABLE integration_settings ADD COLUMN merchant_api_key_prefix VARCHAR"))
+        if "merchant_api_key_created_at" not in cols:
+            conn.execute(text("ALTER TABLE integration_settings ADD COLUMN merchant_api_key_created_at TIMESTAMP"))
+        conn.commit()
     _integration_table_ready = True
 
 
@@ -250,12 +476,178 @@ def update_integration_settings():
             settings.display_name = display_name
         if "logo" in data:
             settings.logo = logo
+        generated_key = None
+        if data.get("rotate_merchant_api_key"):
+            generated_key = IntegrationSettings.new_merchant_api_key()
+            settings.merchant_api_key_hash = _hash_api_key(generated_key)
+            settings.merchant_api_key_prefix = generated_key[:14]
+            settings.merchant_api_key_created_at = datetime.now(timezone.utc)
 
         db.commit()
-        return jsonify({"success": True, "settings": settings.to_dict()})
+        payload = {"success": True, "settings": settings.to_dict()}
+        if generated_key:
+            payload["merchant_api_key"] = generated_key
+            payload["message"] = "Store this key now. Aiviate only saves its hash."
+        return jsonify(payload)
     except Exception:
         db.rollback()
         traceback.print_exc()
         return jsonify({"error": "Failed to save integration settings"}), 500
+    finally:
+        db.close()
+
+
+@orders_bp.route("/api/integrations/health", methods=["GET"])
+def merchant_integration_health():
+    merchant, error = _require_merchant()
+    if error:
+        return error
+    return jsonify({
+        "status": "ok",
+        "service": "Aiviate merchant integration API",
+        "tenant_id": merchant["company_id"],
+        "correlation_id": _correlation_id(),
+    })
+
+
+@orders_bp.route("/api/integrations/orders", methods=["POST"])
+def create_merchant_order():
+    merchant, error = _require_merchant()
+    if error:
+        return error
+
+    correlation_id = _correlation_id()
+    idempotency = _idempotency_key()
+    canonical = _canonical_order(request.get_json(silent=True) or {})
+    if canonical["errors"]:
+        return jsonify({
+            "success": False,
+            "status": "rejected",
+            "correlation_id": correlation_id,
+            "errors": canonical["errors"],
+        }), 422
+
+    db = get_db_session()
+    try:
+        stop, outcome = _insert_canonical_order(
+            db, merchant["company_id"], canonical, correlation_id, idempotency
+        )
+        if outcome == "duplicate":
+            db.rollback()
+            return jsonify({
+                "success": True,
+                "status": "accepted",
+                "duplicate": True,
+                "correlation_id": correlation_id,
+                "order": _canonical_from_stop(stop),
+            })
+        db.commit()
+        return jsonify({
+            "success": True,
+            "status": canonical["status"],
+            "duplicate": False,
+            "correlation_id": correlation_id,
+            "order": _canonical_from_stop(stop),
+        }), 201
+    except IntegrityError:
+        db.rollback()
+        existing = db.query(Stop).filter(
+            Stop.company_id == merchant["company_id"],
+            Stop.order_id == _merchant_order_id(canonical["external_order_id"]),
+        ).first()
+        return jsonify({
+            "success": True,
+            "status": "accepted",
+            "duplicate": True,
+            "correlation_id": correlation_id,
+            "order": _canonical_from_stop(existing) if existing else None,
+        })
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to import merchant order", "correlation_id": correlation_id}), 500
+    finally:
+        db.close()
+
+
+@orders_bp.route("/api/integrations/orders/bulk", methods=["POST"])
+def create_merchant_orders_bulk():
+    merchant, error = _require_merchant()
+    if error:
+        return error
+
+    correlation_id = _correlation_id()
+    data = request.get_json(silent=True) or {}
+    items = data.get("orders") if isinstance(data, dict) else None
+    if not isinstance(items, list) or not items:
+        return jsonify({
+            "success": False,
+            "status": "rejected",
+            "correlation_id": correlation_id,
+            "errors": [{"field": "orders", "message": "orders must be a non-empty list"}],
+        }), 422
+
+    db = get_db_session()
+    accepted, rejected = [], []
+    try:
+        for item in items:
+            canonical = _canonical_order(item if isinstance(item, dict) else {})
+            if canonical["errors"]:
+                rejected.append({
+                    "external_order_id": canonical["external_order_id"],
+                    "status": "rejected",
+                    "errors": canonical["errors"],
+                })
+                continue
+            stop, outcome = _insert_canonical_order(
+                db, merchant["company_id"], canonical, correlation_id, _idempotency_key()
+            )
+            accepted.append({
+                "external_order_id": canonical["external_order_id"],
+                "status": canonical["status"],
+                "duplicate": outcome == "duplicate",
+                "internal_order_id": stop.id,
+            })
+        db.commit()
+        return jsonify({
+            "success": not rejected,
+            "correlation_id": correlation_id,
+            "accepted": accepted,
+            "rejected": rejected,
+        }), 207 if rejected else 201
+    except IntegrityError:
+        db.rollback()
+        return jsonify({
+            "success": False,
+            "error": "Duplicate order conflict; retry with the same external_order_id to fetch the existing order",
+            "correlation_id": correlation_id,
+        }), 409
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to import merchant orders", "correlation_id": correlation_id}), 500
+    finally:
+        db.close()
+
+
+@orders_bp.route("/api/integrations/orders/<external_order_id>", methods=["GET"])
+def get_merchant_order(external_order_id):
+    merchant, error = _require_merchant()
+    if error:
+        return error
+
+    db = get_db_session()
+    try:
+        stop = db.query(Stop).filter(
+            Stop.company_id == merchant["company_id"],
+            Stop.order_id == _merchant_order_id(external_order_id),
+        ).first()
+        if not stop:
+            return jsonify({"error": "Order not found", "correlation_id": _correlation_id()}), 404
+        return jsonify({
+            "success": True,
+            "correlation_id": _correlation_id(),
+            "order": _canonical_from_stop(stop),
+        })
     finally:
         db.close()

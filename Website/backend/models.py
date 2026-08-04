@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
@@ -356,6 +357,9 @@ class IntegrationSettings(Base):
     company_id = Column(String, ForeignKey("companies.id"), primary_key=True)
     display_name = Column(String, nullable=True)
     logo = Column(Text, nullable=True)  # data URL (small, downscaled client-side)
+    merchant_api_key_hash = Column(String, nullable=True)
+    merchant_api_key_prefix = Column(String, nullable=True)
+    merchant_api_key_created_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     def to_dict(self):
@@ -363,8 +367,17 @@ class IntegrationSettings(Base):
             "company_id": self.company_id,
             "display_name": self.display_name,
             "logo": self.logo,
+            "merchant_api_key_prefix": self.merchant_api_key_prefix,
+            "merchant_api_key_created_at": (
+                self.merchant_api_key_created_at.isoformat()
+                if self.merchant_api_key_created_at else None
+            ),
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+    @staticmethod
+    def new_merchant_api_key():
+        return f"aiv_live_{secrets.token_urlsafe(32)}"
 
 
 def init_db():

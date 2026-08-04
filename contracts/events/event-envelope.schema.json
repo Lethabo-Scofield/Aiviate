@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiviate.local/contracts/events/event-envelope.schema.json",
+  "title": "Aiviate Event Envelope",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "source",
+    "payload"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 8 },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "merchant.order_created",
+        "order.imported",
+        "order.validation_result",
+        "dispatch.plan_created",
+        "job.assigned",
+        "driver.invited",
+        "driver.location_updated",
+        "stop.status_changed",
+        "operational.delay_detected",
+        "reoptimization.requested",
+        "route.changed",
+        "safety.signal_received",
+        "safety.incident_confirmed",
+        "call.requested",
+        "call.completed"
+      ]
+    },
+    "schema_version": { "type": "string", "pattern": "^v[0-9]+$" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "entity_ids": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

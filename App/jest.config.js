@@ -1,5 +1,5 @@
 module.exports = {
-  preset: 'jest-expo',
+  preset: './node_modules/jest-expo/jest-preset.js',
   testMatch: ['**/__tests__/**/*.test.js'],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { configFile: './babel.test.config.js' }],

@@ -15,5 +15,6 @@ agents_bp = Blueprint("agents", __name__)
 autopilot_bp = Blueprint("autopilot", __name__)
 engine_bp = Blueprint("engine", __name__)
 orders_bp = Blueprint("orders", __name__)
+support_bp = Blueprint("support", __name__)
 
-from routes import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, demo, intelligence, agents, autopilot, engine, orders
+from routes import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, demo, intelligence, agents, autopilot, engine, orders, support

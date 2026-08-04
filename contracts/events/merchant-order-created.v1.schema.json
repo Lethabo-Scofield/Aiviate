@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiviate.local/contracts/events/merchant-order-created.v1.schema.json",
+  "title": "Merchant Order Created v1",
+  "allOf": [
+    { "$ref": "./event-envelope.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "event_type": { "const": "merchant.order_created" },
+        "schema_version": { "const": "v1" },
+        "payload": {
+          "type": "object",
+          "required": ["external_order_id", "customer_name", "customer_phone", "raw_address"],
+          "properties": {
+            "external_order_id": { "type": "string" },
+            "customer_name": { "type": "string" },
+            "customer_phone": { "type": "string" },
+            "customer_email": { "type": "string" },
+            "raw_address": { "type": "string" },
+            "latitude": { "type": ["number", "null"] },
+            "longitude": { "type": ["number", "null"] },
+            "package_weight": { "type": ["number", "null"] },
+            "package_volume": { "type": ["number", "null"] },
+            "priority": { "type": "string" },
+            "delivery_window_start": { "type": "string" },
+            "delivery_window_end": { "type": "string" },
+            "service_time_minutes": { "type": "integer" },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

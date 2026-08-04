@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web --port 5000",
-    "test": "jest"
+    "test": "node node_modules/jest/bin/jest.js --forceExit"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
