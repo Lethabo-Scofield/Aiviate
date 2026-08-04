@@ -1,0 +1,93 @@
+**Here is a complete, ready-to-use prompt** you can copy and paste into Replit (especially good for Replit Agent or a new Flask/React project):
+
+---
+
+**PROMPT FOR REPLIT:**
+
+You are an expert full-stack developer. Build a **professional, modern, and complete Admin Website** for **Aiviate** — a smart last-mile delivery platform focused on **Efficiency + Driver Safety** in Johannesburg.
+
+### Project Name: Aiviate Dispatch Admin
+
+**Tech Stack:**
+- Python + Flask (Backend)
+- HTML, CSS (Tailwind CSS or Bootstrap 5), JavaScript
+- Leaflet.js for maps
+- SQLite database
+- Use Flask-Login for basic authentication (username: admin, password: aiviate123)
+
+**Design Style:**
+- Modern, clean, dark/light mode (default dark for logistics feel)
+- Professional blue + green accents (trust + safety)
+- Mobile-responsive, fast, and impressive
+
+### Main Sections to Build:
+
+1. **Login Page** (`/login`)
+
+2. **Dashboard (Home)**
+   - Top KPI cards: Active Drivers, Total Stops Today, On-Time Rate, Safety Score, Total Distance
+   - Big interactive Leaflet Map showing all drivers (live dots), routes, and stops
+   - Recent Alerts panel (Fatigue Detected, Route Deviation, Delayed, etc.)
+   - Quick stats for Johannesburg areas (Soweto, Sandton, Bedfordview, etc.)
+
+3. **Live Operations**
+   - List of all drivers with current status, location, speed, and progress
+   - Click on driver → side panel with full route details and safety metrics
+
+4. **Safety Center** (Very Important)
+   - Driver Safety Scores
+   - Real-time fatigue / distraction alerts
+   - Driving behavior leaderboard (Harsh braking, Speeding, etc.)
+   - Risk heatmap
+
+5. **Route Management**
+   - Excel Upload for new jobs (use the column structure we discussed before)
+   - Route Optimization button (simulate OR-Tools result)
+   - List of optimized routes with assign driver functionality
+   - Manual route editing support (visual)
+
+6. **Device Management** (New Panel)
+   - List of all Driver Devices
+   - Device status (Online/Offline, Battery, Signal)
+   - Sensor data overview (Accelerometer, Camera status)
+   - Assign device to driver
+   - OTA update simulation
+
+7. **Drivers Management**
+   - Add/Edit drivers
+   - Performance metrics (Deliveries, On-time %, Safety Score)
+
+8. **Alerts & Notifications**
+   - Centralized alert inbox
+
+### Must-Have Features:
+- Fully responsive (works great on desktop and tablet)
+- Fake real-time updates (use JavaScript to simulate moving drivers and new alerts every few seconds)
+- Beautiful UI/UX — make it look like a premium logistics product
+- Sidebar navigation
+- Top bar with company logo “Aiviate” + user info
+- Mock data for 8–10 drivers and 30+ stops
+
+**Bonus (Make it Final Product Level):**
+- Add subtle animations
+- Include a “Demo Mode” toggle
+- Footer with “Made for Johannesburg Last-Mile Delivery”
+
+Start by creating the project structure, then build the Dashboard + Sidebar first, then add other pages one by one. Use modern, clean code with good comments.
+
+Make this look like a **finished, investor-ready product**.
+
+Current website for reference: https://aiviate.olyxee.com/
+
+Now begin building.
+
+---
+
+Copy the entire prompt above and paste it into Replit (preferably with Replit Agent or Ghostwriter enabled).
+
+Would you like me to also give you:
+- A shorter version focused only on the Admin Dashboard?
+- A version using **Streamlit** instead (much faster to build beautiful UIs)?
+- Or a React + Vite version?
+
+Just say the word and I’ll adjust the prompt.

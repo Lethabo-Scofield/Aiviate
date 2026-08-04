@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Track Order | AI Support</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+
+        AI Support
+
+    </div>
+
+    <nav>
+
+        <a href="index.html">Home</a>
+
+        <a href="order.html">Track Order</a>
+
+        <a href="support.html">AI Support</a>
+
+        <a href="faq.html">FAQ</a>
+
+    </nav>
+
+</header>
+
+
+<div class="order-container">
+
+    <h1>Track Your Order</h1>
+
+    <div class="input-group">
+
+        <input
+            type="text"
+            id="orderNumber"
+            placeholder="Enter Order Number (Example: ORD-1001)"
+        >
+
+        <button onclick="searchOrder()">
+
+            Search
+
+        </button>
+
+    </div>
+
+
+    <div
+        id="result"
+        class="result"
+    >
+
+        <h2>Order Information</h2>
+
+        <p>
+
+            <strong>Order Number:</strong>
+
+            <span id="orderNo"></span>
+
+        </p>
+
+        <p>
+
+            <strong>Customer:</strong>
+
+            <span id="customer"></span>
+
+        </p>
+
+        <p>
+
+            <strong>Order Status:</strong>
+
+            <span id="status"></span>
+
+        </p>
+
+        <p>
+
+            <strong>Delivery Status:</strong>
+
+            <span id="delivery"></span>
+
+        </p>
+
+        <p>
+
+            <strong>Courier:</strong>
+
+            <span id="courier"></span>
+
+        </p>
+
+        <p>
+
+            <strong>Estimated Delivery:</strong>
+
+            <span id="estimated"></span>
+
+        </p>
+
+    </div>
+
+</div>
+
+<script src="js/api.js"></script>
+
+<script src="js/orders.js"></script>
+
+</body>
+
+</html>

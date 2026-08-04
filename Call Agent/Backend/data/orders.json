@@ -1,0 +1,34 @@
+[
+  {
+    "orderNumber": "ORD-1001",
+    "customerName": "John Smith",
+    "orderStatus": "Dispatched",
+    "deliveryStatus": "Out for Delivery",
+    "courier": "FastShip Couriers",
+    "estimatedDelivery": "2026-08-02"
+  },
+  {
+    "orderNumber": "ORD-1002",
+    "customerName": "Jane Doe",
+    "orderStatus": "Processing",
+    "deliveryStatus": "Preparing for Dispatch",
+    "courier": "Express Logistics",
+    "estimatedDelivery": "2026-07-27"
+  },
+  {
+    "orderNumber": "ORD-1003",
+    "customerName": "Michael Brown",
+    "orderStatus": "Delivered",
+    "deliveryStatus": "Delivered",
+    "courier": "Speed Courier",
+    "estimatedDelivery": "2026-07-20"
+  },
+  {
+    "orderNumber": "ORD-1004",
+    "customerName": "Sarah Williams",
+    "orderStatus": "Cancelled",
+    "deliveryStatus": "Cancelled",
+    "courier": "N/A",
+    "estimatedDelivery": "N/A"
+  }
+]

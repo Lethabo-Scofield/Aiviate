@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "pU4dFJxzd_pQUeuvR2ASG"
+uri = "file://assets/icon.png"
+type = "image"
+title = "aviate-app-icon"
+
+[[generated]]
+id = "VNknLADiNG2brWUCvu_WA"
+uri = "file://assets/splash-mark.png"
+type = "image"
+title = "aviate-splash-mark"
+
+[[generated]]
+id = "zJrVhR3dRrEgxcIxymRZ8"
+uri = "file://assets/adaptive-foreground.png"
+type = "image"
+title = "aviate-adaptive-fg"

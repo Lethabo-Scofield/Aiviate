@@ -1,0 +1,42 @@
+[
+  {
+    "id": "N1",
+    "type": "route_new",
+    "title": "New route from dispatch",
+    "body": "RT-2041 (5 stops · 18.5 km) is available to accept.",
+    "time": "Just now",
+    "unread": true
+  },
+  {
+    "id": "N2",
+    "type": "route_assigned",
+    "title": "Route assigned to you",
+    "body": "RT-2031 has been assigned by Dispatch · Jane M.",
+    "time": "12 min ago",
+    "unread": true
+  },
+  {
+    "id": "N3",
+    "type": "reminder",
+    "title": "Head to first pickup",
+    "body": "Fourways Mall, Loading Bay — ETA 8 min.",
+    "time": "30 min ago",
+    "unread": true
+  },
+  {
+    "id": "N4",
+    "type": "info",
+    "title": "Daily safety check reminder",
+    "body": "Don't forget to log your vehicle inspection.",
+    "time": "2 h ago",
+    "unread": false
+  },
+  {
+    "id": "N5",
+    "type": "system",
+    "title": "App updated to v1.4",
+    "body": "Improved route map performance.",
+    "time": "Yesterday",
+    "unread": false
+  }
+]

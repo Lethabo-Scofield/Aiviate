@@ -1,0 +1,166 @@
+1. Core design principle
+
+One screen = one action
+
+No dashboards, no complexity, no SaaS clutter.
+
+Drivers only need:
+
+what to do next
+where to go
+how to confirm progress
+2. Navigation structure (very simple)
+
+Bottom navigation (3 tabs max):
+
+1. Jobs
+2. Active
+3. Earnings
+
+That’s it.
+
+Everything else is inside those flows.
+
+3. Screen 1: Jobs (Home screen)
+
+Purpose: show available + assigned jobs
+
+Sections:
+A. “New Jobs” (top)
+Card list of available deliveries
+Each card shows:
+pickup location
+distance to pickup
+estimated payout
+accept button
+B. “Assigned Jobs”
+Jobs already accepted
+Status preview:
+pending pickup
+in transit
+completed
+4. Screen 2: Active Job (most important screen)
+
+This is the core of the app.
+
+When a driver taps a job → full-screen “execution mode”.
+
+Active Job layout:
+Top section
+Pickup → Drop-off progress bar
+Status label:
+“Heading to pickup”
+“At pickup”
+“In transit”
+“Delivered”
+Middle section (main action)
+
+Big map view:
+
+route line
+driver location
+pickup pin
+drop-off pin
+
+One primary button at a time:
+
+“Navigate to Pickup”
+“Confirm Pickup”
+“Start Delivery”
+“Confirm Delivery”
+
+Only ONE button visible depending on state.
+
+Bottom section (details)
+customer name
+cargo type
+notes (fragile, heavy, etc.)
+estimated arrival time
+5. Screen 3: Earnings
+
+Simple financial view:
+
+total earnings today
+weekly earnings
+completed trips
+
+List:
+
+job history
+payout per job
+status (paid / pending)
+
+No complexity.
+
+6. Key UX behavior rules (important)
+1. No clutter
+
+Drivers should never see:
+
+analytics
+routing logic
+system explanations
+2. State-driven UI
+
+App changes based on job state:
+
+Example states:
+
+idle → show jobs
+accepted → show navigation
+in transit → show progress
+completed → show summary
+3. Offline tolerance
+app should still show last known route
+sync when back online
+4. One-hand usability (iOS feel)
+large buttons
+bottom actions
+minimal typing
+7. How it connects to your system (Aviate engine)
+
+Driver app only consumes:
+
+assigned job
+optimized route
+ETA updates
+
+It does NOT compute anything.
+
+Your backend handles:
+
+route optimization
+dispatch decisions
+scoring
+
+Driver app is just an execution client
+
+8. Notification system (critical)
+
+Push notifications:
+
+“New job available”
+“You’ve been assigned a job”
+“Head to pickup location”
+“Delivery completed”
+
+No email, no complexity.
+
+9. Visual style (iOS-like)
+White background
+Teal (#008080) for primary actions
+Navy accents for headers
+Soft shadows
+Rounded cards (12–16px radius)
+Smooth transitions (slide between states)
+10. What makes this “best-in-class”
+
+Most driver apps fail because they:
+
+show too much data
+require thinking
+mix admin logic with execution
+
+Your version should feel like:
+
+“Press next step → follow directions → get paid”

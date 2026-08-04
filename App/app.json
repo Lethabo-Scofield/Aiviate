@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Aviate",
+    "slug": "aviate-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "aviate",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F2A3D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aviate.driver",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Aviate uses your location during active trips to show your position on the map and measure your distance to the next stop.",
+        "NSCameraUsageDescription": "Aviate uses your camera to scan package barcodes when confirming pickups and deliveries."
+      }
+    },
+    "android": {
+      "package": "com.aviate.driver",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F2A3D"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Aviate uses your location during active trips to show your position on the map and measure your distance to the next stop."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Aviate uses your camera to scan package barcodes when confirming pickups and deliveries."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#0F2A3D"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": []
+        }
+      ]
+    ]
+  }
+}
