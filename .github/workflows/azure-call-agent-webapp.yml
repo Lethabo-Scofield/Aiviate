@@ -1,0 +1,46 @@
+name: Deploy Call Agent Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Call Agent/Backend/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: 'Call Agent/Backend/package-lock.json'
+
+      - name: Install Call Agent dependencies
+        working-directory: 'Call Agent/Backend'
+        run: npm ci
+
+      - name: Validate Call Agent JavaScript files
+        working-directory: 'Call Agent/Backend'
+        run: |
+          node --check server.js
+          node --check routes/tools.js
+          node --check routes/calls.js
+          node --check routes/webhooks.js
+          node --check services/aiviateClient.js
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_CALL_AGENT_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_CALL_AGENT }}
+          package: './Call Agent/Backend'

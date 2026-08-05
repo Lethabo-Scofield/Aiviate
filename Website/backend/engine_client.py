@@ -1,8 +1,9 @@
 """Server-side client for the Aiviate decision engine (OR-Tools).
 
 The engine runs as a separate local service. Only this backend talks to it,
-using an admin API key read from a gitignored file at the workspace root. The
-browser never sees the key or calls the engine directly.
+using an admin API key from environment in deployed environments or a
+gitignored file at the workspace root for local development. The browser never
+sees the key or calls the engine directly.
 """
 
 import os
@@ -25,6 +26,9 @@ class EngineError(Exception):
 
 
 def _api_key():
+    env_key = os.environ.get("AIVIATE_ENGINE_API_KEY", "").strip()
+    if env_key:
+        return env_key
     if not _KEY_FILE.exists():
         raise EngineError("The AI Planner engine is still starting up. Try again in a moment.")
     key = _KEY_FILE.read_text().strip()

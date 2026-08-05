@@ -4,6 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
+const port = Number(process.env.PORT) || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -18,6 +19,6 @@ app.use("/internal/v1/calls", require("./routes/calls"));
 app.use("/tools", require("./routes/tools"));
 app.use("/webhooks", require("./routes/webhooks"));
 
-app.listen(3000, () => {
-    console.log("Server running on port 3000");
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
