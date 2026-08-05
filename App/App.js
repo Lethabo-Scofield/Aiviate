@@ -11,6 +11,7 @@ import {
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
 
+import { AuthProvider } from './src/contexts/AuthContext';
 import { DriverProvider } from './src/contexts/DriverContext';
 import { NotificationsProvider } from './src/contexts/NotificationsContext';
 import { JobsProvider } from './src/contexts/JobsContext';
@@ -62,13 +63,15 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ToastProvider>
-        <DriverProvider>
-          <NotificationsProvider>
-            <JobsProvider>
-              <RootNavigator />
-            </JobsProvider>
-          </NotificationsProvider>
-        </DriverProvider>
+        <AuthProvider>
+          <DriverProvider>
+            <NotificationsProvider>
+              <JobsProvider>
+                <RootNavigator />
+              </JobsProvider>
+            </NotificationsProvider>
+          </DriverProvider>
+        </AuthProvider>
       </ToastProvider>
     </SafeAreaProvider>
   );

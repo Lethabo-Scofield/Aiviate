@@ -18,6 +18,7 @@ import AnimatedProgress from '../components/AnimatedProgress';
 import LogoMark from '../components/LogoMark';
 import BarcodeScanModal from '../components/BarcodeScanModal';
 import { useJobs } from '../contexts/JobsContext';
+import { useDriver } from '../contexts/DriverContext';
 import { useToast } from '../contexts/ToastContext';
 import { useDriverLocation } from '../hooks/useDriverLocation';
 import { fetchOptimizedRoute, fetchLeg } from '../services/routing';
@@ -27,6 +28,7 @@ import { COLORS } from '../theme';
 
 export default function ActiveJobScreen({ navigation }) {
   const { activeRoute, advance, start } = useJobs();
+  const { driver } = useDriver();
   const { toast } = useToast();
   const [routePath, setRoutePath] = useState(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
@@ -43,7 +45,7 @@ export default function ActiveJobScreen({ navigation }) {
 
   // Stream device location whenever a route is in play (assigned OR in_progress).
   const { coords: realDriverLocation, status: locStatus, error: locError, retry } =
-    useDriverLocation({ enabled: isLocationNeeded });
+    useDriverLocation({ enabled: isLocationNeeded, driverId: driver?.id });
 
   // On web (preview / demo), allow the driver to "simulate" being at the next
   // stop so the gated scan flow can be exercised without real GPS at the
