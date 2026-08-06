@@ -9,6 +9,7 @@
 
 import { routes as seedRoutes, history as seedHistory } from '../data';
 import { haversineMeters, ARRIVAL_RADIUS_M } from '../utils/geo';
+import { outcomeRequiresBarcode } from './outcomes';
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -59,15 +60,22 @@ export const validateProof = (route, proof) => {
   if (!stop) throw new ProofError('NO_STOP', 'No active stop on this route.');
   if (!proof) throw new ProofError('NO_PROOF', 'Proof of delivery is required.');
 
-  const { scannedBarcode, driverLocation } = proof;
-  if (!scannedBarcode) {
-    throw new ProofError('NO_BARCODE', 'A scanned package barcode is required.');
-  }
-  if (normalizeBarcode(scannedBarcode) !== normalizeBarcode(stop.barcode)) {
-    throw new ProofError(
-      'BARCODE_MISMATCH',
-      `Scanned barcode does not match the package for this stop.`,
-    );
+  const { scannedBarcode, driverLocation, outcome } = proof;
+  // The package-scan gate applies to successful deliveries (delivered /
+  // partial). Failure outcomes (customer unavailable, incorrect address, etc.)
+  // have no handover to scan, so only the geofence gate below applies to them.
+  // `outcome` defaults to a barcode-requiring delivery when unspecified.
+  const needsBarcode = outcome == null ? true : outcomeRequiresBarcode(outcome);
+  if (needsBarcode) {
+    if (!scannedBarcode) {
+      throw new ProofError('NO_BARCODE', 'A scanned package barcode is required.');
+    }
+    if (normalizeBarcode(scannedBarcode) !== normalizeBarcode(stop.barcode)) {
+      throw new ProofError(
+        'BARCODE_MISMATCH',
+        `Scanned barcode does not match the package for this stop.`,
+      );
+    }
   }
   if (
     !driverLocation ||
