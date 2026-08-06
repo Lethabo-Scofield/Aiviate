@@ -1,0 +1,10 @@
+bcrypt
+flask
+flask-cors
+geopy
+gunicorn
+openpyxl
+pg8000
+PyJWT
+requests
+sqlalchemy
