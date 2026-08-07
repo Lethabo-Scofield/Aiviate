@@ -6,5 +6,5 @@ operational context to every agent, gathers their decisions, lets the
 Approval & Risk agent classify which are autonomous-safe, and returns
 the combined result to the HTTP surface.
 """
-from agents.orchestrator import Orchestrator, AGENT_REGISTRY  # noqa: F401
-from agents.base import AgentDecision, AgentStatus  # noqa: F401
+from .orchestrator import Orchestrator, AGENT_REGISTRY  # noqa: F401
+from .base import AgentDecision, AgentStatus  # noqa: F401

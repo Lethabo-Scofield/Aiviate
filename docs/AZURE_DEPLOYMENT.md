@@ -153,6 +153,23 @@ VITE_API_URL=https://aviate-api.azurewebsites.net/api
 
 8. Commit to your main branch and let GitHub Actions publish the site.
 
+### Custom domain setup
+
+If you want a branded URL instead of the Azure-generated one:
+
+1. In the Static Web App, add your custom domain in Azure.
+2. Point the domain's DNS CNAME to the Static Web App hostname Azure gives you.
+3. Add the custom domain to the API app's `ALLOWED_ORIGINS` alongside the Static Web App host.
+4. Keep `VITE_API_URL` pointing at `https://aviate-api.azurewebsites.net/api` unless you also put the API behind the same branded domain.
+
+Example:
+
+```text
+ALLOWED_ORIGINS="https://your-brand.com,https://www.your-brand.com,https://aviate-web.azurestaticapps.net"
+```
+
+This keeps the site reachable on different devices because the frontend stays public and the API URL is absolute, so the browser does not depend on local machine routing.
+
 Alternative: if GitHub integration is blocked, run `npm run build` in `Website/` and deploy the `dist/` folder manually using the portal or Azure Static Web Apps CLI.
 
 ## Step 4: Deploy The Flask API To Azure App Service

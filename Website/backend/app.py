@@ -101,8 +101,11 @@ def _run_migrations():
             conn.commit()
 
 
+# Module-level WSGI app for gunicorn/App Service startup.
+app = create_app()
+
+
 if __name__ == "__main__":
-    app = create_app()
     print("Aiviate Dispatch API starting on port 8000")
     app.run(
         debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true",

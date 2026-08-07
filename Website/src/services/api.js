@@ -1,4 +1,16 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const isLocalDevHost = (hostname) =>
+  hostname === "localhost" ||
+  hostname === "127.0.0.1" ||
+  hostname === "::1" ||
+  hostname.startsWith("10.") ||
+  hostname.startsWith("192.168.") ||
+  hostname.endsWith(".local");
+
+const RUNTIME_API_FALLBACK =
+  typeof window !== "undefined" && !isLocalDevHost(window.location.hostname)
+    ? "https://aviate-api.azurewebsites.net/api"
+    : "/api";
+const API_BASE = import.meta.env.VITE_API_URL || RUNTIME_API_FALLBACK;
 
 function getAuthHeaders(contentType) {
   const headers = {};

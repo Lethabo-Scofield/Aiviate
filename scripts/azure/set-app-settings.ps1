@@ -129,9 +129,9 @@ function Set-WebAppSettings {
     }
 
     if ($PSCmdlet.ShouldProcess($AppName, "Apply App Service settings")) {
-        Invoke-AzureCli -Description "Apply App Service settings for $AppName" -Arguments @(
+        Invoke-AzureCli -Description "Apply App Service settings for $AppName" -Arguments (@(
             "webapp", "config", "appsettings", "set", "--resource-group", $ResourceGroupName, "--name", $AppName, "--settings"
-        ) + $Settings
+        ) + $Settings)
     }
 }
 
@@ -144,9 +144,9 @@ function Set-ContainerAppSettings {
     }
 
     if ($PSCmdlet.ShouldProcess($ContainerAppName, "Apply Container App settings")) {
-        Invoke-AzureCli -Description "Apply Container App settings for $ContainerAppName" -Arguments @(
+        Invoke-AzureCli -Description "Apply Container App settings for $ContainerAppName" -Arguments (@(
             "containerapp", "update", "--resource-group", $ResourceGroupName, "--name", $ContainerAppName, "--set-env-vars"
-        ) + $Settings
+        ) + $Settings)
     }
 }
 
