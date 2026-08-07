@@ -17,6 +17,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import AnimatedProgress from '../components/AnimatedProgress';
 import LogoMark from '../components/LogoMark';
 import BarcodeScanModal from '../components/BarcodeScanModal';
+import DeliveryOutcomeModal from '../components/DeliveryOutcomeModal';
 import { useJobs } from '../contexts/JobsContext';
 import { useDriver } from '../contexts/DriverContext';
 import { useToast } from '../contexts/ToastContext';
@@ -34,6 +35,8 @@ export default function ActiveJobScreen({ navigation }) {
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [acting, setActing] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [outcomeOpen, setOutcomeOpen] = useState(false);
+  const [capturedBarcode, setCapturedBarcode] = useState(null);
   const [simulatedAtStop, setSimulatedAtStop] = useState(false);
   const arrivalNotifiedRef = useRef(null);
 
@@ -176,63 +179,69 @@ export default function ActiveJobScreen({ navigation }) {
     }
   };
 
-  // Open the scanner only if the driver is physically within arrival range.
-  const handleScanRequest = () => {
+  // Open the outcome sheet only if the driver is physically within arrival range.
+  const handleRecordRequest = () => {
     if (!isWithinArrival) {
       haptic.warning();
-      toast.error('Get within 30 m of the stop before scanning.');
+      toast.error('Get within 30 m of the stop before recording delivery.');
       return;
     }
     haptic.light();
-    setScanOpen(true);
+    setCapturedBarcode(null);
+    setOutcomeOpen(true);
   };
 
-  // Called by the scanner ONLY on a confirmed barcode match.
-  // Defense-in-depth: we re-check live proximity at confirm time (not just at
-  // open time) AND pass the proof to the API so completion is also enforced
-  // server-side. The driver could have drifted away between opening the
-  // scanner and the scan succeeding.
-  const handleScanConfirmed = async (code) => {
+  // The scanner (opened from inside the outcome sheet) confirmed the package
+  // barcode. Feed it back into the still-open outcome sheet.
+  const handleScanConfirmed = (code) => {
     setScanOpen(false);
+    setCapturedBarcode(code);
+    haptic.success();
+  };
+
+  // Outcome sheet submitted. Defense-in-depth: re-check live proximity at
+  // submit time (the driver may have drifted since opening the sheet), then
+  // persist. `advance` validates the proof (barcode for successful outcomes +
+  // geofence) and enqueues the write — so this works offline too.
+  const handleOutcomeSubmit = async (payload) => {
     if (!driverLocation) {
       haptic.error();
       toast.error('Lost GPS signal — wait a moment and try again.');
       return;
     }
-    const liveDistance = haversineMeters(driverLocation, {
-      lat: currentStop.lat,
-      lng: currentStop.lng,
-    });
+    const liveDistance = haversineMeters(driverLocation, { lat: currentStop.lat, lng: currentStop.lng });
     if (liveDistance > ARRIVAL_RADIUS_M) {
       haptic.error();
-      toast.error(`You moved out of range (${formatMeters(liveDistance)}). Get closer and rescan.`);
+      toast.error(`You moved out of range (${formatMeters(liveDistance)}). Get closer and retry.`);
       return;
     }
+    setOutcomeOpen(false);
     setActing(true);
     try {
-      const wasPickup = currentStop?.type === 'pickup';
       await advance(activeRoute.id, {
-        scannedBarcode: code,
+        ...payload,
         driverLocation: { lat: driverLocation.lat, lng: driverLocation.lng },
       });
       haptic.success();
-      // Reset the simulated-location flag so the driver has to re-trigger it
-      // (or actually arrive) for the next stop.
       setSimulatedAtStop(false);
+      setCapturedBarcode(null);
       const isLast = idx + 1 >= stops.length;
+      const label =
+        payload.outcome === 'delivered' ? `Stop ${idx + 1} delivered`
+        : payload.outcome === 'partially_delivered' ? `Stop ${idx + 1} partially delivered`
+        : `Stop ${idx + 1} — outcome recorded`;
       if (isLast) {
         toast.success('Route complete — nice work');
         setTimeout(() => navigation.navigate('Jobs'), 600);
       } else {
-        toast.success(wasPickup ? 'Pickup confirmed' : `Stop ${idx + 1} delivered`);
+        toast.success(label);
       }
     } catch (e) {
       haptic.error();
-      // Surface the server-side reason if it gave us one.
       const msg =
         e?.code === 'OUT_OF_RANGE' ? 'You are no longer in range of the stop.'
         : e?.code === 'BARCODE_MISMATCH' ? 'Scanned package does not match this stop.'
-        : e?.message || 'Could not update stop. Try again.';
+        : e?.message || 'Could not record outcome. Try again.';
       toast.error(msg);
     } finally {
       setActing(false);
@@ -242,7 +251,7 @@ export default function ActiveJobScreen({ navigation }) {
   const handlePrimary = () => {
     if (isComplete || acting) return;
     if (activeRoute.status === 'assigned') return handleStart();
-    return handleScanRequest();
+    return handleRecordRequest();
   };
 
   const openExternalNav = () => {
@@ -263,7 +272,7 @@ export default function ActiveJobScreen({ navigation }) {
     : activeRoute.status === 'assigned'
       ? 'Start trip'
       : isWithinArrival
-        ? currentStop.type === 'pickup' ? 'Scan package · pickup' : 'Scan package · delivery'
+        ? 'Record delivery'
         : distLabel
           ? `Get closer · ${distLabel} away`
           : 'Waiting for GPS…';
@@ -459,7 +468,7 @@ export default function ActiveJobScreen({ navigation }) {
             <>
               {!isComplete && activeRoute.status === 'in_progress' && (
                 <Ionicons
-                  name={isWithinArrival ? 'barcode-outline' : 'lock-closed'}
+                  name={isWithinArrival ? 'clipboard-outline' : 'lock-closed'}
                   size={18}
                   color="#fff"
                 />
@@ -473,10 +482,19 @@ export default function ActiveJobScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      <DeliveryOutcomeModal
+        visible={outcomeOpen}
+        stop={currentStop}
+        injectedBarcode={capturedBarcode}
+        onRequestScan={() => setScanOpen(true)}
+        onClose={() => setOutcomeOpen(false)}
+        onSubmit={handleOutcomeSubmit}
+      />
+
       <BarcodeScanModal
         visible={scanOpen}
         expectedBarcode={currentStop?.barcode}
-        stopLabel={currentStop ? `${currentStop.type === 'pickup' ? 'Pickup' : 'Delivery'} · ${currentStop.address}` : ''}
+        stopLabel={currentStop ? `Delivery · ${currentStop.address}` : ''}
         onClose={() => setScanOpen(false)}
         onConfirm={handleScanConfirmed}
       />

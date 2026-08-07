@@ -68,9 +68,12 @@ export async function submitStopCompletion(route, proof, idempotencyKey) {
     idempotency_key: idempotencyKey || null,
     outcome: proof.outcome || 'delivered',
     recipient_name: proof.recipientName || null,
-    scanned_barcode: proof.scannedBarcode,
+    scanned_barcode: proof.scannedBarcode || null,
     location: proof.driverLocation || null,
     notes: proof.notes || null,
+    delivered_qty: proof.deliveredQty ?? null,
+    total_qty: proof.totalQty ?? null,
+    reattempt_required: proof.reattemptRequired ?? null,
     // evidence metadata only — binary upload is a separate, resumable step
     evidence: proof.evidence || null,
     client_captured_at: proof.capturedAt || new Date().toISOString(),
