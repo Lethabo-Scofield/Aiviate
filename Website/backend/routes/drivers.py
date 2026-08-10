@@ -1,5 +1,6 @@
 import uuid
 import traceback
+from datetime import datetime, timezone
 
 import bcrypt
 from flask import request, jsonify, g
@@ -7,7 +8,7 @@ from flask import request, jsonify, g
 from routes import drivers_bp
 from middleware import require_auth, require_admin
 from models import Driver, User, Job, Stop
-from utils import get_db_session
+from utils import get_db_session, record_domain_event
 
 
 @drivers_bp.route("/api/drivers", methods=["GET"])
@@ -133,7 +134,6 @@ def update_driver_location(driver_id):
     known location and updates the timestamp. Authz: only an admin in the
     tenant, or the driver themselves, may post.
     """
-    from datetime import datetime, timezone
     role = getattr(g, "user_role", None)
     self_driver_id = getattr(g, "driver_id", None)
     if role != "admin" and self_driver_id != driver_id:
@@ -157,6 +157,22 @@ def update_driver_location(driver_id):
         driver.current_lat = lat
         driver.current_lng = lng
         driver.location_updated_at = datetime.now(timezone.utc)
+        record_domain_event(
+            db,
+            "driver_location_updates",
+            g.company_id,
+            status="received",
+            external_ref=driver.id,
+            correlation_id=request.headers.get("X-Correlation-ID"),
+            source="driver_app",
+            payload={
+                "driver_id": driver.id,
+                "lat": lat,
+                "lng": lng,
+                "reported_by_user_id": getattr(g, "user_id", None),
+            },
+            occurred_at=driver.location_updated_at,
+        )
         db.commit()
         return jsonify({"ok": True, "lat": lat, "lng": lng})
     except Exception:
@@ -322,7 +338,6 @@ def get_my_jobs():
 @require_auth
 def complete_my_stop(job_id, stop_id):
     from models import Stop
-    from datetime import datetime, timezone
 
     db = get_db_session()
     try:
@@ -354,18 +369,141 @@ def complete_my_stop(job_id, stop_id):
 
         stop.completed = True
         stop.completed_at = datetime.now(timezone.utc)
+        data = request.get_json(silent=True) or {}
 
         all_stops = db.query(Stop).filter(Stop.job_id == job_id).all()
         if all(s.completed for s in all_stops):
             job.status = "completed"
             job.completed_at = datetime.now(timezone.utc)
 
+        record_domain_event(
+            db,
+            "stop_status_history",
+            g.company_id,
+            status="completed",
+            external_ref=stop.id,
+            correlation_id=request.headers.get("X-Correlation-ID"),
+            source="driver_app",
+            payload={
+                "job_id": job.id,
+                "stop_id": stop.id,
+                "driver_id": driver.id,
+                "order_id": stop.order_id,
+                "completed_at": stop.completed_at.isoformat(),
+            },
+            occurred_at=stop.completed_at,
+        )
+        record_domain_event(
+            db,
+            "stop_proof_events",
+            g.company_id,
+            status="accepted",
+            external_ref=stop.id,
+            correlation_id=request.headers.get("X-Correlation-ID"),
+            source="driver_app",
+            payload={
+                "job_id": job.id,
+                "stop_id": stop.id,
+                "driver_id": driver.id,
+                "scanned_barcode": data.get("scanned_barcode"),
+                "driver_location": data.get("driver_location"),
+            },
+            occurred_at=stop.completed_at,
+        )
+        if job.status == "completed":
+            record_domain_event(
+                db,
+                "job_status_history",
+                g.company_id,
+                status="completed",
+                external_ref=job.id,
+                correlation_id=request.headers.get("X-Correlation-ID"),
+                source="driver_app",
+                payload={
+                    "job_id": job.id,
+                    "driver_id": driver.id,
+                    "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+                },
+                occurred_at=job.completed_at,
+            )
         db.commit()
         return jsonify({"success": True, "stop": stop.to_dict(), "job_status": job.status})
     except Exception:
         db.rollback()
         traceback.print_exc()
         return jsonify({"error": "Failed to complete stop"}), 500
+    finally:
+        db.close()
+
+
+@drivers_bp.route("/api/my-jobs/<job_id>/start", methods=["POST"])
+@require_auth
+def start_my_job(job_id):
+    db = get_db_session()
+    try:
+        driver = db.query(Driver).filter(
+            Driver.user_id == g.user_id,
+            Driver.company_id == g.company_id,
+        ).first()
+
+        if not driver:
+            driver = db.query(Driver).filter(
+                Driver.email == g.user_email,
+                Driver.company_id == g.company_id,
+            ).first()
+
+        if not driver:
+            return jsonify({"error": "No driver profile linked to your account"}), 403
+
+        job = db.query(Job).filter(
+            Job.id == job_id,
+            Job.driver_id == driver.id,
+            Job.company_id == g.company_id,
+        ).first()
+        if not job:
+            return jsonify({"error": "Job not found or not assigned to you"}), 404
+
+        if job.status not in ("assigned", "in_progress"):
+            return jsonify({"error": f"Job cannot be started from status {job.status}"}), 400
+
+        job.status = "in_progress"
+        now = datetime.now(timezone.utc)
+        record_domain_event(
+            db,
+            "job_status_history",
+            g.company_id,
+            status="in_progress",
+            external_ref=job.id,
+            correlation_id=request.headers.get("X-Correlation-ID"),
+            source="driver_app",
+            payload={
+                "job_id": job.id,
+                "driver_id": driver.id,
+                "started_at": now.isoformat(),
+            },
+            occurred_at=now,
+        )
+        record_domain_event(
+            db,
+            "job_events",
+            g.company_id,
+            status="received",
+            external_ref=job.id,
+            correlation_id=request.headers.get("X-Correlation-ID"),
+            source="driver_app",
+            payload={
+                "event_type": "job_started",
+                "job_id": job.id,
+                "driver_id": driver.id,
+            },
+            occurred_at=now,
+        )
+        db.commit()
+        return jsonify({"success": True, "job": job.to_dict()})
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to start job"}), 500
     finally:
         db.close()
 

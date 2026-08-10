@@ -1,9 +1,12 @@
 import json
 import os
+import re
+import uuid
 from datetime import datetime, timedelta, timezone
 from math import radians, sin, cos, sqrt, atan2
 
 import jwt
+from sqlalchemy import text
 from config import JWT_SECRET
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -76,3 +79,40 @@ def determine_area_name(lat, lng):
 def get_db_session():
     from models import SessionLocal
     return SessionLocal()
+
+
+def record_domain_event(
+    db,
+    table_name,
+    company_id,
+    *,
+    status="active",
+    external_ref=None,
+    correlation_id=None,
+    source=None,
+    payload=None,
+    occurred_at=None,
+):
+    """Persist a row into one of the expanded operational domain tables."""
+    if not re.match(r"^[a-z][a-z0-9_]*$", table_name):
+        raise ValueError("Invalid domain table name")
+
+    db.execute(
+        text(f"""
+            INSERT INTO {table_name}
+              (id, company_id, status, external_ref, correlation_id, source, payload, occurred_at)
+            VALUES
+              (:id, :company_id, :status, :external_ref, :correlation_id, :source,
+               CAST(:payload AS JSONB), :occurred_at)
+        """),
+        {
+            "id": str(uuid.uuid4()),
+            "company_id": company_id,
+            "status": status,
+            "external_ref": external_ref,
+            "correlation_id": correlation_id,
+            "source": source,
+            "payload": json.dumps(payload or {}),
+            "occurred_at": occurred_at or datetime.now(timezone.utc),
+        },
+    )

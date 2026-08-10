@@ -70,6 +70,16 @@ npm ci
 npm test -- --runInBand
 ```
 
+Connect the Driver App to the real APP API:
+
+```bash
+cd App
+$env:EXPO_PUBLIC_AIVIATE_API_URL="https://your-aiviate-app.example.com"
+npm run web
+```
+
+With `EXPO_PUBLIC_AIVIATE_API_URL` set, the Driver App shows a login screen and authenticates drivers through the APP API. Without that API URL, it intentionally falls back to seed data for local preview and tests.
+
 Run focused decision-engine tests:
 
 ```bash
@@ -110,3 +120,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel setup, service boundaries, environ
 ## Current State
 
 See [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the latest audit of what exists, what is wired, and what is still planned.
+
+## Database
+
+See [docs/DATABASES.md](docs/DATABASES.md) for the operational database ownership model and the expanded production schema migration.

@@ -16,7 +16,7 @@ from middleware import require_auth, require_admin
 from models import Stop, Company, IntegrationSettings, AuditLog
 from optimize_route import geocode_address, DEPOT
 from orders_source import fetch_orders, orders_db_configured
-from utils import get_db_session
+from utils import get_db_session, record_domain_event
 
 ORDER_ID_PREFIX = "STORE-"
 MERCHANT_ORDER_ID_PREFIX = "MERCH-"
@@ -233,6 +233,88 @@ def _insert_canonical_order(db, company_id, canonical, correlation_id, idempoten
             "source": canonical["source"],
         },
     ))
+    record_domain_event(
+        db,
+        "orders",
+        company_id,
+        status=canonical["status"],
+        external_ref=canonical["external_order_id"],
+        correlation_id=correlation_id,
+        source=canonical["source"],
+        payload={
+            "internal_stop_id": stop.id,
+            "external_order_id": canonical["external_order_id"],
+            "customer_name": canonical["customer_name"],
+            "customer_phone": canonical["customer_phone"],
+            "customer_email": canonical["customer_email"],
+            "priority": canonical["priority"],
+            "delivery_window_start": canonical["delivery_window_start"],
+            "delivery_window_end": canonical["delivery_window_end"],
+            "service_time_minutes": canonical["service_time_minutes"],
+            "legacy_stop_order_id": order_id,
+        },
+    )
+    record_domain_event(
+        db,
+        "order_addresses",
+        company_id,
+        status=canonical["status"],
+        external_ref=canonical["external_order_id"],
+        correlation_id=correlation_id,
+        source=canonical["source"],
+        payload={
+            "internal_stop_id": stop.id,
+            "raw_address": canonical["raw_address"],
+            "normalised_address": canonical["normalised_address"],
+            "latitude": canonical["latitude"],
+            "longitude": canonical["longitude"],
+            "geocoding_confidence": canonical["geocoding_confidence"],
+        },
+    )
+    record_domain_event(
+        db,
+        "order_packages",
+        company_id,
+        status="active",
+        external_ref=canonical["external_order_id"],
+        correlation_id=correlation_id,
+        source=canonical["source"],
+        payload={
+            "internal_stop_id": stop.id,
+            "package_weight": canonical["package_weight"],
+            "package_volume": canonical["package_volume"],
+            "demand": stop.demand,
+        },
+    )
+    record_domain_event(
+        db,
+        "order_status_history",
+        company_id,
+        status=canonical["status"],
+        external_ref=canonical["external_order_id"],
+        correlation_id=correlation_id,
+        source="merchant_api",
+        payload={
+            "internal_stop_id": stop.id,
+            "status": canonical["status"],
+            "reason": "merchant_order_ingested",
+        },
+    )
+    if idempotency:
+        record_domain_event(
+            db,
+            "idempotency_keys",
+            company_id,
+            status="used",
+            external_ref=idempotency,
+            correlation_id=correlation_id,
+            source="merchant_api",
+            payload={
+                "scope": "merchant_order_ingestion",
+                "external_order_id": canonical["external_order_id"],
+                "internal_stop_id": stop.id,
+            },
+        )
     return stop, "created"
 
 

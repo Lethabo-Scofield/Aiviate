@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import ModalHeader from '../components/ModalHeader';
 import Avatar from '../components/Avatar';
+import { useAuth } from '../contexts/AuthContext';
 import { useDriver } from '../contexts/DriverContext';
 import { COLORS } from '../theme';
 
@@ -28,6 +29,7 @@ const Row = ({ icon, label, value }) => (
 
 export default function ProfileScreen({ navigation }) {
   const { driver } = useDriver();
+  const { signOut } = useAuth();
 
   if (!driver) {
     return <SafeAreaView style={styles.container} />;
@@ -97,7 +99,12 @@ export default function ProfileScreen({ navigation }) {
         <TouchableOpacity
           style={styles.signOut}
           activeOpacity={0.85}
-          onPress={() => Alert.alert?.('Sign out', 'Sign out is not enabled in this preview.')}
+          onPress={() => {
+            Alert.alert?.('Sign out', 'Sign out of the driver app?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign out', style: 'destructive', onPress: signOut },
+            ]);
+          }}
         >
           <Ionicons name="log-out-outline" size={18} color={COLORS.danger} />
           <Text style={styles.signOutText}>Sign out</Text>

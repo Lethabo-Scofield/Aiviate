@@ -74,7 +74,7 @@ Current blockers:
 
 - Jest did not run from the default script on this machine until the script was pointed directly at `node_modules/jest/bin/jest.js`.
 - The local `jest-expo` package currently fails Jest preset validation.
-- The app still has mock/seed data paths that need to be separated from production flows.
+- The app now has a backend mode through `EXPO_PUBLIC_AIVIATE_API_URL` and a driver login screen. Without the API URL it still uses seed data for local preview and tests.
 
 ### Website
 
@@ -117,6 +117,7 @@ Operational database:
 - Flask backend uses PostgreSQL via `NEON_DATABASE_URL` or `DATABASE_URL`.
 - SQLAlchemy models are in `Website/backend/models.py`.
 - Cold-start compatibility migrations currently run in `Website/backend/app.py`.
+- Expanded production schema migration is in `Website/backend/migrations/20260810_expand_operational_schema.sql`.
 
 Decision-engine database:
 
@@ -174,6 +175,7 @@ Existing integrations:
 - The browser calls the Flask APP API through `Website/src/services/api.js`.
 - The admin web app can import external store orders through `/api/store/orders/import`, but this is an authenticated admin pull flow rather than a merchant-owned push API.
 - A canonical merchant integration API has now been started under `/api/integrations/*` with merchant API-key authentication, tenant isolation, duplicate prevention, correlation IDs, structured validation errors, and audit records.
+- A production database expansion migration now defines 117 additional APP-owned operational domain tables.
 
 Missing integrations:
 
@@ -286,7 +288,7 @@ Root orchestration is not yet present.
 - Store order import exists as a legacy admin pull flow under `/api/store/*`.
 - The new merchant push API exists under `/api/integrations/*` and should become the external integration contract.
 - Call Agent JSON order data is obsolete for production paths.
-- Driver app seed data is useful for local UI development but must not be used as production state.
+- Driver app seed data is useful for local UI development and tests. Production mobile builds must configure the APP API URL and use the driver login flow.
 - Device-like backend tables and screens exist, but the physical DEVICE product is not implemented and must be documented as planned only.
 
 ## Hard-Coded Localhost And Mock Data
@@ -297,7 +299,7 @@ Root orchestration is not yet present.
 - `Website/vite.config.js` proxies to `http://localhost:8000`.
 - `Website/aiviate-engine/src/aiviate/config.py` defaults OSRM to `http://localhost:5000`.
 - `Call Agent/Backend/data/orders.json` is still used by Call Agent order endpoints.
-- `App/src/data/*` contains driver-app seed data.
+- `App/src/data/*` contains driver-app seed data used only when backend mode is not configured.
 
 ## Security Problems
 
@@ -335,9 +337,10 @@ Result: passed, 15 tests.
 1. The GitHub remote name does not match the user-provided `Aiviate.git` URL; the checked-out remote is `Aviate_Admin.git`.
 2. Root developer experience is incomplete: no root README, root `.env.example`, root orchestration or root commands.
 3. APP operational state currently uses `Stop` as the order-like persistence model; a dedicated canonical `Order` table is still needed for full product scope.
-4. Call Agent is still local-JSON backed and not safe for production customer queries.
+4. Call Agent legacy `/api/orders/*` remains local-JSON backed and is not safe for production customer queries.
 5. Driver invitation/password flow is not secure enough.
-6. DEVICE must remain documentation-only until real hardware/software is implemented.
+6. Driver App login UI exists, but invitation-token activation and password reset still need completion.
+7. DEVICE must remain documentation-only until real hardware/software is implemented.
 
 ## Migration Decisions
 

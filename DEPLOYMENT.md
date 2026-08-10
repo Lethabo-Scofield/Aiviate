@@ -68,6 +68,18 @@ Notes:
 - `ENGINE_URL` must point to a deployed decision-engine service if route planning should work in production.
 - `AIVIATE_SERVICE_TOKEN` must match the Call Agent service token.
 
+## Database Migration
+
+Before production rollout, apply the expanded APP operational schema to the PostgreSQL database:
+
+```bash
+psql "$DATABASE_URL" -f Website/backend/migrations/20260810_expand_operational_schema.sql
+```
+
+This migration creates more than 80 domain tables for the operational backend, including merchant ingestion, dispatch, driver app, call-agent persistence, safety, future device contracts, idempotency and audit.
+
+`psql` is not bundled with this repository. Run the command from a machine or CI job with the PostgreSQL client installed.
+
 ## Decision Engine Deployment
 
 The deterministic OR-Tools engine is in:
@@ -135,6 +147,33 @@ POST /tools/human-handoff
 
 The old `/api/orders/*` JSON-backed demo routes still exist and must not be used as the production order source.
 
+## Driver App Backend Mode
+
+The Driver App lives in:
+
+```text
+App
+```
+
+It now has a real backend mode. When the API URL is set, the app shows a driver login screen and reads assigned jobs and driver profile data from the APP API:
+
+```text
+EXPO_PUBLIC_AIVIATE_API_URL=https://your-aiviate-app.example.com
+EXPO_PUBLIC_AIVIATE_DRIVER_TOKEN=
+```
+
+`EXPO_PUBLIC_AIVIATE_DRIVER_TOKEN` is optional and should only be used for local testing. In normal use, drivers sign in through the app and receive a driver JWT from `POST /api/auth/login`. Without `EXPO_PUBLIC_AIVIATE_API_URL`, the app falls back to local seed data for development and tests.
+
+Real backend endpoints used by the Driver App:
+
+```text
+GET  /api/my-jobs
+POST /api/my-jobs/{job_id}/start
+POST /api/my-jobs/{job_id}/complete/{stop_id}
+```
+
+Do not ship production mobile builds with seed data as the intended source. Use seed mode only for local preview and automated tests.
+
 ## Merchant API Setup
 
 Admin users can rotate a merchant API key through:
@@ -176,7 +215,7 @@ Run these before deploying:
 cd Website
 npm ci
 npm run build
-python -m py_compile backend/app.py backend/models.py backend/routes/orders.py backend/routes/support.py
+python -m py_compile backend/app.py backend/models.py backend/routes/orders.py backend/routes/support.py backend/routes/drivers.py
 ```
 
 ```bash
@@ -205,12 +244,14 @@ Known current note: the full decision-engine pytest suite may need a longer CI t
 ## Production Readiness Checklist
 
 - Real `DATABASE_URL` or `NEON_DATABASE_URL` configured.
+- Expanded operational schema migration applied.
 - Stable `JWT_SECRET` configured.
 - `ALLOWED_ORIGINS` restricted to approved domains.
 - Decision engine deployed and reachable by `ENGINE_URL`.
 - Call Agent deployed separately with matching `AIVIATE_SERVICE_TOKEN`.
 - Retell credentials configured only when ready to leave simulation mode.
 - Merchant API keys generated through APP and stored by merchants outside the repo.
+- Driver App configured with `EXPO_PUBLIC_AIVIATE_API_URL`; drivers use the login screen for JWT auth.
 - No real secrets committed.
 - `DEVICE/` remains documentation only.
 
