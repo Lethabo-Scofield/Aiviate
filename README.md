@@ -30,6 +30,7 @@ It contains:
 - PostgreSQL persistence through `DATABASE_URL` or `NEON_DATABASE_URL`
 - Merchant ingestion API under `/api/integrations/*`
 - Customer-support API under `/api/customer-support/*`
+- Public customer tracking under `/track/:token` and `/api/public/tracking/*`
 
 The deterministic decision engine lives in `Website/aiviate-engine/` and should run as its own Python service. The APP backend calls it through `ENGINE_URL`.
 
@@ -60,6 +61,13 @@ Run the admin UI locally:
 ```bash
 cd Website
 npm run dev
+```
+
+Apply migrations before enabling production features:
+
+```bash
+psql "$DATABASE_URL" -f Website/backend/migrations/20260810_expand_operational_schema.sql
+psql "$DATABASE_URL" -f Website/backend/migrations/20260810_public_tracking.sql
 ```
 
 Run the driver app tests:

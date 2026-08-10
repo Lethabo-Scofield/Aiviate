@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import DataSources from "./pages/DataSources";
 import Orders from "./pages/Orders";
 import Integrations from "./pages/Integrations";
+import PublicTracking from "./pages/PublicTracking";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/track/:token" element={<PublicTracking />} />
       <Route element={<ProtectedRoute>{isDriver ? <DriverLayout /> : <Layout />}</ProtectedRoute>}>
         {isDriver ? (
           <>

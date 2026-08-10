@@ -150,6 +150,11 @@ Existing APP API routes:
 - `/api/integrations/orders`
 - `/api/integrations/orders/bulk`
 - `/api/integrations/orders/{external_order_id}`
+- `/api/public/tracking/{token}`
+- `/api/public/tracking/{token}/reschedule`
+- `/api/public/tracking/{token}/availability`
+- `/api/stops/{stop_id}/tracking-link`
+- `/api/stops/{stop_id}/tracking-link/revoke`
 
 Existing decision-engine routes:
 
@@ -176,6 +181,7 @@ Existing integrations:
 - The admin web app can import external store orders through `/api/store/orders/import`, but this is an authenticated admin pull flow rather than a merchant-owned push API.
 - A canonical merchant integration API has now been started under `/api/integrations/*` with merchant API-key authentication, tenant isolation, duplicate prevention, correlation IDs, structured validation errors, and audit records.
 - A production database expansion migration now defines 117 additional APP-owned operational domain tables.
+- Public customer tracking now exists as a connected stop-backed vertical slice. Dispatchers can generate revocable hashed-token links, customers can view `/track/:token`, and reschedule/availability actions write audit and domain-event records.
 
 Missing integrations:
 
@@ -183,6 +189,7 @@ Missing integrations:
 - WEB does not yet persist its own merchant orders independently and then submit them to APP.
 - The Call Agent is not yet connected to the APP operational API.
 - Driver invitations still need secure one-time activation links.
+- Live ETA revisions, provider-backed travel times, notification outbox, failed-delivery queue, returns and analytics still need their own connected vertical slices.
 - Route-change events are not yet fully event-driven across APP, engine and driver app.
 - Shared JSON Schema/OpenAPI contracts still need to be added at root.
 
@@ -306,6 +313,7 @@ Root orchestration is not yet present.
 - Driver creation and reset currently store and display permanent plaintext generated passwords.
 - Driver invitation tokens are not implemented yet.
 - Merchant API keys now hash at rest for `/api/integrations/*`, but UI/key lifecycle is not complete.
+- Public tracking tokens are stored as hashes and public responses exclude phone numbers, internal IDs, private notes and driver contact details.
 - Call Agent service authentication has been added for the new APP customer-support API, but old JSON routes remain exposed.
 - Retell webhook signature verification has a first implementation, but signature format must be verified against the active Retell configuration before production.
 - Root `.env.example` is missing.

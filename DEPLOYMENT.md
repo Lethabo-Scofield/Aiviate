@@ -34,6 +34,7 @@ For the Azure App Service backend, allow the Static Web App origin:
 
 ```text
 ALLOWED_ORIGINS=https://brave-tree-054688510.7.azurestaticapps.net
+PUBLIC_APP_URL=https://brave-tree-054688510.7.azurestaticapps.net
 ```
 
 Use comma-separated origins if you add a branded domain later.
@@ -77,6 +78,7 @@ DATABASE_URL=
 NEON_DATABASE_URL=
 JWT_SECRET=
 ALLOWED_ORIGINS=
+PUBLIC_APP_URL=
 DB_CONNECT_TIMEOUT=10
 SKIP_DB_INIT=true
 ENGINE_URL=
@@ -89,6 +91,7 @@ Notes:
 - Use `DATABASE_URL` or `NEON_DATABASE_URL`; both are supported.
 - `JWT_SECRET` must be stable across deployments or sessions will be invalidated.
 - `ALLOWED_ORIGINS` should be the production site URL and any approved preview origins. Avoid `*` in production.
+- `PUBLIC_APP_URL` is used when the backend generates customer tracking links.
 - `SKIP_DB_INIT=true` is recommended for serverless cold starts. The current backend still has small compatibility column creation for existing tables, but full schema migration should be moved to a release step.
 - `ENGINE_URL` must point to a deployed decision-engine service if route planning should work in production.
 - `AIVIATE_SERVICE_TOKEN` must match the Call Agent service token.
@@ -102,6 +105,14 @@ psql "$DATABASE_URL" -f Website/backend/migrations/20260810_expand_operational_s
 ```
 
 This migration creates more than 80 domain tables for the operational backend, including merchant ingestion, dispatch, driver app, call-agent persistence, safety, future device contracts, idempotency and audit.
+
+Apply the public customer-tracking token table before enabling tracking links:
+
+```bash
+psql "$DATABASE_URL" -f Website/backend/migrations/20260810_public_tracking.sql
+```
+
+The public-tracking routes lazily create the table if the runtime has DDL permission, but production should use the explicit migration step so schema changes are audited and repeatable.
 
 `psql` is not bundled with this repository. Run the command from a machine or CI job with the PostgreSQL client installed.
 
@@ -232,6 +243,28 @@ X-Aiviate-Merchant-Key: <merchant key>
 Idempotency-Key: <stable request key>
 X-Correlation-ID: <optional trace id>
 ```
+
+## Public Customer Tracking
+
+Admins can generate a customer-safe tracking link from an expanded job stop in the Website. The token is returned only once, copied to the clipboard where the browser allows it, and only a SHA-256 hash is stored.
+
+Public endpoints:
+
+```text
+GET  /api/public/tracking/{token}
+POST /api/public/tracking/{token}/reschedule
+POST /api/public/tracking/{token}/availability
+```
+
+Admin endpoints:
+
+```text
+GET  /api/stops/{stop_id}/tracking-link
+POST /api/stops/{stop_id}/tracking-link
+POST /api/stops/{stop_id}/tracking-link/revoke
+```
+
+The public response intentionally excludes customer phone numbers, private notes, internal stop IDs, driver contact details and precise driver GPS history.
 
 ## Release Checks
 

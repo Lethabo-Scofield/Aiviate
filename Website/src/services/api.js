@@ -250,6 +250,46 @@ export async function getStops() {
   return handleResponse(res);
 }
 
+export async function createTrackingLink(stopId) {
+  const res = await fetch(`${API_BASE}/stops/${encodeURIComponent(stopId)}/tracking-link`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders('application/json'), 'X-Public-App-Origin': window.location.origin },
+    body: JSON.stringify({}),
+  });
+  return handleResponse(res);
+}
+
+export async function revokeTrackingLink(stopId) {
+  const res = await fetch(`${API_BASE}/stops/${encodeURIComponent(stopId)}/tracking-link/revoke`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function getPublicTracking(token) {
+  const res = await fetch(`${API_BASE}/public/tracking/${encodeURIComponent(token)}`);
+  return handleResponse(res);
+}
+
+export async function requestPublicReschedule(token, requestedWindow) {
+  const res = await fetch(`${API_BASE}/public/tracking/${encodeURIComponent(token)}/reschedule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requested_window: requestedWindow }),
+  });
+  return handleResponse(res);
+}
+
+export async function confirmPublicAvailability(token, available) {
+  const res = await fetch(`${API_BASE}/public/tracking/${encodeURIComponent(token)}/availability`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ available }),
+  });
+  return handleResponse(res);
+}
+
 export async function getStats() {
   const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeaders() });
   return handleResponse(res);

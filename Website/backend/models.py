@@ -1,6 +1,6 @@
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.pool import NullPool
@@ -378,6 +378,45 @@ class IntegrationSettings(Base):
     @staticmethod
     def new_merchant_api_key():
         return f"aiv_live_{secrets.token_urlsafe(32)}"
+
+
+class PublicTrackingToken(Base):
+    __tablename__ = "public_tracking_tokens"
+
+    id = Column(String, primary_key=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    stop_id = Column(String, ForeignKey("stops.id"), nullable=False)
+    token_hash = Column(String, nullable=False, unique=True)
+    public_reference = Column(String, nullable=False)
+    status = Column(String, default="active")
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    @staticmethod
+    def default_expiry():
+        return datetime.now(timezone.utc) + timedelta(days=30)
+
+    def is_active(self):
+        now = datetime.now(timezone.utc)
+        expires_at = self.expires_at
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return self.status == "active" and not self.revoked_at and expires_at and expires_at > now
+
+    def to_admin_dict(self):
+        return {
+            "id": self.id,
+            "stop_id": self.stop_id,
+            "public_reference": self.public_reference,
+            "status": self.status,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "revoked_at": self.revoked_at.isoformat() if self.revoked_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 def init_db():

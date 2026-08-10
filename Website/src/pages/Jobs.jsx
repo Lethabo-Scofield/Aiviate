@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Package, UserPlus, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Package, UserPlus, ChevronDown, ChevronUp, X, Link2, Check } from "lucide-react";
 import { SkeletonList } from "../components/Loader";
-import { getJobs, getDrivers, assignDriver, unassignDriver } from "../services/api";
+import { getJobs, getDrivers, assignDriver, unassignDriver, createTrackingLink } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 export default function Jobs({ embedded = false }) {
@@ -143,6 +143,22 @@ export default function Jobs({ embedded = false }) {
 }
 
 function JobRow({ job, drivers, expanded, assigning, onToggle, onAssignToggle, onAssign, onUnassign }) {
+  const [trackingState, setTrackingState] = useState({});
+
+  const handleTrackingLink = async (stopId) => {
+    setTrackingState((prev) => ({ ...prev, [stopId]: { loading: true } }));
+    try {
+      const res = await createTrackingLink(stopId);
+      const link = res.tracking_link;
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      }
+      setTrackingState((prev) => ({ ...prev, [stopId]: { copied: true, link } }));
+    } catch (e) {
+      setTrackingState((prev) => ({ ...prev, [stopId]: { error: e.message || "Could not create link" } }));
+    }
+  };
+
   return (
     <div className="apple-card overflow-hidden">
       <div className="p-4 flex items-center gap-4 cursor-pointer hover:bg-[#fafafa] transition-colors" onClick={onToggle}>
@@ -206,16 +222,32 @@ function JobRow({ job, drivers, expanded, assigning, onToggle, onAssignToggle, o
           </div>
           <p className="text-[11px] font-semibold text-[#868E96] uppercase tracking-wider mb-2">Stop sequence</p>
           <div className="space-y-1 max-h-48 overflow-y-auto">
-            {job.stops.map((stop, idx) => (
+            {job.stops.map((stop, idx) => {
+              const tracking = trackingState[stop.id] || {};
+              return (
               <div key={stop.id} className={`flex items-center gap-2.5 p-2 rounded-lg text-[12px] ${stop.completed ? "bg-[#34c759]/5" : "bg-[#F1F3F5]"}`}>
                 <span className="font-bold text-[#c7c7cc] w-4 text-right shrink-0">{idx + 1}</span>
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-[#111315]">{stop.customer_name}</span>
                   <span className="text-[#ADB5BD] ml-1.5 truncate hidden sm:inline">{stop.address}</span>
+                  {tracking.link && (
+                    <p className="text-[10.5px] text-[#008080] truncate mt-0.5">{tracking.link}</p>
+                  )}
+                  {tracking.error && (
+                    <p className="text-[10.5px] text-[#ff3b30] mt-0.5">{tracking.error}</p>
+                  )}
                 </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleTrackingLink(stop.id); }}
+                  disabled={tracking.loading}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-[#008080]/10 flex items-center justify-center transition-colors disabled:opacity-50"
+                  title="Generate customer tracking link"
+                >
+                  {tracking.copied ? <Check size={13} className="text-[#34c759]" /> : <Link2 size={13} className="text-[#008080]" />}
+                </button>
                 {stop.completed && <span className="text-[9px] px-1.5 py-0.5 bg-[#34c759]/10 text-[#34c759] rounded-full font-semibold">Done</span>}
               </div>
-            ))}
+            );})}
           </div>
         </div>
       )}
