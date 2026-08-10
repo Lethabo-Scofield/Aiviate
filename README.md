@@ -74,11 +74,11 @@ Connect the Driver App to the real APP API:
 
 ```bash
 cd App
-$env:EXPO_PUBLIC_AIVIATE_API_URL="https://your-aiviate-app.example.com"
+$env:EXPO_PUBLIC_API_URL="https://aviate-api.azurewebsites.net/api"
 npm run web
 ```
 
-With `EXPO_PUBLIC_AIVIATE_API_URL` set, the Driver App shows a login screen and authenticates drivers through the APP API. Without that API URL, it intentionally falls back to seed data for local preview and tests.
+With `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_AIVIATE_API_URL` set, the Driver App shows a login screen and authenticates drivers through the APP API. The URL must include `/api`. Without an API URL, it intentionally falls back to seed data for local preview and tests.
 
 Run focused decision-engine tests:
 

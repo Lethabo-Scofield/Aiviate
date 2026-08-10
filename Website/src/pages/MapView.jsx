@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
-import { getJobs } from "../services/api";
+import { API_BASE, getJobs } from "../services/api";
 import { SkeletonList } from "../components/Loader";
 import { Map as MapIcon, Layers, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -109,7 +109,7 @@ async function fetchOSRMRoute(waypoints) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
-    const res = await fetch("/api/route", {
+    const res = await fetch(`${API_BASE}/route`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ waypoints }),

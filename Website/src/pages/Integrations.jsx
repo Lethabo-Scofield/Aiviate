@@ -5,7 +5,7 @@ import {
   Pencil, Check, X, ImagePlus, Trash2, Code2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
-import { getStoreOrders, getStoreIntegration, updateStoreIntegration } from "../services/api";
+import { API_BASE, getStoreOrders, getStoreIntegration, updateStoreIntegration } from "../services/api";
 import { siShopify, siWoocommerce } from "simple-icons";
 
 function BrandIcon({ icon, size = 16 }) {
@@ -327,7 +327,7 @@ export default function Integrations() {
             <div>
               <p className="text-[12px] font-semibold text-[#111315] mb-1.5">1 · Get an access token</p>
               <p className="text-[11.5px] text-[#868E96] mb-2">Log in with an admin account — the response includes a token to use in the next step.</p>
-              <pre className="bg-[#111315] text-[#E9ECEF] text-[11px] leading-relaxed rounded-xl p-3.5 overflow-x-auto font-mono">{`curl -X POST ${window.location.origin}/api/auth/login \\
+              <pre className="bg-[#111315] text-[#E9ECEF] text-[11px] leading-relaxed rounded-xl p-3.5 overflow-x-auto font-mono">{`curl -X POST ${API_BASE}/auth/login \\
   -H "Content-Type: application/json" \\
   -d '{"email": "you@company.com", "password": "•••"}'`}</pre>
             </div>
@@ -338,7 +338,7 @@ export default function Integrations() {
                 (optionally <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">order_id</span>, <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">customer_name</span>, <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">phone</span>, <span className="font-mono text-[10.5px] bg-[#F1F3F5] px-1 py-0.5 rounded">notes</span>) and upload it.
                 Addresses are geocoded automatically.
               </p>
-              <pre className="bg-[#111315] text-[#E9ECEF] text-[11px] leading-relaxed rounded-xl p-3.5 overflow-x-auto font-mono">{`curl -X POST ${window.location.origin}/api/upload \\
+              <pre className="bg-[#111315] text-[#E9ECEF] text-[11px] leading-relaxed rounded-xl p-3.5 overflow-x-auto font-mono">{`curl -X POST ${API_BASE}/upload \\
   -H "Authorization: Bearer YOUR_TOKEN" \\
   -F "file=@orders.csv"`}</pre>
             </div>

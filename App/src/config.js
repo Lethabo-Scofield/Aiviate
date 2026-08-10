@@ -6,6 +6,7 @@
 //
 // Configure per environment with a `.env` file at the App/ root, e.g.:
 //   EXPO_PUBLIC_API_URL=https://api.aiviate.example.com/api
+//   EXPO_PUBLIC_AIVIATE_API_URL=https://api.aiviate.example.com/api
 //   EXPO_PUBLIC_APP_SCHEME=aviate
 //
 // NOTE for native devices: `localhost` points at the phone, not your machine.
@@ -22,6 +23,7 @@ const DEFAULT_NATIVE_API =
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
+  process.env.EXPO_PUBLIC_AIVIATE_API_URL ||
   (Platform.OS === 'web' ? DEFAULT_WEB_API : DEFAULT_NATIVE_API);
 
 // Deep-link scheme used by activation links (must match app.json `scheme`).

@@ -13,6 +13,31 @@ This document describes how to deploy the current repository without pretending 
 | Call Agent prototype frontend | `Call Agent/Frontend/` | None | Deprecated local prototype; do not deploy |
 | DEVICE | `DEVICE/` | None | Documentation only |
 
+## Azure Production Wiring
+
+Current production endpoints:
+
+```text
+Website UI: https://brave-tree-054688510.7.azurestaticapps.net
+APP API:    https://aviate-api.azurewebsites.net/api
+```
+
+For Azure Static Web Apps, set the Website build environment variable:
+
+```text
+VITE_API_URL=https://aviate-api.azurewebsites.net/api
+```
+
+The frontend also has a browser-runtime production fallback to the same API URL when it is not running on `localhost`, but the explicit Azure setting is preferred so every build is deterministic.
+
+For the Azure App Service backend, allow the Static Web App origin:
+
+```text
+ALLOWED_ORIGINS=https://brave-tree-054688510.7.azurestaticapps.net
+```
+
+Use comma-separated origins if you add a branded domain later.
+
 ## Vercel: Website And APP API
 
 Create or update the Vercel project with:
@@ -158,11 +183,12 @@ App
 It now has a real backend mode. When the API URL is set, the app shows a driver login screen and reads assigned jobs and driver profile data from the APP API:
 
 ```text
-EXPO_PUBLIC_AIVIATE_API_URL=https://your-aiviate-app.example.com
+EXPO_PUBLIC_API_URL=https://aviate-api.azurewebsites.net/api
+EXPO_PUBLIC_AIVIATE_API_URL=https://aviate-api.azurewebsites.net/api
 EXPO_PUBLIC_AIVIATE_DRIVER_TOKEN=
 ```
 
-`EXPO_PUBLIC_AIVIATE_DRIVER_TOKEN` is optional and should only be used for local testing. In normal use, drivers sign in through the app and receive a driver JWT from `POST /api/auth/login`. Without `EXPO_PUBLIC_AIVIATE_API_URL`, the app falls back to local seed data for development and tests.
+`EXPO_PUBLIC_AIVIATE_DRIVER_TOKEN` is optional and should only be used for local testing. In normal use, drivers sign in through the app and receive a driver JWT from `POST /api/auth/login`. `EXPO_PUBLIC_API_URL` is the canonical Expo variable; `EXPO_PUBLIC_AIVIATE_API_URL` is supported as a compatibility alias. The URL must include `/api`. Without an API URL, the app falls back to local seed data for development and tests.
 
 Real backend endpoints used by the Driver App:
 
@@ -251,7 +277,7 @@ Known current note: the full decision-engine pytest suite may need a longer CI t
 - Call Agent deployed separately with matching `AIVIATE_SERVICE_TOKEN`.
 - Retell credentials configured only when ready to leave simulation mode.
 - Merchant API keys generated through APP and stored by merchants outside the repo.
-- Driver App configured with `EXPO_PUBLIC_AIVIATE_API_URL`; drivers use the login screen for JWT auth.
+- Driver App configured with `EXPO_PUBLIC_API_URL`; drivers use the login screen for JWT auth.
 - No real secrets committed.
 - `DEVICE/` remains documentation only.
 

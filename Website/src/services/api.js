@@ -10,7 +10,7 @@ const RUNTIME_API_FALLBACK =
   typeof window !== "undefined" && !isLocalDevHost(window.location.hostname)
     ? "https://aviate-api.azurewebsites.net/api"
     : "/api";
-const API_BASE = import.meta.env.VITE_API_URL || RUNTIME_API_FALLBACK;
+export const API_BASE = import.meta.env.VITE_API_URL || RUNTIME_API_FALLBACK;
 
 function getAuthHeaders(contentType) {
   const headers = {};
