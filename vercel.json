@@ -1,20 +1,17 @@
 {
   "version": 2,
-  "builds": [
+  "installCommand": "cd Website && npm ci --no-audit --no-fund",
+  "buildCommand": "cd Website && npm run build",
+  "outputDirectory": "Website/dist",
+  "framework": "vite",
+  "rewrites": [
     {
-      "src": "Website/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "source": "/api/(.*)",
+      "destination": "https://aviate-api.azurewebsites.net/api/$1"
     },
     {
-      "src": "Website/api/index.py",
-      "use": "@vercel/python",
-      "config": { "includeFiles": "Website/backend/**" }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/Website/api/index.py" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
