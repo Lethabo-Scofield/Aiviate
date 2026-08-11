@@ -190,6 +190,51 @@ def _canonical_from_stop(stop):
     }
 
 
+def _store_order_from_stop(stop):
+    """Expose existing operational stops in the Orders UI shape.
+
+    This is a compatibility bridge for deployments where Aiviate is already
+    the operational source of truth and no separate storefront database exists.
+    The Orders screen still expects the external-store payload shape, so keep
+    the response customer-safe and mark records as already imported.
+    """
+    return {
+        "id": stop.order_id or stop.id,
+        "stop_id": stop.id,
+        "customer_name": stop.customer_name or "",
+        "customer_email": "",
+        "customer_phone": stop.phone or "",
+        "shipping_address": stop.address or "",
+        "lat": float(stop.lat) if stop.lat is not None else None,
+        "lng": float(stop.lng) if stop.lng is not None else None,
+        "status": "delivered" if stop.completed else "dispatch_ready" if stop.job_id else "received",
+        "payment_status": "",
+        "total": 0.0,
+        "created_at": stop.created_at.isoformat() if stop.created_at else None,
+        "item_count": max(1, int(stop.demand or 1)),
+        "item_summary": stop.notes or f"{max(1, int(stop.demand or 1))} package(s)",
+        "imported": True,
+        "importable": bool(stop.address),
+        "source": "operational_stops",
+        "job_id": stop.job_id,
+        "completed": bool(stop.completed),
+    }
+
+
+def _list_operational_orders(company_id):
+    db = get_db_session()
+    try:
+        stops = (
+            db.query(Stop)
+            .filter(Stop.company_id == company_id)
+            .order_by(Stop.created_at.desc())
+            .all()
+        )
+        return [_store_order_from_stop(s) for s in stops]
+    finally:
+        db.close()
+
+
 def _insert_canonical_order(db, company_id, canonical, correlation_id, idempotency=None):
     order_id = _merchant_order_id(canonical["external_order_id"])
     existing = db.query(Stop).filter(
@@ -340,13 +385,22 @@ def _company_owns_store(company_id):
 @require_admin
 def list_store_orders():
     if not orders_db_configured() or not _company_owns_store(g.company_id):
-        return jsonify({"configured": False, "orders": []})
+        return jsonify({
+            "configured": True,
+            "source": "operational_stops",
+            "orders": _list_operational_orders(g.company_id),
+        })
 
     try:
         orders = fetch_orders()
     except Exception:
         traceback.print_exc()
-        return jsonify({"error": "Could not reach the orders database"}), 502
+        return jsonify({
+            "configured": True,
+            "source": "operational_stops",
+            "warning": "External orders database is unavailable or not in storefront schema; showing Aiviate operational orders.",
+            "orders": _list_operational_orders(g.company_id),
+        })
 
     db = get_db_session()
     try:
