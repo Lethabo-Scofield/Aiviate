@@ -4,6 +4,10 @@ import { SkeletonList } from "../components/Loader";
 import { getJobs, getDrivers, assignDriver, unassignDriver, createTrackingLink } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
+function fmtMoney(n) {
+  return `R ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export default function Jobs({ embedded = false }) {
   const [jobs, setJobs] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -167,7 +171,7 @@ function JobRow({ job, drivers, expanded, assigning, onToggle, onAssignToggle, o
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[14px] font-semibold text-[#111315]">{job.area}</p>
-          <p className="text-[12px] text-[#ADB5BD]">{job.total_stops} stops | {job.total_distance_km} km</p>
+          <p className="text-[12px] text-[#ADB5BD]">{job.total_stops} stops | {job.total_distance_km} km | {fmtMoney(job.display_total)}</p>
         </div>
         <div className="flex items-center gap-3">
           {job.driver_name ? (
@@ -208,10 +212,11 @@ function JobRow({ job, drivers, expanded, assigning, onToggle, onAssignToggle, o
 
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-[#F1F3F5] animate-fade-in">
-          <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             {[
               { v: job.total_stops, l: "Stops" },
               { v: `${job.total_distance_km} km`, l: "Distance" },
+              { v: fmtMoney(job.display_total), l: "Orders" },
               { v: `${job.estimated_time_min} min`, l: "Est. Time" },
             ].map(({ v, l }) => (
               <div key={l} className="bg-[#F1F3F5] rounded-xl p-2.5 text-center">
@@ -229,7 +234,7 @@ function JobRow({ job, drivers, expanded, assigning, onToggle, onAssignToggle, o
                 <span className="font-bold text-[#c7c7cc] w-4 text-right shrink-0">{idx + 1}</span>
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-[#111315]">{stop.customer_name}</span>
-                  <span className="text-[#ADB5BD] ml-1.5 truncate hidden sm:inline">{stop.address}</span>
+                  <span className="text-[#ADB5BD] ml-1.5 truncate hidden sm:inline">{stop.address} · {fmtMoney(stop.display_total)}</span>
                   {tracking.link && (
                     <p className="text-[10.5px] text-[#008080] truncate mt-0.5">{tracking.link}</p>
                   )}

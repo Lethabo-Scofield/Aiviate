@@ -209,7 +209,8 @@ def _store_order_from_stop(stop):
         "lng": float(stop.lng) if stop.lng is not None else None,
         "status": "delivered" if stop.completed else "dispatch_ready" if stop.job_id else "received",
         "payment_status": "",
-        "total": 0.0,
+        "total": float(getattr(stop, "total_amount", 0) or 0),
+        "display_total": float(getattr(stop, "total_amount", 0) or 0),
         "created_at": stop.created_at.isoformat() if stop.created_at else None,
         "item_count": max(1, int(stop.demand or 1)),
         "item_summary": stop.notes or f"{max(1, int(stop.demand or 1))} package(s)",
@@ -306,7 +307,7 @@ def _insert_canonical_order(db, company_id, canonical, correlation_id, idempoten
     if canonical["errors"]:
         return None, "rejected"
 
-    stop = Stop(
+        stop = Stop(
         id=f"ORD-{uuid.uuid4().hex[:10].upper()}",
         order_id=order_id,
         customer_name=canonical["customer_name"],
@@ -554,6 +555,7 @@ def import_store_orders():
                 phone=o["customer_phone"] or "",
                 notes=o["item_summary"][:500] if o["item_summary"] else "",
                 time_window_start="", time_window_end="",
+                total_amount=o.get("display_total") or o.get("total") or 0,
                 company_id=company_id,
             )
             try:

@@ -1,7 +1,8 @@
 import os
+from decimal import Decimal
 import secrets
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Numeric
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.pool import NullPool
 
@@ -138,9 +139,14 @@ class Stop(Base):
     completed = Column(Boolean, default=False)
     completed_at = Column(DateTime, nullable=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
+    total_amount = Column(Numeric(12, 2), default=0)
     created_at = Column(DateTime, default=utcnow)
 
-    def to_dict(self):
+    def to_dict(self, display_total=None):
+        if display_total is None:
+            display_total = self.total_amount or 0
+        if isinstance(display_total, Decimal):
+            display_total = float(display_total)
         return {
             "id": self.id,
             "order_id": self.order_id,
@@ -158,6 +164,8 @@ class Stop(Base):
             "stop_number": self.stop_number,
             "completed": self.completed,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "total_amount": float(self.total_amount or 0),
+            "display_total": float(display_total or 0),
         }
 
 

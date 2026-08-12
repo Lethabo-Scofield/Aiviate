@@ -4,6 +4,10 @@ import { Spinner } from "../components/Loader";
 import { uploadExcel, optimizeStops, getStops, getJobs, getStoreOrders, importStoreOrders } from "../services/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+function fmtMoney(n) {
+  return `R ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export default function DispatchCenter({ embedded = false }) {
   const [step, setStep] = useState("upload");
   const [uploading, setUploading] = useState(false);
@@ -202,6 +206,7 @@ export default function DispatchCenter({ embedded = false }) {
                           </p>
                           <p className="text-[11px] text-[#ADB5BD] truncate">{o.shipping_address || "No shipping address"}</p>
                         </div>
+                        <span className="text-[11px] font-semibold text-[#111315] shrink-0">{fmtMoney(o.display_total ?? o.total)}</span>
                         {o.imported ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#34c759]/10 text-[#34c759] font-semibold shrink-0">Imported</span>
                         ) : !o.importable ? (
@@ -292,7 +297,7 @@ export default function DispatchCenter({ embedded = false }) {
                     <MapPin size={12} className="text-[#DEE2E6] shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[12px] font-medium text-[#111315] truncate">{stop.customer_name}</p>
-                      <p className="text-[11px] text-[#ADB5BD] truncate">{stop.address}</p>
+                      <p className="text-[11px] text-[#ADB5BD] truncate">{stop.address} · {fmtMoney(stop.display_total)}</p>
                     </div>
                   </div>
                 ))}
@@ -368,7 +373,7 @@ export default function DispatchCenter({ embedded = false }) {
               <CheckCircle size={20} className="text-[#34c759] shrink-0" />
               <div>
                 <p className="text-[14px] font-semibold text-[#111315]">{jobs.length} optimized jobs created</p>
-                <p className="text-[12px] text-[#868E96]">{stops.length} stops grouped by area with optimized sequences</p>
+                <p className="text-[12px] text-[#868E96]">{stops.length} stops grouped by area with optimized sequences · {fmtMoney(stops.reduce((sum, s) => sum + Number(s.display_total || 0), 0))}</p>
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
@@ -398,8 +403,8 @@ export default function DispatchCenter({ embedded = false }) {
                     <p className="text-[10px] text-[#ADB5BD]">stops</p>
                   </div>
                   <div className="bg-[#F1F3F5] rounded-xl p-2.5">
-                    <p className="text-[15px] font-semibold text-[#111315]">{job.total_distance_km} km</p>
-                    <p className="text-[10px] text-[#ADB5BD]">distance</p>
+                    <p className="text-[15px] font-semibold text-[#111315]">{fmtMoney(job.display_total)}</p>
+                    <p className="text-[10px] text-[#ADB5BD]">orders</p>
                   </div>
                 </div>
               </div>

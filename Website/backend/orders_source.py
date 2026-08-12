@@ -73,7 +73,11 @@ def fetch_orders():
         if "orders" in tables and _table_has_rows(conn, "orders"):
             return _fetch_storefront_orders(conn, "order_items" in tables)
         if "stops" in tables:
-            return _fetch_operational_stop_orders(conn)
+            return _fetch_operational_stop_orders(
+                conn,
+                has_orders_table="orders" in tables,
+                has_total_amount=_table_has_column(conn, "stops", "total_amount"),
+            )
         raise RuntimeError("Orders database has neither orders nor stops table")
 
 
@@ -100,6 +104,18 @@ def source_kind():
 
 def _table_has_rows(conn, table_name):
     return bool(conn.execute(text(f"SELECT EXISTS (SELECT 1 FROM {table_name} LIMIT 1)")).scalar())
+
+
+def _table_has_column(conn, table_name, column_name):
+    return bool(conn.execute(text("""
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = :table_name
+              AND column_name = :column_name
+        )
+    """), {"table_name": table_name, "column_name": column_name}).scalar())
 
 
 def _fetch_storefront_orders(conn, has_order_items=True):
@@ -147,17 +163,31 @@ def _fetch_storefront_orders(conn, has_order_items=True):
     return orders
 
 
-def _fetch_operational_stop_orders(conn):
+def _fetch_operational_stop_orders(conn, has_orders_table=False, has_total_amount=False):
     store_name = _store_name_filter()
-    where_clause = "WHERE customer_name = :store_name" if store_name else ""
+    where_clause = "WHERE s.customer_name = :store_name" if store_name else ""
     params = {"store_name": store_name} if store_name else {}
+    join_clause = """
+        LEFT JOIN orders sto_order
+          ON s.order_id = 'STORE-' || sto_order.id::text
+    """ if has_orders_table else ""
+    if has_total_amount and has_orders_table:
+        total_expr = "COALESCE(NULLIF(s.total_amount, 0), sto_order.total, 0)"
+    elif has_total_amount:
+        total_expr = "COALESCE(s.total_amount, 0)"
+    elif has_orders_table:
+        total_expr = "COALESCE(sto_order.total, 0)"
+    else:
+        total_expr = "0"
 
     rows = conn.execute(text(f"""
-        SELECT id, order_id, customer_name, address, lat, lng, demand,
-               service_time, phone, notes, job_id, completed, created_at
-        FROM stops
+        SELECT s.id, s.order_id, s.customer_name, s.address, s.lat, s.lng, s.demand,
+               s.service_time, s.phone, s.notes, s.job_id, s.completed, s.created_at,
+               {total_expr} AS display_total
+        FROM stops s
+        {join_clause}
         {where_clause}
-        ORDER BY created_at DESC
+        ORDER BY s.created_at DESC
     """), params).mappings().all()
 
     orders = []
@@ -173,7 +203,8 @@ def _fetch_operational_stop_orders(conn):
             "lng": float(r["lng"]) if r["lng"] is not None else None,
             "status": "delivered" if r["completed"] else "dispatch_ready" if r["job_id"] else "received",
             "payment_status": "",
-            "total": 0.0,
+            "total": float(r["display_total"] or 0),
+            "display_total": float(r["display_total"] or 0),
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
             "item_count": item_count,
             "item_summary": r["notes"] or f"{item_count} package(s)",

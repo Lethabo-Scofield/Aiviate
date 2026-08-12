@@ -6,6 +6,7 @@ from flask import request, jsonify, g
 from routes import jobs_bp
 from middleware import require_auth, require_admin
 from models import Job, Driver
+from stop_totals import stop_display_totals
 from utils import get_db_session
 
 
@@ -16,7 +17,14 @@ def get_jobs():
     db = get_db_session()
     try:
         jobs = db.query(Job).filter(Job.company_id == g.company_id).all()
-        return jsonify({"jobs": [j.to_dict() for j in jobs]})
+        totals = stop_display_totals(db, company_id=g.company_id)
+        jobs_out = []
+        for job in jobs:
+            data = job.to_dict()
+            data["stops"] = [s.to_dict(display_total=totals.get(s.id)) for s in job.stops]
+            data["display_total"] = round(sum((s.get("display_total") or 0) for s in data["stops"]), 2)
+            jobs_out.append(data)
+        return jsonify({"jobs": jobs_out})
     finally:
         db.close()
 

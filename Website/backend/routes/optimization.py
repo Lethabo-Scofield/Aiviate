@@ -65,6 +65,7 @@ def _normalize_rows(rows):
         row.setdefault("Service_Time", 15)
         row.setdefault("Phone", "")
         row.setdefault("Notes", "")
+        row.setdefault("Total_Amount", 0)
         row.setdefault("Time_Window_Start", "")
         row.setdefault("Time_Window_End", "")
 
@@ -85,6 +86,15 @@ def _safe_str(val):
         return ""
     s = str(val).strip()
     return "" if s.lower() == "nan" else s
+
+
+def _safe_float(val, default):
+    if val is None or val == "":
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
 
 
 def _geocode_rows(rows):
@@ -117,6 +127,7 @@ def _geocode_rows(rows):
             "service_time": _safe_int(row.get("Service_Time"), 15),
             "phone": _safe_str(row.get("Phone", "")),
             "notes": _safe_str(row.get("Notes", "")),
+            "total_amount": _safe_float(row.get("Total_Amount"), 0.0),
         }
         stops_data.append(stop_dict)
         time_module.sleep(1.1)
@@ -161,6 +172,7 @@ def upload_excel():
                     address=s["address"], lat=s["lat"], lng=s["lng"], demand=s["demand"],
                     service_time=s["service_time"], phone=s["phone"], notes=s["notes"],
                     time_window_start=s["time_window_start"], time_window_end=s["time_window_end"],
+                    total_amount=s.get("total_amount", 0),
                     company_id=company_id,
                 ))
             db.commit()
@@ -334,6 +346,7 @@ def _create_jobs_from_clusters(db, clusters, company_id):
                     notes=stop_data.get("notes", ""),
                     time_window_start=stop_data.get("time_window_start", ""),
                     time_window_end=stop_data.get("time_window_end", ""),
+                    total_amount=stop_data.get("total_amount") or stop_data.get("display_total") or 0,
                     job_id=job_id, stop_number=i + 1,
                     company_id=company_id,
                 ))

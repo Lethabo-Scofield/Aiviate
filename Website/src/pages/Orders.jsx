@@ -294,7 +294,7 @@ function OrderCard({ order: o, expanded, onToggle, onImport, importingThis, impo
           </p>
         </div>
         <div className="text-right shrink-0 hidden xs:block sm:block">
-          <p className="text-[13px] font-semibold text-[#111315]">{fmtMoney(o.total)}</p>
+          <p className="text-[13px] font-semibold text-[#111315]">{fmtMoney(o.display_total ?? o.total)}</p>
           <p className="text-[10.5px] text-[#ADB5BD] mt-0.5 whitespace-nowrap">{fmtRelative(o.created_at)}</p>
         </div>
         <ChevronDown
@@ -325,7 +325,7 @@ function OrderCard({ order: o, expanded, onToggle, onImport, importingThis, impo
               )}
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-black/[0.06]">
                 <span className="text-[12.5px] text-[#868E96]">Order total</span>
-                <span className="text-[13px] font-semibold text-[#111315]">{fmtMoney(o.total)}</span>
+                <span className="text-[13px] font-semibold text-[#111315]">{fmtMoney(o.display_total ?? o.total)}</span>
               </div>
             </div>
 

@@ -12,4 +12,5 @@ Example:
 
 ```bash
 psql "$DATABASE_URL" -f Website/backend/migrations/20260810_expand_operational_schema.sql
+psql "$DATABASE_URL" -f Website/backend/migrations/20260813_stop_total_amount.sql
 ```

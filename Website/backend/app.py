@@ -77,6 +77,7 @@ def _run_migrations():
         add_col_if_missing("jobs", "route_geometry", "TEXT")
         add_col_if_missing("jobs", "company_id", "VARCHAR REFERENCES companies(id)")
         add_col_if_missing("stops", "company_id", "VARCHAR REFERENCES companies(id)")
+        add_col_if_missing("stops", "total_amount", "NUMERIC(12,2) DEFAULT 0")
         add_col_if_missing("drivers", "company_id", "VARCHAR REFERENCES companies(id)")
         add_col_if_missing("drivers", "user_id", "VARCHAR")
         add_col_if_missing("drivers", "blocked", "BOOLEAN DEFAULT FALSE")
