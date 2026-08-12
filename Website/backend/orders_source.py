@@ -18,6 +18,10 @@ def orders_db_configured():
     return bool(os.environ.get("ORDERS_DATABASE_KEY"))
 
 
+def _store_name_filter():
+    return (os.environ.get("ORDERS_STORE_NAME") or "").strip()
+
+
 def _get_engine():
     global _engine
     if _engine is None:
@@ -144,12 +148,17 @@ def _fetch_storefront_orders(conn, has_order_items=True):
 
 
 def _fetch_operational_stop_orders(conn):
-    rows = conn.execute(text("""
+    store_name = _store_name_filter()
+    where_clause = "WHERE customer_name = :store_name" if store_name else ""
+    params = {"store_name": store_name} if store_name else {}
+
+    rows = conn.execute(text(f"""
         SELECT id, order_id, customer_name, address, lat, lng, demand,
                service_time, phone, notes, job_id, completed, created_at
         FROM stops
+        {where_clause}
         ORDER BY created_at DESC
-    """)).mappings().all()
+    """), params).mappings().all()
 
     orders = []
     for r in rows:

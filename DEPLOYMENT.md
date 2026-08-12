@@ -99,11 +99,15 @@ SKIP_DB_INIT=true
 ENGINE_URL=
 AIVIATE_SERVICE_TOKEN=
 MERCHANT_API_RATE_LIMIT_PER_MINUTE=120
+ORDERS_STORE_NAME=
 ```
 
 Notes:
 
 - Use `DATABASE_URL` or `NEON_DATABASE_URL`; both are supported.
+- If `ORDERS_DATABASE_KEY` points at a shared stops-backed store database, set
+  `ORDERS_STORE_NAME` to the exact store/customer name to show, for example
+  `Sasol Garage`.
 - `JWT_SECRET` must be stable across deployments or sessions will be invalidated.
 - `ALLOWED_ORIGINS` should be the production site URL and any approved preview origins. Avoid `*` in production.
 - `PUBLIC_APP_URL` is used when the backend generates customer tracking links.
