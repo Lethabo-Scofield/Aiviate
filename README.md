@@ -20,13 +20,14 @@ Simple product promise:
 
 ## What Is Deployable Today
 
-The primary deployable service is `Website/`.
+The primary deployable service is the root Vercel project, which builds
+`Website/` and serves the Flask API through root `api/`.
 
 It contains:
 
 - Vite React admin UI
-- Flask operational API mounted through `Website/api/index.py`
-- Vercel config at `Website/vercel.json`
+- Flask operational API mounted through `api/index.py`
+- Vercel config at root `vercel.json`
 - PostgreSQL persistence through `DATABASE_URL` or `NEON_DATABASE_URL`
 - Merchant ingestion API under `/api/integrations/*`
 - Customer-support API under `/api/customer-support/*`
@@ -82,7 +83,7 @@ Connect the Driver App to the real APP API:
 
 ```bash
 cd App
-$env:EXPO_PUBLIC_API_URL="https://aviate-api.azurewebsites.net/api"
+$env:EXPO_PUBLIC_API_URL="https://aiviate.olyxee.com/api"
 npm run web
 ```
 

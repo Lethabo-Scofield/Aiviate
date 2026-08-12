@@ -6,61 +6,76 @@ This document describes how to deploy the current repository without pretending 
 
 | Area | Path | Deployment target | Status |
 | --- | --- | --- | --- |
-| APP operational web/API | `Website/` | Vercel project root directory: `Website` | Ready for Vercel build with required env vars |
+| APP operational web/API | `Website/` + root `api/` | Vercel project root | Ready for Vercel build with required env vars |
 | Decision engine | `Website/aiviate-engine/` | Separate Python/FastAPI service | Required for real route planning |
 | Driver app | `App/` | Expo / EAS or local Expo runtime | Not a Vercel web service |
 | Call Agent | `Call Agent/Backend/` | Separate Node/Express service | Ready as a service shell with simulation mode |
 | Call Agent prototype frontend | `Call Agent/Frontend/` | None | Deprecated local prototype; do not deploy |
 | DEVICE | `DEVICE/` | None | Documentation only |
 
-## Azure Production Wiring
+## Current Production Wiring
 
 Current production endpoints:
 
 ```text
-Website UI: https://brave-tree-054688510.7.azurestaticapps.net
-APP API:    https://aviate-api.azurewebsites.net/api
+Website UI: https://aiviate.olyxee.com
+APP API:    https://aiviate.olyxee.com/api
 ```
 
-For Azure Static Web Apps, set the Website build environment variable:
+The Vercel frontend should use same-origin API calls. Do not set `VITE_API_URL`
+for the Vercel production frontend unless you intentionally want to bypass the
+same-origin `/api` route.
 
 ```text
-VITE_API_URL=https://aviate-api.azurewebsites.net/api
+VITE_API_URL=
 ```
 
-The frontend also has a browser-runtime production fallback to the same API URL when it is not running on `localhost`, but the explicit Azure setting is preferred so every build is deterministic.
+The APP backend uses the operational Neon PostgreSQL database through either
+`NEON_DATABASE_URL` or `DATABASE_URL`. The Neon database currently contains the
+authoritative operational tables such as `companies`, `users`, `jobs`, `stops`,
+`drivers`, `alerts`, `devices`, `safety_events`, `autopilot_settings`,
+`integration_settings` and `audit_log`.
 
-For the Azure App Service backend, allow the Static Web App origin:
+Required production values:
 
 ```text
-ALLOWED_ORIGINS=https://brave-tree-054688510.7.azurestaticapps.net
-PUBLIC_APP_URL=https://brave-tree-054688510.7.azurestaticapps.net
+NEON_DATABASE_URL=<Neon operational PostgreSQL URL>
+JWT_SECRET=<stable production secret>
+ALLOWED_ORIGINS=https://aiviate.olyxee.com
+PUBLIC_APP_URL=https://aiviate.olyxee.com
+SKIP_DB_INIT=true
 ```
 
-Use comma-separated origins if you add a branded domain later.
+Use comma-separated origins if you add approved preview domains later.
+
+Azure App Service is no longer the primary API path for the Vercel site. If you
+keep the Azure backend deployed, configure it with the same `NEON_DATABASE_URL`
+and `JWT_SECRET`; otherwise it will read a different database and users will see
+different orders.
 
 ## Vercel: Website And APP API
 
-Create or update the Vercel project with:
+Create or update the Vercel project with the repository root as the project
+root:
 
 ```text
-Root Directory: Website
-Install Command: npm ci --no-audit --no-fund
-Build Command: npm run build
-Output Directory: dist
+Root Directory: .
+Install Command: cd Website && npm ci --no-audit --no-fund
+Build Command: cd Website && npm run build
+Output Directory: Website/dist
 ```
 
-`Website/vercel.json` already routes:
+Root `vercel.json` routes:
 
 ```text
-/api/* -> api/index.py
-/*     -> index.html
+/api/* -> /api/index.py
+/*     -> /index.html
 ```
 
 The Python serverless entry point is:
 
 ```text
-Website/api/index.py
+api/index.py
 ```
 
 The Flask app factory is:
@@ -194,8 +209,8 @@ App
 It now has a real backend mode. When the API URL is set, the app shows a driver login screen and reads assigned jobs and driver profile data from the APP API:
 
 ```text
-EXPO_PUBLIC_API_URL=https://aviate-api.azurewebsites.net/api
-EXPO_PUBLIC_AIVIATE_API_URL=https://aviate-api.azurewebsites.net/api
+EXPO_PUBLIC_API_URL=https://aiviate.olyxee.com/api
+EXPO_PUBLIC_AIVIATE_API_URL=https://aiviate.olyxee.com/api
 EXPO_PUBLIC_AIVIATE_DRIVER_TOKEN=
 ```
 

@@ -15,7 +15,7 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://aviate-api.azurewebsites.net/api"
+        "EXPO_PUBLIC_API_URL": "https://aiviate.olyxee.com/api"
       },
       "android": {
         "buildType": "apk"
