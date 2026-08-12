@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  ShoppingBag, RefreshCw, Zap, AlertTriangle, CheckCircle, MapPin, Plug, Search,
+  ShoppingBag, RefreshCw, Zap, AlertTriangle, CheckCircle, MapPin, Search,
   ChevronDown, Phone, Mail, Package, CreditCard, Clock,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
@@ -75,7 +75,6 @@ function statusExplainer(order) {
 
 export default function Orders() {
   const [orders, setOrders] = useState(null);
-  const [configured, setConfigured] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -91,7 +90,6 @@ export default function Orders() {
       isRefresh ? setRefreshing(true) : setLoading(true);
       setError("");
       const res = await getStoreOrders();
-      setConfigured(!!res.configured);
       setOrders(res.orders || []);
     } catch (e) {
       setError(e.message || "Could not load orders.");
@@ -200,21 +198,7 @@ export default function Orders() {
         </div>
       )}
 
-      {!configured && !loading ? (
-        <div className="apple-card p-10 text-center max-w-xl">
-          <div className="w-12 h-12 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-4">
-            <Plug size={20} className="text-[#868E96]" strokeWidth={1.8} />
-          </div>
-          <h2 className="text-[16px] font-semibold text-[#111315] mb-1.5">No store connected</h2>
-          <p className="text-[13px] text-[#868E96] mb-5">
-            Connect your e-commerce store to see orders here and dispatch them in one click.
-          </p>
-          <Link to="/integrations" className="apple-btn apple-btn-primary text-[13px] py-2 px-4 inline-flex">
-            Go to Integrations
-          </Link>
-        </div>
-      ) : (
-        <>
+      <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
               { label: "Total orders", value: counts.total, tone: "text-[#111315]" },
@@ -278,8 +262,7 @@ export default function Orders() {
               ))}
             </div>
           )}
-        </>
-      )}
+      </>
     </div>
   );
 }
