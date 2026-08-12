@@ -11,6 +11,31 @@ from models import Driver, User, Job, Stop
 from utils import get_db_session, record_domain_event
 
 
+def _storefront_jobs_query(db, company_id, driver_id):
+    return (
+        db.query(Job)
+        .join(Stop, Stop.job_id == Job.id)
+        .filter(
+            Job.driver_id == driver_id,
+            Job.company_id == company_id,
+            Stop.order_id.like("STORE-%"),
+        )
+        .distinct()
+    )
+
+
+def _job_with_storefront_stops(job):
+    data = job.to_dict()
+    stops = [
+        s.to_dict()
+        for s in job.stops
+        if str(s.order_id or "").startswith("STORE-")
+    ]
+    data["stops"] = stops
+    data["total_stops"] = len(stops)
+    return data
+
+
 @drivers_bp.route("/api/drivers", methods=["GET"])
 @require_auth
 @require_admin
@@ -321,14 +346,11 @@ def get_my_jobs():
         if not driver:
             return jsonify({"jobs": [], "driver": None})
 
-        my_jobs = db.query(Job).filter(
-            Job.driver_id == driver.id,
-            Job.company_id == g.company_id,
-        ).all()
+        my_jobs = _storefront_jobs_query(db, g.company_id, driver.id).all()
 
         return jsonify({
             "driver": driver.to_dict(),
-            "jobs": [j.to_dict() for j in my_jobs],
+            "jobs": [_job_with_storefront_stops(j) for j in my_jobs],
         })
     finally:
         db.close()
@@ -519,8 +541,11 @@ def get_driver_jobs(driver_id):
         ).first()
         if not driver:
             return jsonify({"error": "Driver not found"}), 404
-        driver_jobs = db.query(Job).filter(Job.driver_id == driver_id, Job.company_id == g.company_id).all()
-        return jsonify({"driver_id": driver_id, "jobs": [j.to_dict() for j in driver_jobs]})
+        driver_jobs = _storefront_jobs_query(db, g.company_id, driver_id).all()
+        return jsonify({
+            "driver_id": driver_id,
+            "jobs": [_job_with_storefront_stops(j) for j in driver_jobs],
+        })
     finally:
         db.close()
 

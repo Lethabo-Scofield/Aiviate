@@ -26,6 +26,9 @@ export const API_URL =
   process.env.EXPO_PUBLIC_AIVIATE_API_URL ||
   (Platform.OS === 'web' ? DEFAULT_WEB_API : DEFAULT_NATIVE_API);
 
+export const DEFAULT_DRIVER_EMAIL = process.env.EXPO_PUBLIC_DEFAULT_DRIVER_EMAIL || '';
+export const DEFAULT_DRIVER_PASSWORD = process.env.EXPO_PUBLIC_DEFAULT_DRIVER_PASSWORD || '';
+
 // Deep-link scheme used by activation links (must match app.json `scheme`).
 export const APP_SCHEME = process.env.EXPO_PUBLIC_APP_SCHEME || 'aviate';
 
@@ -47,4 +50,4 @@ export const NETWORK = {
   maxAttempts: 8,
 };
 
-export default { API_URL, APP_SCHEME, FEATURES, NETWORK };
+export default { API_URL, DEFAULT_DRIVER_EMAIL, DEFAULT_DRIVER_PASSWORD, APP_SCHEME, FEATURES, NETWORK };

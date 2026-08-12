@@ -9,12 +9,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { haptic } from '../utils/haptics';
 import { COLORS } from '../theme';
+import { DEFAULT_DRIVER_EMAIL, DEFAULT_DRIVER_PASSWORD } from '../config';
 
 export default function LoginScreen({ navigation }) {
   const { signIn } = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(DEFAULT_DRIVER_EMAIL);
+  const [password, setPassword] = useState(DEFAULT_DRIVER_PASSWORD);
   const [busy, setBusy] = useState(false);
 
   const canSubmit = email.trim().length > 3 && password.length > 0 && !busy;
