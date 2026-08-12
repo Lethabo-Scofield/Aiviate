@@ -4,19 +4,6 @@
   "buildCommand": "cd Website && npm run build",
   "outputDirectory": "Website/dist",
   "framework": "vite",
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "Website/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
