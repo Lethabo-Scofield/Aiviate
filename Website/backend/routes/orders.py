@@ -224,6 +224,7 @@ def _store_order_from_stop(stop):
 def _list_operational_orders(company_id):
     db = get_db_session()
     try:
+        _ensure_default_store_orders(db, company_id)
         stops = (
             db.query(Stop)
             .filter(Stop.company_id == company_id)
@@ -233,6 +234,64 @@ def _list_operational_orders(company_id):
         return [_store_order_from_stop(s) for s in stops]
     finally:
         db.close()
+
+
+def _ensure_default_store_orders(db, company_id):
+    """Give every tenant a default operational store feed.
+
+    Existing tenants keep their own data. New tenants get a small copied set of
+    demo delivery stops under their own company_id, so the Orders page has real
+    database-backed records without exposing another tenant's records.
+    """
+    existing_count = db.query(Stop.id).filter(Stop.company_id == company_id).count()
+    if existing_count:
+        return
+
+    template_stops = (
+        db.query(Stop)
+        .filter(Stop.company_id == "CMP-DEMO0001")
+        .order_by(Stop.created_at.desc())
+        .limit(6)
+        .all()
+    )
+    if not template_stops:
+        template_stops = [
+            Stop(
+                id="DEFAULT-TEMPLATE-1",
+                order_id="DEFAULT-001",
+                customer_name="Demo Customer",
+                address="Sandton City, Johannesburg",
+                lat=-26.1076,
+                lng=28.0567,
+                demand=1,
+                service_time=15,
+                phone="+27110000000",
+                notes="Default store package",
+            )
+        ]
+
+    now = datetime.now(timezone.utc)
+    for index, template in enumerate(template_stops, start=1):
+        order_id = f"DEFAULT-{index:03d}"
+        if db.query(Stop.id).filter(Stop.company_id == company_id, Stop.order_id == order_id).first():
+            continue
+        db.add(Stop(
+            id=f"ORD-{uuid.uuid4().hex[:10].upper()}",
+            order_id=order_id,
+            customer_name=template.customer_name or f"Default Customer {index}",
+            address=template.address or "Johannesburg, South Africa",
+            lat=template.lat,
+            lng=template.lng,
+            demand=template.demand or 1,
+            service_time=template.service_time or 15,
+            phone=template.phone or "",
+            notes=template.notes or "Default store package",
+            time_window_start=template.time_window_start or "",
+            time_window_end=template.time_window_end or "",
+            company_id=company_id,
+            created_at=now,
+        ))
+    db.commit()
 
 
 def _insert_canonical_order(db, company_id, canonical, correlation_id, idempotency=None):
