@@ -4,10 +4,23 @@
   "buildCommand": "cd Website && npm run build",
   "outputDirectory": "Website/dist",
   "framework": "vite",
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "Website/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://aviate-api.azurewebsites.net/api/$1"
+      "destination": "/api/index.py"
     },
     {
       "source": "/(.*)",
