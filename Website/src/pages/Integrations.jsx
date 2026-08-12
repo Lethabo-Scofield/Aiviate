@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plug, ShoppingBag, RefreshCw, ArrowRight, Globe, Lock,
+  ShoppingBag, RefreshCw, ArrowRight, Globe, Lock,
   Pencil, Check, X, ImagePlus, Trash2, Code2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
@@ -66,13 +66,13 @@ export default function Integrations() {
       const res = await getStoreOrders();
       const orders = res.orders || [];
       setStatus({
-        configured: !!res.configured,
+        configured: true,
         orderCount: orders.length,
         newCount: orders.filter((o) => !o.imported && o.importable).length,
         checkedAt: new Date(),
       });
     } catch {
-      setStatus({ configured: false, orderCount: 0, newCount: 0, checkedAt: new Date() });
+      setStatus({ configured: true, orderCount: 0, newCount: 0, checkedAt: new Date() });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -144,7 +144,7 @@ export default function Integrations() {
 
       {loading ? (
         <div className="apple-card p-10 text-center mb-8"><Spinner size={22} className="mx-auto" /></div>
-      ) : status?.configured ? (
+      ) : (
         <div className="apple-card p-5 sm:p-6 mb-8">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4 min-w-0 flex-1">
@@ -273,15 +273,6 @@ export default function Integrations() {
               View orders <ArrowRight size={13} />
             </Link>
           </div>
-        </div>
-      ) : (
-        <div className="apple-card p-8 text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-[#F1F3F5] flex items-center justify-center mx-auto mb-3">
-            <Plug size={20} className="text-[#868E96]" strokeWidth={1.8} />
-          </div>
-          <p className="text-[13px] text-[#868E96]">
-            Nothing connected yet. Ask your team to add your store's connection details.
-          </p>
         </div>
       )}
 
