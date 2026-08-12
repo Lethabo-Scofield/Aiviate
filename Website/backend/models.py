@@ -365,13 +365,15 @@ class IntegrationSettings(Base):
     def to_dict(self):
         return {
             "company_id": self.company_id,
-            "display_name": self.display_name,
+            "display_name": self.display_name or "Aiviate Operational Store",
             "logo": self.logo,
             "merchant_api_key_prefix": self.merchant_api_key_prefix,
             "merchant_api_key_created_at": (
                 self.merchant_api_key_created_at.isoformat()
                 if self.merchant_api_key_created_at else None
             ),
+            "source": "operational_stops",
+            "default": not bool(self.display_name or self.logo or self.merchant_api_key_hash),
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 

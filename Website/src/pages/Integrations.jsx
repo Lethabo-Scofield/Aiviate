@@ -88,7 +88,7 @@ export default function Integrations() {
       .catch(() => {});
   }, []);
 
-  const storeName = branding.display_name || "Storefront Orders API";
+  const storeName = branding.display_name || "Aiviate Operational Store";
 
   const startEdit = () => {
     setDraftName(branding.display_name || "");
@@ -180,7 +180,7 @@ export default function Integrations() {
                       type="text"
                       value={draftName}
                       onChange={(e) => setDraftName(e.target.value)}
-                      placeholder="Storefront Orders API"
+                      placeholder="Aiviate Operational Store"
                       maxLength={80}
                       autoFocus
                       className="w-full max-w-xs px-3 py-1.5 rounded-lg border border-black/[0.1] text-[14px] font-semibold text-[#111315] focus:outline-none focus:border-[#008080] focus:ring-2 focus:ring-[#008080]/15"
@@ -216,10 +216,10 @@ export default function Integrations() {
                 {!editing && (
                   <>
                     <p className="text-[12px] text-[#868E96] mt-1">
-                      Your e-commerce store · read-only order sync
+                      Default order source · tenant-scoped operational records
                     </p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      {["REST", "Orders", "Read-only"].map((t) => (
+                      {["Aiviate", "Orders", "Tenant scoped"].map((t) => (
                         <span key={t} className="text-[10px] px-2 py-0.5 rounded-md bg-[#F1F3F5] text-[#868E96] font-mono font-medium">{t}</span>
                       ))}
                     </div>
@@ -267,7 +267,7 @@ export default function Integrations() {
 
           <div className="flex items-center justify-between mt-5 pt-4 border-t border-black/[0.06]">
             <p className="text-[11px] text-[#ADB5BD] inline-flex items-center gap-1.5">
-              <Lock size={11} /> Credentials stored securely as an environment secret
+              <Lock size={11} /> Available by default for every account
             </p>
             <Link to="/orders" className="apple-btn apple-btn-primary text-[13px] py-2 px-4">
               View orders <ArrowRight size={13} />

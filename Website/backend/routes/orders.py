@@ -553,6 +553,20 @@ def _ensure_integration_table():
     _integration_table_ready = True
 
 
+def _get_or_create_default_integration(db, company_id):
+    settings = db.query(IntegrationSettings).filter(
+        IntegrationSettings.company_id == company_id
+    ).first()
+    if settings:
+        return settings, False
+    settings = IntegrationSettings(
+        company_id=company_id,
+        display_name="Aiviate Operational Store",
+    )
+    db.add(settings)
+    return settings, True
+
+
 @orders_bp.route("/api/store/integration", methods=["GET"])
 @require_auth
 @require_admin
@@ -565,10 +579,14 @@ def get_integration_settings():
 
     db = get_db_session()
     try:
-        settings = db.query(IntegrationSettings).filter(
-            IntegrationSettings.company_id == g.company_id
-        ).first()
-        return jsonify({"settings": settings.to_dict() if settings else None})
+        settings, created = _get_or_create_default_integration(db, g.company_id)
+        if created:
+            db.commit()
+        return jsonify({"settings": settings.to_dict()})
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Failed to load integration settings"}), 500
     finally:
         db.close()
 
@@ -601,12 +619,7 @@ def update_integration_settings():
 
     db = get_db_session()
     try:
-        settings = db.query(IntegrationSettings).filter(
-            IntegrationSettings.company_id == g.company_id
-        ).first()
-        if not settings:
-            settings = IntegrationSettings(company_id=g.company_id)
-            db.add(settings)
+        settings, _created = _get_or_create_default_integration(db, g.company_id)
 
         if "display_name" in data:
             settings.display_name = display_name
