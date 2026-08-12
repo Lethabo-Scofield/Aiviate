@@ -451,13 +451,11 @@ def list_store_orders():
         except Exception:
             traceback.print_exc()
 
-    if not orders_db_configured() or (
-        detected_source != "operational_stops" and not _company_owns_store(g.company_id)
-    ):
+    if not orders_db_configured():
         return jsonify({
             "configured": True,
-            "source": "operational_stops",
-            "orders": _list_operational_orders(g.company_id),
+            "source": "storefront_orders",
+            "orders": [],
         })
 
     try:
@@ -466,9 +464,9 @@ def list_store_orders():
         traceback.print_exc()
         return jsonify({
             "configured": True,
-            "source": "operational_stops",
-            "warning": "External orders database is unavailable or not in storefront schema; showing Aiviate operational orders.",
-            "orders": _list_operational_orders(g.company_id),
+            "source": detected_source,
+            "warning": "External orders database is unavailable.",
+            "orders": [],
         })
 
     db = get_db_session()
@@ -494,7 +492,11 @@ def list_store_orders():
 def import_store_orders():
     if not orders_db_configured():
         return jsonify({"error": "Orders database is not configured"}), 400
-    if not _company_owns_store(g.company_id):
+    try:
+        detected_source = source_kind()
+    except Exception:
+        detected_source = "unknown"
+    if detected_source not in ("storefront_orders", "operational_stops") and not _company_owns_store(g.company_id):
         return jsonify({"error": "Your company does not have access to this orders database"}), 403
 
     data = request.get_json(silent=True) or {}
