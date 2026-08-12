@@ -275,7 +275,13 @@ def get_road_route():
 
 
 def _clear_existing_jobs(db, company_id):
-    old_jobs = db.query(Job).filter(Job.company_id == company_id).all()
+    old_jobs = (
+        db.query(Job)
+        .join(Stop, Stop.job_id == Job.id)
+        .filter(Job.company_id == company_id, Stop.order_id.like("STORE-%"))
+        .distinct()
+        .all()
+    )
     for oj in old_jobs:
         for s in oj.stops:
             s.job_id = None
@@ -285,7 +291,10 @@ def _clear_existing_jobs(db, company_id):
 
 
 def _get_stops_for_optimization(db, company_id, data):
-    unassigned_stops = db.query(Stop).filter(Stop.company_id == company_id).all()
+    unassigned_stops = db.query(Stop).filter(
+        Stop.company_id == company_id,
+        Stop.order_id.like("STORE-%"),
+    ).all()
     stops_data = [s.to_dict() for s in unassigned_stops]
 
     incoming_stops = data.get("stops")

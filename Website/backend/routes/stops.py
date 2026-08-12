@@ -13,7 +13,10 @@ from utils import get_db_session
 def get_stops():
     db = get_db_session()
     try:
-        stops = db.query(Stop).filter(Stop.company_id == g.company_id).all()
+        stops = db.query(Stop).filter(
+            Stop.company_id == g.company_id,
+            Stop.order_id.like("STORE-%"),
+        ).all()
         totals = stop_display_totals(db, company_id=g.company_id)
         return jsonify({"stops": [stop_to_dict_with_total(s, totals) for s in stops]})
     finally:
