@@ -165,7 +165,11 @@ def upload_excel():
         company_id = g.company_id
         db = get_db_session()
         try:
-            db.query(Stop).filter(Stop.job_id.is_(None), Stop.company_id == company_id).delete()
+            db.query(Stop).filter(
+                Stop.job_id.is_(None),
+                Stop.company_id == company_id,
+                Stop.order_id.like("STORE-%"),
+            ).delete(synchronize_session=False)
             for s in stops_data:
                 db.add(Stop(
                     id=s["id"], order_id=s["order_id"], customer_name=s["customer_name"],
@@ -215,9 +219,9 @@ def optimize():
         _clear_existing_jobs(db, company_id)
 
         stops_data = _get_stops_for_optimization(db, company_id, data)
-        if not stops_data or len(stops_data) < 2:
+        if not stops_data:
             db.rollback()
-            return jsonify({"error": "Need at least 2 stops to optimize"}), 400
+            return jsonify({"error": "No store stops available to optimize"}), 400
 
         clusters = cluster_stops(stops_data, radius_km=cluster_radius)
         jobs_created = _create_jobs_from_clusters(db, clusters, company_id)
@@ -299,7 +303,10 @@ def _get_stops_for_optimization(db, company_id, data):
 
     incoming_stops = data.get("stops")
     if incoming_stops and len(incoming_stops) >= 2:
-        stops_data = incoming_stops
+        stops_data = [
+            s for s in incoming_stops
+            if str(s.get("order_id") or "").startswith("STORE-")
+        ]
 
     return stops_data
 
@@ -315,9 +322,12 @@ def _create_jobs_from_clusters(db, clusters, company_id):
         center_lng = sum(s["lng"] for s in cluster) / len(cluster)
 
         locations = [(DEPOT["lat"], DEPOT["lng"])] + [(s["lat"], s["lng"]) for s in cluster]
-        dist_matrix = build_distance_matrix(locations)
-
-        ordered_stops, total_dist = _solve_tsp_local(cluster, locations, dist_matrix)
+        if len(cluster) == 1:
+            ordered_stops = cluster
+            total_dist = 0
+        else:
+            dist_matrix = build_distance_matrix(locations)
+            ordered_stops, total_dist = _solve_tsp_local(cluster, locations, dist_matrix)
 
         area_name = determine_area_name(center_lat, center_lng)
         est_time = int(total_dist / 35 * 60) + sum(s.get("service_time", 15) for s in ordered_stops)

@@ -8,6 +8,10 @@ function fmtMoney(n) {
   return `R ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function storeStopsOnly(list = []) {
+  return list.filter((s) => String(s.order_id || "").startsWith("STORE-"));
+}
+
 export default function DispatchCenter({ embedded = false }) {
   const [step, setStep] = useState("upload");
   const [uploading, setUploading] = useState(false);
@@ -23,6 +27,7 @@ export default function DispatchCenter({ embedded = false }) {
   const [refreshingOrders, setRefreshingOrders] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const readyStops = storeStopsOnly(stops);
 
   const loadStoreOrders = async () => {
     try {
@@ -42,8 +47,9 @@ export default function DispatchCenter({ embedded = false }) {
       try {
         const [stopsRes, jobsRes] = await Promise.all([getStops(), getJobs()]);
         const forceOptimize = searchParams.get("mode") === "optimize";
-        if (stopsRes.stops?.length > 0) {
-          setStops(stopsRes.stops);
+        const loadedStops = storeStopsOnly(stopsRes.stops || []);
+        if (loadedStops.length > 0) {
+          setStops(loadedStops);
           if (jobsRes.jobs?.length > 0 && !forceOptimize) {
             setJobs(jobsRes.jobs);
             setStep("results");
@@ -66,7 +72,7 @@ export default function DispatchCenter({ embedded = false }) {
     try {
       const result = await importStoreOrders();
       const [stopsRes] = await Promise.all([getStops(), loadStoreOrders()]);
-      const allStops = stopsRes.stops || result.stops || [];
+      const allStops = storeStopsOnly(stopsRes.stops || result.stops || []);
       if (allStops.length === 0) {
         setError("No orders could be imported. Check that orders have shipping addresses.");
         return;
@@ -93,7 +99,7 @@ export default function DispatchCenter({ embedded = false }) {
     try {
       const result = await uploadExcel(file);
       setUploadResult(result);
-      setStops(result.stops || []);
+      setStops(storeStopsOnly(result.stops || []));
       setStep("optimize");
     } catch (err) {
       setError(err.message);
@@ -106,7 +112,8 @@ export default function DispatchCenter({ embedded = false }) {
     setOptimizing(true);
     setError("");
     try {
-      const result = await optimizeStops(stops, 4, clusterRadius);
+      const storeStops = storeStopsOnly(stops);
+      const result = await optimizeStops(storeStops, 4, clusterRadius);
       setJobs(result.jobs || []);
       setStep("results");
     } catch (err) {
@@ -289,9 +296,9 @@ export default function DispatchCenter({ embedded = false }) {
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             <div className="md:col-span-3 apple-card p-5">
-              <h3 className="text-[13px] font-semibold text-[#111315] mb-3">{stops.length} addresses ready</h3>
+              <h3 className="text-[13px] font-semibold text-[#111315] mb-3">{readyStops.length} addresses ready</h3>
               <div className="max-h-64 overflow-y-auto space-y-1">
-                {stops.map((stop, idx) => (
+                {readyStops.map((stop, idx) => (
                   <div key={stop.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-[#F1F3F5] transition-colors">
                     <span className="text-[11px] font-bold text-[#c7c7cc] w-5 text-right shrink-0">{idx + 1}</span>
                     <MapPin size={12} className="text-[#DEE2E6] shrink-0" />
@@ -326,7 +333,7 @@ export default function DispatchCenter({ embedded = false }) {
 
               <button
                 onClick={handleOptimize}
-                disabled={optimizing || stops.length < 2}
+                disabled={optimizing || readyStops.length === 0}
                 className="apple-btn apple-btn-primary w-full"
               >
                 {optimizing ? <><Spinner size={16} /> Optimizing...</> : <><Zap size={16} /> Optimize Routes</>}
@@ -373,7 +380,7 @@ export default function DispatchCenter({ embedded = false }) {
               <CheckCircle size={20} className="text-[#34c759] shrink-0" />
               <div>
                 <p className="text-[14px] font-semibold text-[#111315]">{jobs.length} optimized jobs created</p>
-                <p className="text-[12px] text-[#868E96]">{stops.length} stops grouped by area with optimized sequences · {fmtMoney(stops.reduce((sum, s) => sum + Number(s.display_total || 0), 0))}</p>
+                <p className="text-[12px] text-[#868E96]">{readyStops.length} stops grouped by area with optimized sequences · {fmtMoney(readyStops.reduce((sum, s) => sum + Number(s.display_total || 0), 0))}</p>
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">

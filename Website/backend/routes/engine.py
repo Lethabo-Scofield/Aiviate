@@ -19,7 +19,7 @@ class DispatchError(Exception):
 
 
 def run_dispatch(db, company_id):
-    """Build optimized routes from all of a company's stops, persist one Job
+    """Build optimized routes from storefront stops, persist one Job
     per route, and round-robin assign each to an available driver.
 
     Shared by the HTTP endpoint and the Home agent so planning works the same
@@ -29,11 +29,14 @@ def run_dispatch(db, company_id):
     user-facing message when the plan cannot be built. The caller owns the
     session lifecycle (commit happens here; rollback/close stay with caller).
     """
-    stops = db.query(Stop).filter(Stop.company_id == company_id).all()
+    stops = db.query(Stop).filter(
+        Stop.company_id == company_id,
+        Stop.order_id.like("STORE-%"),
+    ).all()
     stops_data = [s.to_dict() for s in stops]
 
-    if len(stops_data) < 2:
-        raise DispatchError("Need at least 2 stops to build a plan. Upload deliveries first.")
+    if not stops_data:
+        raise DispatchError("No store stops available to build a plan.")
 
     try:
         result = engine_client.optimize_stops(stops_data)
@@ -100,10 +103,20 @@ def run_dispatch(db, company_id):
     # Remove any prior jobs for this company that are now empty because
     # all their stops were re-planned into the new AI jobs.
     new_ids = {job.id for job, _ in created_jobs}
-    for old_job in db.query(Job).filter(Job.company_id == company_id).all():
+    for old_job in (
+        db.query(Job)
+        .join(Stop, Stop.job_id == Job.id)
+        .filter(Job.company_id == company_id, Stop.order_id.like("STORE-%"))
+        .distinct()
+        .all()
+    ):
         if old_job.id in new_ids:
             continue
-        remaining = db.query(Stop).filter(Stop.job_id == old_job.id).count()
+        remaining = (
+            db.query(Stop)
+            .filter(Stop.job_id == old_job.id, Stop.order_id.like("STORE-%"))
+            .count()
+        )
         if remaining == 0:
             db.delete(old_job)
 
@@ -138,7 +151,10 @@ def engine_optimize():
 
     db = get_db_session()
     try:
-        stops = db.query(Stop).filter(Stop.company_id == company_id).all()
+        stops = db.query(Stop).filter(
+            Stop.company_id == company_id,
+            Stop.order_id.like("STORE-%"),
+        ).all()
         stops_data = [s.to_dict() for s in stops]
     finally:
         db.close()
