@@ -18,10 +18,6 @@ def orders_db_configured():
     return bool(os.environ.get("ORDERS_DATABASE_KEY"))
 
 
-def _store_name_filter():
-    return (os.environ.get("ORDERS_STORE_NAME") or "").strip()
-
-
 def _get_engine():
     global _engine
     if _engine is None:
@@ -56,9 +52,9 @@ def _get_engine():
 def fetch_orders():
     """Fetch orders from the configured store database.
 
-    Preferred schema is storefront-style `orders` + `order_items`. Some
-    existing Aiviate-connected store databases already store delivery orders as
-    operational `stops`; support that shape as a read-only store source too.
+    Preferred schema is storefront-style `orders` + `order_items`. BulkMart
+    also writes one shared-fleet row to `stops` per purchase with order_id
+    values like `STORE-42`; only those STORE-* stops are storefront orders.
     """
     engine = _get_engine()
     with engine.connect() as conn:
@@ -164,9 +160,7 @@ def _fetch_storefront_orders(conn, has_order_items=True):
 
 
 def _fetch_operational_stop_orders(conn, has_orders_table=False, has_total_amount=False):
-    store_name = _store_name_filter()
-    where_clause = "WHERE s.customer_name = :store_name" if store_name else ""
-    params = {"store_name": store_name} if store_name else {}
+    params = {}
     join_clause = """
         LEFT JOIN orders sto_order
           ON s.order_id = 'STORE-' || sto_order.id::text
@@ -186,7 +180,7 @@ def _fetch_operational_stop_orders(conn, has_orders_table=False, has_total_amoun
                {total_expr} AS display_total
         FROM stops s
         {join_clause}
-        {where_clause}
+        WHERE s.order_id LIKE 'STORE-%'
         ORDER BY s.created_at DESC
     """), params).mappings().all()
 
