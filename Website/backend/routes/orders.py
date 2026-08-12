@@ -15,7 +15,7 @@ from routes import orders_bp
 from middleware import require_auth, require_admin
 from models import Stop, Company, IntegrationSettings, AuditLog
 from optimize_route import geocode_address, DEPOT
-from orders_source import fetch_orders, orders_db_configured
+from orders_source import fetch_orders, orders_db_configured, source_kind
 from utils import get_db_session, record_domain_event
 
 ORDER_ID_PREFIX = "STORE-"
@@ -443,7 +443,16 @@ def _company_owns_store(company_id):
 @require_auth
 @require_admin
 def list_store_orders():
-    if not orders_db_configured() or not _company_owns_store(g.company_id):
+    detected_source = "none"
+    if orders_db_configured():
+        try:
+            detected_source = source_kind()
+        except Exception:
+            traceback.print_exc()
+
+    if not orders_db_configured() or (
+        detected_source != "operational_stops" and not _company_owns_store(g.company_id)
+    ):
         return jsonify({
             "configured": True,
             "source": "operational_stops",
@@ -475,7 +484,7 @@ def list_store_orders():
         o["imported"] = _store_order_id(o["id"]) in imported_ids
         o["importable"] = bool(o["shipping_address"])
 
-    return jsonify({"configured": True, "orders": orders})
+    return jsonify({"configured": True, "source": detected_source, "orders": orders})
 
 
 @orders_bp.route("/api/store/orders/import", methods=["POST"])
@@ -493,10 +502,7 @@ def import_store_orders():
     if requested_ids is not None:
         if not isinstance(requested_ids, list):
             return jsonify({"error": "order_ids must be a list of order IDs"}), 400
-        try:
-            requested = {int(i) for i in requested_ids}
-        except (TypeError, ValueError):
-            return jsonify({"error": "order_ids must contain only numeric IDs"}), 400
+        requested = {str(i) for i in requested_ids}
 
     try:
         orders = fetch_orders()
@@ -505,7 +511,7 @@ def import_store_orders():
         return jsonify({"error": "Could not reach the orders database"}), 502
 
     if requested_ids is not None:
-        orders = [o for o in orders if o["id"] in requested]
+        orders = [o for o in orders if str(o["id"]) in requested]
 
     company_id = g.company_id
     db = get_db_session()

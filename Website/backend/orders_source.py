@@ -50,25 +50,78 @@ def _get_engine():
 
 
 def fetch_orders():
-    """Fetch orders from the store database with their line items."""
+    """Fetch orders from the configured store database.
+
+    Preferred schema is storefront-style `orders` + `order_items`. Some
+    existing Aiviate-connected store databases already store delivery orders as
+    operational `stops`; support that shape as a read-only store source too.
+    """
     engine = _get_engine()
     with engine.connect() as conn:
-        rows = conn.execute(text("""
-            SELECT o.id, o.customer_name, o.customer_email, o.customer_phone,
-                   o.shipping_address, o.shipping_latitude, o.shipping_longitude,
-                   o.status, o.payment_status, o.total, o.created_at,
-                   COALESCE(items.item_count, 0) AS item_count,
-                   COALESCE(items.item_summary, '') AS item_summary
-            FROM orders o
-            LEFT JOIN (
-                SELECT order_id,
-                       SUM(quantity) AS item_count,
-                       STRING_AGG(product_name || ' x' || quantity, ', ' ORDER BY id) AS item_summary
-                FROM order_items
-                GROUP BY order_id
-            ) items ON items.order_id = o.id
-            ORDER BY o.created_at DESC
-        """)).mappings().all()
+        tables = {
+            row["table_name"]
+            for row in conn.execute(text("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+            """)).mappings()
+        }
+        if "orders" in tables and _table_has_rows(conn, "orders"):
+            return _fetch_storefront_orders(conn, "order_items" in tables)
+        if "stops" in tables:
+            return _fetch_operational_stop_orders(conn)
+        raise RuntimeError("Orders database has neither orders nor stops table")
+
+
+def source_kind():
+    """Return the detected store source kind without exposing connection data."""
+    if not orders_db_configured():
+        return "none"
+    engine = _get_engine()
+    with engine.connect() as conn:
+        tables = {
+            row["table_name"]
+            for row in conn.execute(text("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+            """)).mappings()
+        }
+        if "orders" in tables and _table_has_rows(conn, "orders"):
+            return "storefront_orders"
+        if "stops" in tables:
+            return "operational_stops"
+        return "unknown"
+
+
+def _table_has_rows(conn, table_name):
+    return bool(conn.execute(text(f"SELECT EXISTS (SELECT 1 FROM {table_name} LIMIT 1)")).scalar())
+
+
+def _fetch_storefront_orders(conn, has_order_items=True):
+    item_join = """
+        LEFT JOIN (
+            SELECT order_id,
+                   SUM(quantity) AS item_count,
+                   STRING_AGG(product_name || ' x' || quantity, ', ' ORDER BY id) AS item_summary
+            FROM order_items
+            GROUP BY order_id
+        ) items ON items.order_id = o.id
+    """ if has_order_items else ""
+    item_select = (
+        "COALESCE(items.item_count, 0) AS item_count,"
+        "COALESCE(items.item_summary, '') AS item_summary"
+    ) if has_order_items else "1 AS item_count, '' AS item_summary"
+
+    rows = conn.execute(text(f"""
+        SELECT o.id, o.customer_name, o.customer_email, o.customer_phone,
+               o.shipping_address, o.shipping_latitude, o.shipping_longitude,
+               o.status, o.payment_status, o.total, o.created_at,
+               {item_select}
+        FROM orders o
+        {item_join}
+        ORDER BY o.created_at DESC
+    """)).mappings().all()
 
     orders = []
     for r in rows:
@@ -86,5 +139,34 @@ def fetch_orders():
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
             "item_count": int(r["item_count"]),
             "item_summary": r["item_summary"],
+        })
+    return orders
+
+
+def _fetch_operational_stop_orders(conn):
+    rows = conn.execute(text("""
+        SELECT id, order_id, customer_name, address, lat, lng, demand,
+               service_time, phone, notes, job_id, completed, created_at
+        FROM stops
+        ORDER BY created_at DESC
+    """)).mappings().all()
+
+    orders = []
+    for r in rows:
+        item_count = max(1, int(r["demand"] or 1))
+        orders.append({
+            "id": r["order_id"] or r["id"],
+            "customer_name": r["customer_name"] or "",
+            "customer_email": "",
+            "customer_phone": r["phone"] or "",
+            "shipping_address": r["address"] or "",
+            "lat": float(r["lat"]) if r["lat"] is not None else None,
+            "lng": float(r["lng"]) if r["lng"] is not None else None,
+            "status": "delivered" if r["completed"] else "dispatch_ready" if r["job_id"] else "received",
+            "payment_status": "",
+            "total": 0.0,
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            "item_count": item_count,
+            "item_summary": r["notes"] or f"{item_count} package(s)",
         })
     return orders
