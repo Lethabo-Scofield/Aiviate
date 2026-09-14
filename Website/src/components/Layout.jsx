@@ -58,8 +58,8 @@ export default function Layout() {
   const [topText, setTopText] = useState("");
   const [profilePanel, setProfilePanel] = useState(null);
   const [themeMode, setThemeMode] = useState(() => {
-    try { return localStorage.getItem("aiviate_theme_mode") || "light"; }
-    catch { return "light"; }
+    try { return localStorage.getItem("aiviate_theme_mode") || "dark"; }
+    catch { return "dark"; }
   });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem("aiviate_sidebar_collapsed") === "true"; }

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import bcrypt
 from flask import request, jsonify, g
+from sqlalchemy import func
 
 from routes import drivers_bp
 from middleware import require_auth, require_admin
@@ -43,7 +44,42 @@ def get_drivers():
     db = get_db_session()
     try:
         drivers = db.query(Driver).filter(Driver.company_id == g.company_id).all()
-        return jsonify({"drivers": [d.to_dict() for d in drivers]})
+        job_counts = (
+            db.query(Job.driver_id, Job.status, func.count(func.distinct(Job.id)))
+            .join(Stop, Stop.job_id == Job.id)
+            .filter(
+                Job.company_id == g.company_id,
+                Job.driver_id.isnot(None),
+                Stop.order_id.like("STORE-%"),
+            )
+            .group_by(Job.driver_id, Job.status)
+            .all()
+        )
+
+        summaries = {}
+        for driver_id, status, count in job_counts:
+            summary = summaries.setdefault(
+                driver_id,
+                {"store_job_count": 0, "store_completed_jobs": 0, "store_active_jobs": 0},
+            )
+            summary["store_job_count"] += count
+            if status == "completed":
+                summary["store_completed_jobs"] += count
+            if status in ("assigned", "in_progress", "started"):
+                summary["store_active_jobs"] += count
+
+        drivers_out = []
+        for driver in drivers:
+            data = driver.to_dict()
+            data.update(
+                summaries.get(
+                    driver.id,
+                    {"store_job_count": 0, "store_completed_jobs": 0, "store_active_jobs": 0},
+                )
+            )
+            drivers_out.append(data)
+
+        return jsonify({"drivers": drivers_out})
     finally:
         db.close()
 
@@ -124,15 +160,18 @@ def get_driver_detail(driver_id):
         if not driver:
             return jsonify({"error": "Driver not found"}), 404
 
-        driver_jobs = db.query(Job).filter(Job.driver_id == driver_id, Job.company_id == g.company_id).all()
+        driver_jobs = _storefront_jobs_query(db, g.company_id, driver_id).all()
 
         completed_jobs = [j for j in driver_jobs if j.status == "completed"]
-        active_jobs = [j for j in driver_jobs if j.status in ("assigned",)]
+        active_jobs = [j for j in driver_jobs if j.status in ("assigned", "in_progress", "started")]
 
         total_stops_completed = 0
         total_stops_assigned = 0
         for job in driver_jobs:
-            stops = db.query(Stop).filter(Stop.job_id == job.id).all()
+            stops = db.query(Stop).filter(
+                Stop.job_id == job.id,
+                Stop.order_id.like("STORE-%"),
+            ).all()
             total_stops_completed += sum(1 for s in stops if s.completed)
             total_stops_assigned += len(stops)
 
@@ -143,7 +182,7 @@ def get_driver_detail(driver_id):
         result["active_jobs"] = len(active_jobs)
         result["total_stops_completed"] = total_stops_completed
         result["total_stops_assigned"] = total_stops_assigned
-        result["jobs"] = [j.to_dict() for j in driver_jobs]
+        result["jobs"] = [_job_with_storefront_stops(j) for j in driver_jobs]
 
         return jsonify({"driver": result})
     finally:
@@ -272,11 +311,14 @@ def get_driver_deliveries(driver_id):
         if not driver:
             return jsonify({"error": "Driver not found"}), 404
 
-        driver_jobs = db.query(Job).filter(Job.driver_id == driver_id, Job.company_id == g.company_id).all()
+        driver_jobs = _storefront_jobs_query(db, g.company_id, driver_id).all()
 
         deliveries = []
         for job in driver_jobs:
-            stops = db.query(Stop).filter(Stop.job_id == job.id).all()
+            stops = db.query(Stop).filter(
+                Stop.job_id == job.id,
+                Stop.order_id.like("STORE-%"),
+            ).all()
             completed_stops = [s for s in stops if s.completed]
             deliveries.append({
                 "job": job.to_dict(),

@@ -19,7 +19,13 @@ def _today_utc_start():
 def get_stats():
     db = get_db_session()
     try:
-        jobs = db.query(Job).filter(Job.company_id == g.company_id).all()
+        jobs = (
+            db.query(Job)
+            .join(Stop, Stop.job_id == Job.id)
+            .filter(Job.company_id == g.company_id, Stop.order_id.like("STORE-%"))
+            .distinct()
+            .all()
+        )
         drivers = db.query(Driver).filter(Driver.company_id == g.company_id).all()
         events = db.query(SafetyEvent).filter(SafetyEvent.company_id == g.company_id).all()
         devices = db.query(Device).filter(Device.company_id == g.company_id).all()

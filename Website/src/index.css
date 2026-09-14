@@ -194,6 +194,33 @@ button, input, textarea, select {
   color: #8f969d;
 }
 
+.dark-ui .chat-shell,
+.dark-ui .chat-composer-dock {
+  background: #0f1113 !important;
+}
+
+.dark-ui .chat-composer,
+.dark-ui .chat-tool-menu,
+.dark-ui .chat-suggestion-card {
+  background: #181a1c !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28) !important;
+}
+
+.dark-ui .chat-tool-item {
+  background: #101214 !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark-ui .chat-tool-item:hover,
+.dark-ui .chat-suggestion-card:hover {
+  background: #222529 !important;
+}
+
+.dark-ui .chat-tool-icon {
+  background: #222529 !important;
+}
+
 button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 /* Tabular numbers for aligned data / financial figures */

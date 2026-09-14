@@ -9,6 +9,9 @@ import {
   Camera,
   CameraOff,
   Activity,
+  BellRing,
+  BrainCircuit,
+  Ear,
   Plus,
   RefreshCw,
   Trash2,
@@ -17,6 +20,8 @@ import {
   CheckCircle2,
   ChevronRight,
   ShieldCheck,
+  Vibrate,
+  Video,
 } from "lucide-react";
 import {
   getDevices,
@@ -89,9 +94,157 @@ function readinessTier(score) {
   return { label: "Offline", color: "#868E96" };
 }
 
+function deviceKind(device) {
+  const model = (device.model || "").toLowerCase();
+  if (model.includes("anti-sleep")) {
+    return {
+      label: "Anti-sleep alarm",
+      Icon: Ear,
+      role: "Vibration and audible fatigue warning",
+      capability: "Driver wake alert",
+    };
+  }
+  if (model.includes("dashcam")) {
+    return {
+      label: "Dashcam ML",
+      Icon: Video,
+      role: "Driver-facing computer vision observations",
+      capability: "ML observation",
+    };
+  }
+  return {
+    label: "Guardian device",
+    Icon: ShieldCheck,
+    role: "Mobile safety telemetry",
+    capability: "Safety telemetry",
+  };
+}
+
 // Back-compat aliases used widely below
 const alertnessFromDevice = readinessFromDevice;
 const alertnessTier = readinessTier;
+
+function SafetyHardwareCard({ title, status, body, Icon, checks = [], action }) {
+  return (
+    <div className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_1px_2px_rgba(17,19,21,0.03)]">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F1F3F5] text-[#111315]">
+          <Icon size={19} strokeWidth={1.55} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[14px] font-semibold text-[#111315]">{title}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#5C636A]">{body}</p>
+            </div>
+            <span className="shrink-0 rounded-full border border-[#DEE2E6] bg-[#F8F9FA] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#5C636A]">
+              {status}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {checks.map(({ icon: CheckIcon, label }) => (
+              <div key={label} className="flex items-center gap-2 rounded-xl bg-[#F8F9FA] px-3 py-2 text-[12px] text-[#343A40]">
+                <CheckIcon size={14} strokeWidth={1.6} className="shrink-0 text-[#111315]" />
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+          {action && <div className="mt-4">{action}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeviceInventoryCard({ device, drivers, onOpen, onAssign, onOta, onRemove, otaBusy }) {
+  const kind = deviceKind(device);
+  const KindIcon = kind.Icon;
+  const readiness = readinessFromDevice(device);
+  const tier = readinessTier(readiness);
+  const online = device.status === "online";
+
+  return (
+    <article className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_1px_2px_rgba(17,19,21,0.03)] transition-colors hover:border-[#ADB5BD]">
+      <button type="button" onClick={onOpen} className="block w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1F3F5] text-[#111315]">
+              <KindIcon size={20} strokeWidth={1.55} />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-[14px] font-semibold text-[#111315]">{device.name}</h3>
+                <span className="rounded-full border border-[#DEE2E6] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5C636A]">
+                  {kind.label}
+                </span>
+              </div>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#868E96]">{kind.role}</p>
+              <p className="mt-2 font-mono text-[10.5px] text-[#ADB5BD]">{device.id} · {device.model}</p>
+            </div>
+          </div>
+          <span className={`mt-1 flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold capitalize ${
+            online ? "bg-[#F1F3F5] text-[#111315]" : "bg-[#F8F9FA] text-[#868E96]"
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-[#5C636A]" : "bg-[#ADB5BD]"}`} />
+            {device.status}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-xl bg-[#F8F9FA] px-3 py-2">
+            <p className="text-[10px] uppercase text-[#868E96] font-semibold">Readiness</p>
+            <p className="mt-1 text-[13px] font-semibold" style={{ color: tier.color }}>{online ? readiness : "—"} {online ? tier.label : "Offline"}</p>
+          </div>
+          <div className="rounded-xl bg-[#F8F9FA] px-3 py-2">
+            <p className="text-[10px] uppercase text-[#868E96] font-semibold">Battery</p>
+            <p className="mt-1 text-[13px] font-semibold text-[#111315]">{device.battery_pct}%</p>
+          </div>
+          <div className="rounded-xl bg-[#F8F9FA] px-3 py-2">
+            <p className="text-[10px] uppercase text-[#868E96] font-semibold">Signal</p>
+            <p className="mt-1 text-[13px] font-semibold text-[#111315]">{online ? `${device.signal_strength}%` : "—"}</p>
+          </div>
+        </div>
+      </button>
+
+      <div className="mt-4 flex flex-col gap-3 border-t border-black/[0.06] pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase text-[#868E96] font-semibold">Assigned driver</p>
+          <select
+            value={device.driver_id || ""}
+            onChange={(e) => onAssign(device.id, e.target.value)}
+            className="mt-1 w-full min-w-[180px] rounded-xl border border-[#DEE2E6] bg-[#F8F9FA] px-3 py-2 text-[12px] text-[#111315] sm:w-auto"
+          >
+            <option value="">Unassigned</option>
+            {drivers.map((driver) => (
+              <option key={driver.id} value={driver.id}>{driver.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-1">
+          {device.ota_status !== "up_to_date" && (
+            <button
+              type="button"
+              onClick={() => onOta(device.id)}
+              disabled={!!otaBusy}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F1F3F5] text-[#111315] hover:bg-[#E9ECEF]"
+              title="Update model"
+            >
+              {otaBusy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(device.id)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F1F3F5] text-[#868E96] hover:bg-[#E9ECEF] hover:text-[#111315]"
+            title="Remove device"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function Device3DCard({ device, driverName }) {
   const ref = useRef(null);
@@ -412,6 +565,7 @@ export default function Devices({ embedded = false }) {
   const onlineCount = devices.filter((d) => d.status === "online").length;
   const lowBattery = devices.filter((d) => d.battery_pct < 20).length;
   const updatesAvailable = devices.filter((d) => d.ota_status === "update_available").length;
+  const antiSleepAlarm = devices.find((d) => (d.model || "").toLowerCase().includes("anti-sleep"));
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -465,6 +619,80 @@ export default function Devices({ embedded = false }) {
         </button>
       </div>
 
+      <div className="grid gap-3 lg:grid-cols-2 mb-5">
+        <SafetyHardwareCard
+          title="Aiviate Anti-Sleep Alarm"
+          status={antiSleepAlarm ? "Connected" : "Ready to pair"}
+          Icon={Ear}
+          body={
+            antiSleepAlarm
+              ? `${antiSleepAlarm.name} is connected${antiSleepAlarm.driver_name ? ` to ${antiSleepAlarm.driver_name}` : ""}. It is treated as the live fatigue-warning device for vibration and audible anti-sleep alerts.`
+              : "An ear-worn anti-sleep alarm for driver fatigue warning. When drowsiness risk is detected, it first alerts the driver locally through vibration and sound, then sends an escalation event if the driver does not respond."
+          }
+          checks={[
+            { icon: Vibrate, label: "Vibration alert before escalation" },
+            { icon: BellRing, label: "Audible warning for micro-sleep risk" },
+            { icon: Activity, label: "Driver acknowledgement required" },
+            { icon: ShieldCheck, label: "Sends safety signal, not accident confirmation" },
+          ]}
+          action={
+            antiSleepAlarm ? (
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl bg-[#F8F9FA] px-3 py-2">
+                  <p className="text-[10px] uppercase text-[#868E96] font-semibold">Device</p>
+                  <p className="text-[12px] font-semibold text-[#111315]">{antiSleepAlarm.id}</p>
+                </div>
+                <div className="rounded-xl bg-[#F8F9FA] px-3 py-2">
+                  <p className="text-[10px] uppercase text-[#868E96] font-semibold">Status</p>
+                  <p className="text-[12px] font-semibold text-[#111315] capitalize">{antiSleepAlarm.status}</p>
+                </div>
+                <div className="rounded-xl bg-[#F8F9FA] px-3 py-2">
+                  <p className="text-[10px] uppercase text-[#868E96] font-semibold">Battery</p>
+                  <p className="text-[12px] font-semibold text-[#111315]">{antiSleepAlarm.battery_pct}%</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewModel("Aiviate Anti-Sleep Alarm");
+                  setNewName("Sipho Anti-Sleep Alarm");
+                  setShowAdd(true);
+                }}
+                className="apple-btn apple-btn-secondary text-[12px]"
+              >
+                <Plus size={14} /> Pair anti-sleep alarm
+              </button>
+            )
+          }
+        />
+        <SafetyHardwareCard
+          title="Aiviate Dashcam ML"
+          status="Design ready"
+          Icon={Video}
+          body="A driver-facing dashcam concept that runs machine-learning checks for eye closure, head pose, phone distraction, and driver non-response. The ML output is treated as an observation that needs policy checks before any escalation."
+          checks={[
+            { icon: Camera, label: "Driver-facing camera stream" },
+            { icon: BrainCircuit, label: "On-device ML where possible" },
+            { icon: CameraOff, label: "Privacy and retention controls required" },
+            { icon: ShieldCheck, label: "Observation to signal to reviewed incident" },
+          ]}
+          action={
+            <button
+              type="button"
+              onClick={() => {
+                setNewModel("Aiviate Dashcam ML");
+                setNewName("Sipho Dashcam");
+                setShowAdd(true);
+              }}
+              className="apple-btn apple-btn-secondary text-[12px]"
+            >
+              <Plus size={14} /> Pair dashcam
+            </button>
+          }
+        />
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
           { label: "Total devices", value: devices.length, color: "#111315" },
@@ -502,131 +730,29 @@ export default function Devices({ embedded = false }) {
           </button>
         </div>
       ) : (
-        <div className="apple-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-[#868E96] font-semibold border-b border-black/[0.06]">
-                  <th className="px-5 py-3">Guardian</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Readiness</th>
-                  <th className="px-5 py-3">Battery</th>
-                  <th className="px-5 py-3">Signal</th>
-                  <th className="px-5 py-3">Driver</th>
-                  <th className="px-5 py-3">Model</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devices.map((d) => (
-                  <tr
-                    key={d.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open ${d.name}`}
-                    onClick={() => setSelectedId(d.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setSelectedId(d.id);
-                      }
-                    }}
-                    className="border-b border-black/[0.04] last:border-0 hover:bg-[#fafafc] cursor-pointer transition-colors focus:outline-none focus-visible:bg-[#fafafc] focus-visible:ring-2 focus-visible:ring-[#111315]/40"
-                  >
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <p className="font-semibold text-[#111315]">{d.name}</p>
-                          <p className="text-[11px] text-[#ADB5BD]">{d.model} • {d.id}</p>
-                        </div>
-                        <ChevronRight size={14} className="text-[#c7c7cc] ml-1" />
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`w-2 h-2 rounded-full ${d.status === "online" ? "bg-[#5C636A]" : "bg-[#ADB5BD]"}`}
-                          style={d.status === "online" ? { animation: "pulseGlow 2s ease-in-out infinite" } : undefined}
-                        />
-                        <span className="text-[12px] font-medium text-[#343A40] capitalize">{d.status}</span>
-                      </div>
-                      <p className="text-[10px] text-[#ADB5BD] mt-1">last seen {timeAgo(d.last_seen)}</p>
-                    </td>
-                    <td className="px-5 py-3">
-                      {(() => {
-                        const a = alertnessFromDevice(d);
-                        const t = alertnessTier(a);
-                        return (
-                          <div className="flex items-center gap-2">
-                            <Eye size={13} style={{ color: t.color }} />
-                            <span className="text-[12px] font-semibold" style={{ color: t.color }}>{d.status === "online" ? a : "—"}</span>
-                            <span className="text-[10px] text-[#ADB5BD]">{t.label}</span>
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-5 py-3"><BatteryBadge pct={d.battery_pct} /></td>
-                    <td className="px-5 py-3">
-                      {d.status === "offline" ? (
-                        <WifiOff size={14} className="text-[#ADB5BD]" />
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <SignalBars strength={d.signal_strength} />
-                          <span className="text-[11px] text-[#868E96]">{d.signal_strength}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={d.driver_id || ""}
-                        onChange={(e) => handleAssign(d.id, e.target.value)}
-                        className="text-[12px] bg-[#F1F3F5] border-0 rounded-lg px-2 py-1.5 max-w-[140px]"
-                      >
-                        <option value="">— Unassigned —</option>
-                        {drivers.map((dr) => (
-                          <option key={dr.id} value={dr.id}>{dr.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[12px] text-[#343A40]">{d.model}</span>
-                        <span className="text-[10px] font-mono text-[#ADB5BD]">v{d.firmware_version}</span>
-                        {d.ota_status === "update_available" && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0a84ff]/10 text-[#0a84ff] font-semibold">
-                            UPDATE
-                          </span>
-                        )}
-                        {d.ota_status === "up_to_date" && (
-                          <CheckCircle2 size={12} className="text-[#5C636A]" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="inline-flex items-center gap-1">
-                        {d.ota_status !== "up_to_date" && (
-                          <button
-                            onClick={() => handleOta(d.id)}
-                            disabled={!!otaBusy[d.id]}
-                            title="Trigger OTA"
-                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#0a84ff]/10 text-[#0a84ff]"
-                          >
-                            {otaBusy[d.id] ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleRemove(d.id)}
-                          title="Remove"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#343A40]/10 text-[#868E96] hover:text-[#343A40]"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#111315]">Connected hardware</h2>
+              <p className="text-[12px] text-[#868E96]">Live safety devices paired to drivers, with status and health signals.</p>
+            </div>
+            <span className="hidden rounded-full border border-[#DEE2E6] px-2.5 py-1 text-[11px] font-medium text-[#5C636A] sm:inline-flex">
+              {devices.length} device{devices.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {devices.map((device) => (
+              <DeviceInventoryCard
+                key={device.id}
+                device={device}
+                drivers={drivers}
+                otaBusy={!!otaBusy[device.id]}
+                onOpen={() => setSelectedId(device.id)}
+                onAssign={handleAssign}
+                onOta={handleOta}
+                onRemove={handleRemove}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -669,7 +795,12 @@ export default function Devices({ embedded = false }) {
                 </div>
                 <div>
                   <label className="text-[12px] font-semibold text-[#343A40] mb-1 block">Hardware model</label>
-                  <input className="apple-input" value={newModel} onChange={(e) => setNewModel(e.target.value)} />
+                  <select className="apple-input" value={newModel} onChange={(e) => setNewModel(e.target.value)}>
+                    <option>Aiviate Mobile</option>
+                    <option>Aiviate Anti-Sleep Alarm</option>
+                    <option>Aiviate Dashcam ML</option>
+                    <option>Aiviate Guardian Combo</option>
+                  </select>
                 </div>
                 <div className="flex gap-2 justify-end pt-2">
                   <button type="button" onClick={() => setShowAdd(false)} className="apple-btn apple-btn-secondary">Cancel</button>

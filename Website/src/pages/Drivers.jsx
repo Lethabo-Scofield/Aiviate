@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Truck, Plus, Trash2, X, Copy, Check, KeyRound, Shield, Car, Bike, Container, Eye, EyeOff, Ban, RefreshCw, ChevronRight, MapPin, Clock, CheckCircle, ArrowLeft, Package } from "lucide-react";
 import { Spinner, SkeletonList } from "../components/Loader";
-import { getDrivers, addDriver, removeDriver, getJobs, getDriverDetail, toggleBlockDriver, resetDriverPassword, getDriverDeliveries } from "../services/api";
+import { getDrivers, addDriver, removeDriver, getDriverDetail, toggleBlockDriver, resetDriverPassword, getDriverDeliveries } from "../services/api";
 
 const VEHICLE_ICONS = { van: Container, truck: Truck, car: Car, bike: Bike };
 
@@ -292,7 +292,6 @@ function DriverDetailPanel({ driverId, onClose, onUpdate }) {
 
 export default function Drivers({ embedded = false }) {
   const [drivers, setDrivers] = useState([]);
-  const [jobs, setJobs] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", vehicle_type: "van", password: "" });
   const [loading, setLoading] = useState(true);
@@ -304,9 +303,8 @@ export default function Drivers({ embedded = false }) {
 
   const loadData = async () => {
     try {
-      const [d, j] = await Promise.all([getDrivers(), getJobs()]);
+      const d = await getDrivers();
       setDrivers(d.drivers || []);
-      setJobs(j.jobs || []);
       setError("");
     } catch (e) {
       console.error(e);
@@ -533,8 +531,8 @@ export default function Drivers({ embedded = false }) {
       ) : (
         <div className="space-y-2">
           {drivers.map((driver, i) => {
-            const driverJobs = jobs.filter(j => j.driver_id === driver.id);
-            const completedJobs = driverJobs.filter(j => j.status === "completed");
+            const driverJobCount = driver.store_job_count || 0;
+            const completedJobCount = driver.store_completed_jobs || 0;
             return (
               <div key={driver.id}
                 onClick={() => setSelectedDriverId(driver.id)}
@@ -559,11 +557,11 @@ export default function Drivers({ embedded = false }) {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 sm:gap-4">
-                  {driverJobs.length > 0 ? (
+                  {driverJobCount > 0 ? (
                     <div className="text-right hidden sm:block">
-                      <span className="text-[12px] font-semibold text-[#111315]">{driverJobs.length} job{driverJobs.length !== 1 ? "s" : ""}</span>
-                      {completedJobs.length > 0 && (
-                        <p className="text-[11px] text-[#868E96]">{completedJobs.length} completed</p>
+                      <span className="text-[12px] font-semibold text-[#111315]">{driverJobCount} job{driverJobCount !== 1 ? "s" : ""}</span>
+                      {completedJobCount > 0 && (
+                        <p className="text-[11px] text-[#868E96]">{completedJobCount} completed</p>
                       )}
                     </div>
                   ) : (

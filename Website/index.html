@@ -9,7 +9,17 @@
     <meta name="keywords" content="logistics, dispatch, route optimization, fleet management, delivery, driver management, SaaS, last-mile delivery, route planning" />
     <meta name="author" content="Aiviate" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#008080" />
+    <meta name="theme-color" content="#0f1113" />
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem("aiviate_theme_mode") || "dark";
+          if (mode === "dark") document.documentElement.classList.add("dark-ui");
+        } catch (e) {
+          document.documentElement.classList.add("dark-ui");
+        }
+      })();
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

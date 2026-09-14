@@ -10,6 +10,7 @@ import traceback
 import uuid
 from datetime import datetime, timezone
 
+import requests
 from flask import jsonify, g, request
 from sqlalchemy import desc
 
@@ -28,6 +29,7 @@ from intelligence.workflow_engine import run_autonomous_workflows
 from intelligence.auto_optimizer import optimize_job_stops
 from intelligence.autopilot import autopilot_status, run_autopilot, update_settings
 from intelligence import command_parser, natural_parser
+from intelligence.llm_chat import LLMUnavailable, answer as llm_answer, is_configured as llm_is_configured
 from intelligence.driver_notifier import notify_driver
 from agents import Orchestrator
 from agents.context import build_context as _agents_ctx
@@ -364,19 +366,25 @@ def _exec_drivers(db, company_id):
 
 
 def _exec_jobs(db, company_id):
-    rows = db.query(Job).filter(Job.company_id == company_id).all()
+    rows = (
+        db.query(Job)
+        .join(Stop, Stop.job_id == Job.id)
+        .filter(Job.company_id == company_id, Stop.order_id.like("STORE-%"))
+        .distinct()
+        .all()
+    )
     items = [
         {
             "id": j.id,
             "area": j.area,
             "status": j.status,
             "driver_name": j.driver_name,
-            "total_stops": j.total_stops,
+            "total_stops": len([s for s in j.stops if (s.order_id or "").startswith("STORE-")]),
             "total_distance_km": j.total_distance_km,
         }
         for j in rows
     ]
-    return _resp(True, f"{len(items)} jobs", type="jobs", items=items)
+    return _resp(True, f"{len(items)} real storefront job{'s' if len(items) != 1 else ''}", type="jobs", items=items)
 
 
 def _route_payload(db, company_id, job):
@@ -529,8 +537,20 @@ def _exec_recommendations(db, company_id):
 def _exec_stats(db, company_id):
     drivers = db.query(Driver).filter(Driver.company_id == company_id).count()
     blocked = db.query(Driver).filter(Driver.company_id == company_id, Driver.blocked == True).count()  # noqa: E712
-    jobs = db.query(Job).filter(Job.company_id == company_id).count()
-    unassigned = db.query(Job).filter(Job.company_id == company_id, Job.status == "unassigned").count()
+    jobs = (
+        db.query(Job)
+        .join(Stop, Stop.job_id == Job.id)
+        .filter(Job.company_id == company_id, Stop.order_id.like("STORE-%"))
+        .distinct()
+        .count()
+    )
+    unassigned = (
+        db.query(Job)
+        .join(Stop, Stop.job_id == Job.id)
+        .filter(Job.company_id == company_id, Job.status == "unassigned", Stop.order_id.like("STORE-%"))
+        .distinct()
+        .count()
+    )
     alerts = db.query(Alert).filter(Alert.company_id == company_id, Alert.is_read == False).count()  # noqa: E712
     items = [
         {"label": "Drivers", "value": drivers},
@@ -721,6 +741,70 @@ def _exec_acknowledge(db, company_id, rec_id, actor):
     return _resp(True, f"Acknowledged {rec_id}", type="acknowledge")
 
 
+ACTION_INTENTS = {
+    "autopilot_run",
+    "autopilot_update",
+    "assign",
+    "unassign",
+    "optimize",
+    "optimize_all",
+    "dispatch",
+    "block",
+    "unblock",
+    "acknowledge",
+    "notify",
+}
+
+READONLY_INTENTS = {
+    "help",
+    "greeting",
+    "autopilot",
+    "drivers",
+    "jobs",
+    "route",
+    "map",
+    "alerts",
+    "audit",
+    "recommendations",
+    "stats",
+}
+
+
+def _looks_like_exact_command(text, normalized, parsed):
+    """Keep typed command-palette commands deterministic.
+
+    Conversational text should go to the LLM, even if the natural parser can map
+    it to a read-only command. Exact commands such as `jobs`, `drivers`, `stats`,
+    or `route J-1` still return structured UI blocks.
+    """
+    raw = (text or "").strip().lower()
+    norm = (normalized or "").strip().lower()
+    if raw != norm:
+        return False
+    exact_readonly_commands = {"help", "map"}
+    if raw in exact_readonly_commands:
+        return True
+    if raw.startswith("route ") or raw.startswith("show route "):
+        return True
+    return parsed.get("intent") in ACTION_INTENTS
+
+
+def _llm_response_or_error(db, company_id, text, parse_error=None):
+    if not llm_is_configured():
+        return None
+    try:
+        result = llm_answer(db, company_id, text, parse_error)
+        result["input"] = text
+        return result
+    except (LLMUnavailable, requests.RequestException) as exc:
+        return {
+            "ok": False,
+            "summary": f"LLM fallback is configured but failed: {exc}",
+            "input": text,
+            "llm": False,
+        }
+
+
 @intelligence_bp.route("/api/intelligence/command", methods=["POST"])
 @require_auth
 @require_admin
@@ -731,11 +815,24 @@ def run_command():
     normalized = natural_parser.normalize(text)
     parsed = command_parser.parse(normalized)
     if "error" in parsed:
-        return jsonify({
-            "ok": False,
-            "summary": _humanize_parse_error(parsed["error"], text),
-            "input": text,
-        }), 200
+        db = get_db_session()
+        try:
+            llm_result = _llm_response_or_error(db, g.company_id, text, parsed["error"])
+            if llm_result:
+                if not llm_result.get("ok"):
+                    llm_result["summary"] = f"{_humanize_parse_error(parsed['error'], text)} {llm_result['summary']}"
+                return jsonify(llm_result), 200
+            return jsonify({
+                "ok": False,
+                "summary": (
+                    _humanize_parse_error(parsed["error"], text)
+                    + " The LLM layer is not enabled on this backend; set OPENAI_API_KEY and restart the API."
+                ),
+                "input": text,
+                "llm": False,
+            }), 200
+        finally:
+            db.close()
 
     intent = parsed["intent"]
     args = parsed.get("args", [])
@@ -744,6 +841,15 @@ def run_command():
     db = get_db_session()
     try:
         cid = g.company_id
+        if (
+            intent in READONLY_INTENTS
+            and llm_is_configured()
+            and not _looks_like_exact_command(text, normalized, parsed)
+        ):
+            llm_result = _llm_response_or_error(db, cid, text)
+            if llm_result:
+                return jsonify(llm_result), 200
+
         try:
             if intent == "help":
                 result = _exec_help()

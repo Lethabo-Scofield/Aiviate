@@ -196,7 +196,7 @@ function TypewriterResult({ result, onDone }) {
     return () => window.clearInterval(id);
   }, [text, result, onDone]);
 
-  const hasDetails = result?.ok && result?.type && result.type !== "greeting";
+  const hasDetails = result?.ok && result?.type && !["greeting", "llm"].includes(result.type);
 
   return (
     <div className="space-y-3">
@@ -215,16 +215,16 @@ function TypewriterResult({ result, onDone }) {
 
 function ChatTurn({ turn, onTyped, assistantName }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex justify-end">
-        <div className="max-w-[78%] rounded-[22px] rounded-br-md bg-[#111315] px-4 py-3 text-[15px] leading-[1.58] text-white shadow-[0_6px_20px_rgba(17,19,21,0.14)]">
+        <div className="max-w-[78%] rounded-2xl bg-[#111315] px-4 py-3 text-[15px] leading-[1.58] text-white">
           {turn.input}
         </div>
       </div>
 
       <div className="flex items-start gap-3">
-        <img src="/logo.png" alt="" className="mt-1 h-8 w-8 shrink-0 object-contain animate-logo-orbit" />
-        <div className="min-w-0 flex-1 rounded-[22px] rounded-tl-md border border-[#E9ECEF] bg-white px-4 py-3 shadow-[0_8px_28px_rgba(17,19,21,0.05)]">
+        <img src="/logo.png" alt="" className="mt-1 h-7 w-7 shrink-0 object-contain" />
+        <div className="min-w-0 flex-1 px-1 py-1">
           {turn.busy ? (
             <div className="flex items-center gap-2 text-[13px] text-[#868E96]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#111315]" />
@@ -278,7 +278,7 @@ function ConnectorPicker({ compact = false }) {
         <ChevronDown size={13} strokeWidth={1.7} />
       </button>
       {open && (
-        <div className={`absolute bottom-full left-0 z-30 mb-2 w-[min(420px,calc(100vw-48px))] rounded-2xl border border-black/[0.08] bg-white p-3 shadow-[0_18px_55px_rgba(17,19,21,0.16)] ${compact ? "sm:left-auto sm:right-0" : ""}`}>
+        <div className={`chat-tool-menu absolute bottom-full left-0 z-30 mb-2 w-[min(420px,calc(100vw-48px))] rounded-2xl border border-black/[0.08] bg-white p-3 shadow-[0_18px_55px_rgba(17,19,21,0.16)] ${compact ? "sm:left-auto sm:right-0" : ""}`}>
           <div className="mb-2 px-1">
             <p className="text-[13px] font-semibold text-[#111315]">Connect tools</p>
             <p className="text-[11.5px] leading-[1.45] text-[#868E96]">Use real business systems for orders, messages, alerts and finance context.</p>
@@ -289,9 +289,9 @@ function ConnectorPicker({ compact = false }) {
                 type="button"
                 key={connector.name}
                 onClick={openIntegrations}
-                className="flex items-center gap-2 rounded-xl border border-[#E9ECEF] bg-[#F8F9FA] px-2.5 py-2 text-left transition-colors hover:border-[#ADB5BD] hover:bg-white"
+              className="chat-tool-item flex items-center gap-2 rounded-xl border border-[#E9ECEF] bg-[#F8F9FA] px-2.5 py-2 text-left transition-colors hover:border-[#ADB5BD] hover:bg-white"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white shadow-[0_1px_2px_rgba(17,19,21,0.04)]">
+                <span className="chat-tool-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white shadow-[0_1px_2px_rgba(17,19,21,0.04)]">
                   <ConnectorIcon connector={connector} />
                 </span>
                 <span className="min-w-0">
@@ -335,36 +335,34 @@ function PromptToolChips() {
 
 function EmptyChatState({ onPrompt, onVoice, assistantName, voiceEnabled }) {
   const prompts = [
-    { title: "Show orders", detail: "See current storefront demand" },
-    { title: "Prepare operation", detail: "Plan, assign, and notify" },
-    { title: "What needs attention?", detail: "Surface exceptions and approvals" },
-    { title: "Assign Sipho", detail: "Check driver work and route assignment" },
+    { title: "What jobs are available?", detail: "Use only real storefront work" },
+    { title: "Where did this order come from?", detail: "Explain the data source" },
+    { title: "What should I do next?", detail: "Give an operator summary" },
   ];
   return (
-    <div className="mx-auto flex min-h-[55vh] max-w-[820px] flex-col items-center justify-center text-center">
-      <img src="/logo.png" alt="" className="mb-6 h-14 w-14 animate-logo-orbit" />
-      <h1 className="text-[34px] font-semibold text-[#111315] sm:text-[46px]">
-        Talk through the operation.
+    <div className="mx-auto flex min-h-[58vh] max-w-[760px] flex-col items-center justify-center text-center">
+      <img src="/logo.png" alt="" className="mb-5 h-14 w-14 object-contain" />
+      <h1 className="text-[32px] font-semibold tracking-tight text-[#111315] sm:text-[44px]">
+        How can I help?
       </h1>
-      <p className="mt-3 max-w-xl text-[16px] leading-[1.65] text-[#5C636A]">
-        Ask {assistantName} about orders, dispatch, routes, drivers, exceptions, or your delivery business.
+      <p className="mt-3 max-w-lg text-[15px] leading-[1.65] text-[#5C636A]">
+        Ask {assistantName} anything about orders, drivers, jobs, or what is happening in the operation.
       </p>
-      <PromptToolChips />
       {voiceEnabled && (
         <button
           onClick={onVoice}
-          className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#111315] px-4 py-2.5 text-[13px] font-medium text-white shadow-[0_12px_34px_rgba(17,19,21,0.18)] transition-transform active:scale-[0.98]"
+          className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#DEE2E6] bg-white px-4 py-2.5 text-[13px] font-medium text-[#111315] transition-colors hover:bg-[#F8F9FA]"
         >
           <Headphones size={16} strokeWidth={1.6} />
-          Start voice mode
+          Voice
         </button>
       )}
-      <div className="mt-7 grid w-full gap-2 sm:grid-cols-2">
+      <div className="mt-8 grid w-full gap-2">
         {prompts.map((prompt) => (
           <button
             key={prompt.title}
             onClick={() => onPrompt(prompt.title)}
-            className="group rounded-2xl border border-[#E9ECEF] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,19,21,0.03)] transition-colors hover:border-[#ADB5BD] hover:bg-[#F8F9FA]"
+            className="chat-suggestion-card group rounded-2xl border border-[#E9ECEF] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,19,21,0.03)] transition-colors hover:border-[#ADB5BD] hover:bg-[#F8F9FA]"
           >
             <span className="flex items-center justify-between gap-3 text-[13px] font-medium text-[#111315]">
               {prompt.title}
@@ -381,7 +379,7 @@ function EmptyChatState({ onPrompt, onVoice, assistantName, voiceEnabled }) {
 function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assistantName, voiceEnabled }) {
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-[820px]">
-      <div className="rounded-[24px] border border-[#DEE2E6] bg-white p-2 shadow-[0_18px_55px_rgba(17,19,21,0.10)] focus-within:border-[#111315]/50">
+      <div className="chat-composer rounded-[22px] border border-[#DEE2E6] bg-white p-2 shadow-[0_8px_28px_rgba(17,19,21,0.08)] focus-within:border-[#111315]/50">
         <div className="flex items-end gap-2">
           {voiceEnabled && (
             <button
@@ -417,12 +415,8 @@ function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assi
             <ArrowUpRight size={16} strokeWidth={1.6} />
           </button>
         </div>
-        <div className="flex items-center justify-between px-3 pb-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <ConnectorPicker compact />
-            <p className="hidden text-[11px] text-[#ADB5BD] sm:block">Enter to send · Shift Enter for a new line</p>
-          </div>
-          <p className="text-[11px] text-[#ADB5BD]">{voiceEnabled ? "Voice ready" : "Voice off"}</p>
+        <div className="flex items-center px-3 pb-1">
+          <ConnectorPicker compact />
         </div>
       </div>
     </form>
@@ -713,7 +707,7 @@ export function OperationsCommand() {
   };
 
   return (
-    <div className="animate-fade-in -mx-5 -mt-14 flex min-h-[calc(100vh-1rem)] flex-col sm:-mx-8 lg:-mx-12 lg:-mt-8">
+    <div className="chat-shell animate-fade-in -mx-5 -mt-14 flex min-h-[calc(100vh-1rem)] flex-col bg-[#F8F9FA] sm:-mx-8 lg:-mx-12 lg:-mt-8">
       <div className="flex-1 overflow-y-auto px-5 pt-16 sm:px-8 lg:px-12 lg:pt-10">
         {thread.length === 0 ? (
           <EmptyChatState
@@ -737,7 +731,7 @@ export function OperationsCommand() {
         )}
       </div>
 
-      <div className="z-20 border-t border-black/[0.06] bg-[#F8F9FA]/95 px-5 pb-4 pt-3 backdrop-blur sm:px-8 lg:px-12">
+      <div className="chat-composer-dock z-20 bg-[#F8F9FA]/95 px-5 pb-4 pt-3 backdrop-blur sm:px-8 lg:px-12">
         <ChatComposer
           value={askText}
           onChange={setAskText}

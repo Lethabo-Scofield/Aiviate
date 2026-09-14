@@ -258,6 +258,27 @@ export default function ResultBlock({ result }) {
       </div>
     );
   }
+  if (t === "llm") {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[#868E96]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#111315]" />
+          LLM response
+          {result.model ? <span className="normal-case tracking-normal">· {result.model}</span> : null}
+        </div>
+        {result.context_counts && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {Object.entries(result.context_counts).slice(0, 4).map(([key, value]) => (
+              <div key={key} className="rounded-lg bg-[#F1F3F5] px-2.5 py-2">
+                <p className="text-[13px] font-semibold text-[#111315]">{value}</p>
+                <p className="text-[10px] capitalize text-[#868E96]">{key.replaceAll("_", " ")}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
   if (t === "route_map") {
     return (
       <div className="space-y-2">

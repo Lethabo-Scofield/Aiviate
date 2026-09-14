@@ -156,7 +156,7 @@ export default function Sidebar({
       >
         <div className="px-5 pt-7 pb-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Aiviate" className="h-9 w-9 object-contain animate-logo-orbit" />
+            <img src="/logo.png" alt="Aiviate" className="h-9 w-9 object-contain" />
             <h1 className="text-[15px] font-semibold text-[#111315]">Aiviate</h1>
           </div>
           <button
@@ -182,25 +182,6 @@ export default function Sidebar({
               onClick={item.to === "/" ? () => window.dispatchEvent(new CustomEvent("aiviate:new-chat")) : undefined}
             />
           ))}
-
-          <div className="px-3 pt-6 pb-1 text-[10px] uppercase text-[#ADB5BD] font-semibold">
-            Try
-          </div>
-          <div className="space-y-1 px-1">
-            {[
-              "Show orders",
-              "Prepare operation",
-              "What needs attention?",
-            ].map((text) => (
-              <button
-                key={text}
-                onClick={() => window.dispatchEvent(new CustomEvent("ask-aiviate", { detail: { text } }))}
-                className="w-full rounded-lg px-2 py-2 text-left text-[12px] leading-[1.4] text-[#5C636A] hover:bg-black/[0.03] hover:text-[#111315]"
-              >
-                {text}
-              </button>
-            ))}
-          </div>
 
           <div className="px-3 pt-6 pb-1 text-[10px] uppercase text-[#ADB5BD] font-semibold">
             History
