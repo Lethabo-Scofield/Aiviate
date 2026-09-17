@@ -7,6 +7,8 @@ const USER_KEY = "aiviate_user";
 const LOCAL_DEMO_TOKEN = "local-demo-token";
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
+
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || null);

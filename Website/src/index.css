@@ -1,66 +1,79 @@
 @import "tailwindcss" source(none);
+@import "./Silk.css";
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..600&display=swap');
 @source "../index.html";
 @source "./**/*.{js,jsx}";
+
+/* ═══════════════════════════════════════════════════════════════
+   Aiviate — dark operations theme, now with a light counterpart
+   Toggle by setting data-theme="light" or data-theme="dark" on
+   <html> (defaults to dark if the attribute is absent).
+   Page files are untouched: the compatibility layer near the
+   bottom remaps hardcoded light utilities onto dark surfaces,
+   and only runs while the app is in dark mode.
+   ═══════════════════════════════════════════════════════════════ */
 
 @theme {
   --font-sans:
     ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
+  --font-serif:
+    "Newsreader", Georgia, "Iowan Old Style", "Times New Roman", serif;
   --font-mono:
     "Geist Mono", "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
     Menlo, monospace;
 
-  /* ── Olyxee neutral palette ─────────────────────────────── */
-  --color-neutral-0: #ffffff;
-  --color-neutral-25: #fcfcfd;
-  --color-neutral-50: #f8f9fa;
-  --color-neutral-100: #f1f3f5;
-  --color-neutral-200: #e9ecef;
-  --color-neutral-300: #dee2e6;
-  --color-neutral-400: #adb5bd;
-  --color-neutral-500: #868e96;
-  --color-neutral-600: #5c636a;
-  --color-neutral-700: #343a40;
-  --color-neutral-800: #212529;
-  --color-neutral-900: #111315;
+  /* ── Surface ladder: void → raised → inset ──────────────── */
+  --color-neutral-0: #121417;   /* was #ffffff — now "card" */
+  --color-neutral-25: #0F1113;
+  --color-neutral-50: #0C0E10;
+  --color-neutral-100: #1B1E22;
+  --color-neutral-200: #23272C;
+  --color-neutral-300: #2E3339;
+  --color-neutral-400: #6B7279;
+  --color-neutral-500: #868E96;
+  --color-neutral-600: #9AA1A9;
+  --color-neutral-700: #C6CBD1;
+  --color-neutral-800: #E4E7EA;
+  --color-neutral-900: #F2F4F6;
 
-  --color-background: #f8f9fa;
-  --color-foreground: #111315;
-  --color-surface: #f1f3f5;
-  --color-border: #e9ecef;
+  --color-void: #08090B;
+  --color-background: #08090B;
+  --color-foreground: #F2F4F6;
+  --color-surface: #121417;
+  --color-border: rgba(255, 255, 255, 0.08);
 
-  /* Neutral action colors */
-  --color-primary: #111315;
-  --color-primary-hover: #343a40;
-  --color-primary-light: rgba(17, 19, 21, 0.08);
+  /* Actions read as light-on-dark */
+  --color-primary: #F2F4F6;
+  --color-primary-hover: #ffffff;
+  --color-primary-light: rgba(242, 244, 246, 0.10);
 
-  /* Text tiers mapped to the neutral scale */
-  --color-text-primary: #111315;
-  --color-text-secondary: #5c636a;
-  --color-text-tertiary: #868e96;
-  --color-text-quaternary: #adb5bd;
+  --color-text-primary: #F2F4F6;
+  --color-text-secondary: #9AA1A9;
+  --color-text-tertiary: #6B7279;
+  --color-text-quaternary: #4E555C;
 
-  /* Semantic — meaning before decoration */
-  --color-info: #5C636A;
-  --color-success: #343A40;
-  --color-warning: #5C636A;
-  --color-error: #343A40;
-  --color-review: #5C636A;
+  /* Semantic — legible on dark, still restrained */
+  --color-info: #7E9BFF;
+  --color-success: #5FD2A0;
+  --color-warning: #E8B268;
+  --color-error: #F07A7A;
+  --color-review: #A98BF0;
 
-  /* Olyxee radius scale */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 20px;
-  --radius-3xl: 24px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 22px;
+  --radius-3xl: 26px;
   --radius-full: 999px;
 }
 
 :root {
-  /* ── Olyxee motion tokens ─────────────────────────────────
-     Motion must always explain something and never feel elastic. */
+  color-scheme: dark;
+
+  /* ── Motion ─────────────────────────────────────────────── */
   --duration-instant: 80ms;
   --duration-fast: 140ms;
   --duration-standard: 220ms;
@@ -72,28 +85,51 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-emphasised: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Back-compat aliases: existing rules reference these names.
-     Re-pointed at Olyxee curves so all motion becomes restrained,
-     with the former "bounce" replaced by a controlled emphasised curve. */
   --ease-ios: var(--ease-standard);
   --ease-ios-out: var(--ease-enter);
   --ease-ios-bounce: var(--ease-emphasised);
   --ease-emphasized: var(--ease-emphasised);
 
-  /* ── Olyxee elevation ─────────────────────────────────── */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
-  --shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.16);
+  /* ── Hairlines ──────────────────────────────────────────── */
+  --line-soft: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
 
-  /* ── Olyxee material (persistent/overlay layers only) ──── */
-  --material-background: rgba(255, 255, 255, 0.82);
-  --material-border: rgba(17, 19, 21, 0.08);
-  --material-blur: blur(20px);
-  --material-saturate: saturate(140%);
+  /* ── The one bold move: iridescent edge light ───────────── */
+  --sheen: linear-gradient(
+    90deg,
+    rgba(91, 124, 250, 0)   0%,
+    rgba(91, 124, 250, 0.75) 18%,
+    rgba(164, 107, 245, 0.85) 38%,
+    rgba(255, 138, 107, 0.85) 62%,
+    rgba(255, 196, 107, 0.7) 82%,
+    rgba(255, 196, 107, 0)  100%
+  );
 
-  /* ── Olyxee 4px spacing grid ──────────────────────────── */
+  /* ── Elevation: dark UI needs depth + a top rim light ───── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 24px rgba(0, 0, 0, 0.55);
+  --shadow-lg:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 48px rgba(0, 0, 0, 0.6);
+  --shadow-overlay: 0 32px 80px rgba(0, 0, 0, 0.7);
+
+  /* ── Material (nav / overlay layers) ────────────────────── */
+  --material-background: rgba(18, 20, 23, 0.72);
+  --material-border: rgba(255, 255, 255, 0.08);
+  --material-blur: blur(24px);
+  --material-saturate: saturate(130%);
+
+  /* ── Ambient background wash (behind body::before) ──────── */
+  --ambient-a: rgba(120, 140, 220, 0.10);
+  --ambient-b: rgba(220, 150, 120, 0.07);
+
+  /* ── 4px spacing grid ───────────────────────────────────── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -106,16 +142,79 @@
   --space-16: 64px;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT THEME — the "izzbalo" look. Same variable names, so every
+   component below (.apple-card, .apple-btn, .ios-seg, etc.) just
+   re-themes automatically. Set <html data-theme="light">.
+   ═══════════════════════════════════════════════════════════════ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-neutral-0: #ffffff;
+  --color-neutral-25: #fdfdfe;
+  --color-neutral-50: #f8f9fa;
+  --color-neutral-100: #f1f3f5;
+  --color-neutral-200: #e9ecef;
+  --color-neutral-300: #dee2e6;
+  --color-neutral-400: #adb5bd;
+  --color-neutral-500: #868e96;
+  --color-neutral-600: #5c636a;
+  --color-neutral-700: #343a40;
+  --color-neutral-800: #212529;
+  --color-neutral-900: #111315;
+
+  --color-void: #f4f5f7;
+  --color-background: #f4f5f7;
+  --color-foreground: #111315;
+  --color-surface: #ffffff;
+  --color-border: rgba(17, 19, 21, 0.08);
+
+  --color-primary: #111315;
+  --color-primary-hover: #343a40;
+  --color-primary-light: rgba(17, 19, 21, 0.08);
+
+  --color-text-primary: #111315;
+  --color-text-secondary: #5c636a;
+  --color-text-tertiary: #868e96;
+  --color-text-quaternary: #adb5bd;
+
+  --color-info: #4f63d8;
+  --color-success: #2f9e6e;
+  --color-warning: #c98a2e;
+  --color-error: #d1574f;
+  --color-review: #7c5cd6;
+
+  --line-soft: rgba(17, 19, 21, 0.05);
+  --line: rgba(17, 19, 21, 0.09);
+  --line-strong: rgba(17, 19, 21, 0.16);
+
+  --shadow-xs: 0 1px 2px rgba(17, 19, 21, 0.05);
+  --shadow-sm: 0 1px 3px rgba(17, 19, 21, 0.07), 0 1px 2px rgba(17, 19, 21, 0.04);
+  --shadow-md: 0 8px 20px rgba(17, 19, 21, 0.08);
+  --shadow-lg: 0 20px 44px rgba(17, 19, 21, 0.12);
+  --shadow-overlay: 0 28px 64px rgba(17, 19, 21, 0.16);
+
+  --material-background: rgba(255, 255, 255, 0.82);
+  --material-border: rgba(17, 19, 21, 0.08);
+  --material-blur: blur(20px);
+  --material-saturate: saturate(140%);
+
+  --ambient-a: rgba(120, 140, 220, 0.12);
+  --ambient-b: rgba(255, 170, 120, 0.12);
+}
+
 html, body { height: 100%; margin: 0; }
 
 html {
   font-size: 16px;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
+  background-color: var(--color-void);
+  transition: background-color var(--duration-standard) var(--ease-standard);
 }
 
 body {
-  background-color: var(--color-background);
+  background-color: var(--color-void);
   color: var(--color-foreground);
   font-family: var(--font-sans);
   font-size: 15px;
@@ -126,7 +225,24 @@ body {
   text-rendering: optimizeLegibility;
   line-height: 1.58;
   letter-spacing: 0;
+  transition: background-color var(--duration-standard) var(--ease-standard), color var(--duration-standard) var(--ease-standard);
 }
+
+/* Ambient depth behind the app. Fixed, non-interactive, very low
+   contrast — it reads as light falling across the panel, not as a
+   decorative gradient wash. Colors swap automatically via
+   --ambient-a / --ambient-b for light vs dark. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(120% 70% at 78% -10%, var(--ambient-a), transparent 62%),
+    radial-gradient(90% 60% at 8% 105%, var(--ambient-b), transparent 60%);
+}
+#root { position: relative; z-index: 1; }
 
 h1, h2, h3, h4, h5, h6,
 p, span, label, button, input, textarea, select, a, li, td, th {
@@ -136,15 +252,14 @@ p, span, label, button, input, textarea, select, a, li, td, th {
 h1, h2, h3, h4, h5, h6 {
   text-wrap: balance;
   line-height: 1.16;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  font-size: 50px;
 }
 
-p, li {
-  line-height: 1.62;
-}
+p, li { line-height: 1.62; }
 
-button, input, textarea, select {
-  font: inherit;
-}
+button, input, textarea, select { font: inherit; }
 
 .tracking-tight,
 .tracking-wide,
@@ -153,80 +268,39 @@ button, input, textarea, select {
   letter-spacing: 0 !important;
 }
 
-.dark-ui body {
-  background-color: #0f1113;
-  color: #f8f9fa;
+/* ── Display type ─────────────────────────────────────────────
+   Large headings move to Newsreader — the serif, editorial voice
+   behind "Orders Dashboard" / "4 Live Orders" in the reference.
+   The global letter-spacing:0 rule above needs this exemption. */
+.text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
+h1, h2 {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-weight: 400;
+  letter-spacing: -0.01em !important;
 }
+.text-4xl, .text-5xl, .text-6xl { letter-spacing: -0.015em !important; }
 
-.dark-ui .bg-\[\#f8f9fa\],
-.dark-ui .bg-\[\#F8F9FA\] { background-color: #0f1113 !important; }
-.dark-ui .bg-white,
-.dark-ui .bg-white\/85,
-.dark-ui .bg-white\/90,
-.dark-ui .bg-white\/95 { background-color: rgba(24, 26, 28, 0.94) !important; }
-.dark-ui .bg-\[\#F1F3F5\],
-.dark-ui .bg-\[\#E9ECEF\] { background-color: #222529 !important; }
-.dark-ui .text-\[\#111315\],
-.dark-ui .text-\[\#343A40\] { color: #f8f9fa !important; }
-.dark-ui .text-\[\#5C636A\],
-.dark-ui .text-\[\#868E96\] { color: #c8cdd2 !important; }
-.dark-ui .text-\[\#ADB5BD\] { color: #8f969d !important; }
-.dark-ui .border-\[\#E9ECEF\],
-.dark-ui .border-\[\#DEE2E6\],
-.dark-ui .border-black\/\[0\.06\],
-.dark-ui .border-black\/\[0\.08\],
-.dark-ui .border-black\/\[0\.04\] { border-color: rgba(255, 255, 255, 0.10) !important; }
-.dark-ui .shadow-sm,
-.dark-ui .apple-card,
-.dark-ui .shadow-\[0_1px_2px_rgba\(17\2c 19\2c 21\2c 0\.03\)\] {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24) !important;
-}
-.dark-ui .apple-card {
-  background: #181a1c;
-  border-color: rgba(255, 255, 255, 0.10);
-}
-.dark-ui input,
-.dark-ui textarea {
-  color: #f8f9fa;
-}
-.dark-ui input::placeholder,
-.dark-ui textarea::placeholder {
-  color: #8f969d;
-}
+/* Opt back into weight where a heading must carry emphasis.
+   Newsreader supports up to 600, so this still renders serif. */
+.font-semibold, .font-bold, .font-medium { font-weight: 600 !important; }
 
-.dark-ui .chat-shell,
-.dark-ui .chat-composer-dock {
-  background: #0f1113 !important;
-}
-
-.dark-ui .chat-composer,
-.dark-ui .chat-tool-menu,
-.dark-ui .chat-suggestion-card {
-  background: #181a1c !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28) !important;
-}
-
-.dark-ui .chat-tool-item {
-  background: #101214 !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-.dark-ui .chat-tool-item:hover,
-.dark-ui .chat-suggestion-card:hover {
-  background: #222529 !important;
-}
-
-.dark-ui .chat-tool-icon {
-  background: #222529 !important;
+/* Big metric numerals, as on the hero cards — same serif family,
+   so "4 Live Orders" and "8 Active Drivers" match the mockup. */
+.metric {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-weight: 350;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  line-height: 1;
 }
 
 button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
-/* Tabular numbers for aligned data / financial figures */
 .tabular-nums, table td, table th { font-variant-numeric: tabular-nums; }
 
-/* Reduced motion respect (Olyxee accessibility requirement) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
@@ -238,12 +312,18 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #dee2e6 transparent;
+  scrollbar-color: #2E3339 transparent;
 }
 *::-webkit-scrollbar { width: 6px; height: 6px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 3px; }
-*::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
+*::-webkit-scrollbar-thumb { background: #2E3339; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #454B52; }
+:root[data-theme="light"] * { scrollbar-color: #dee2e6 transparent; }
+:root[data-theme="light"] *::-webkit-scrollbar-thumb { background: #dee2e6; }
+:root[data-theme="light"] *::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
+
+::selection { background: rgba(126, 155, 255, 0.28); color: #fff; }
+:root[data-theme="light"] ::selection { background: rgba(79, 99, 216, 0.18); color: #111315; }
 
 /* ============ Keyframes ============ */
 @keyframes fadeIn {
@@ -271,13 +351,11 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   50%      { opacity: 1;   transform: scale(1.08); }
 }
 @keyframes logoPulse {
-  0%   { opacity: 0.4; transform: scale(0.92); }
-  50%  { opacity: 1;   transform: scale(1.05); filter: drop-shadow(0 0 12px rgba(17, 19, 21,0.35)); }
-  100% { opacity: 0.4; transform: scale(0.92); }
+  0%   { opacity: 0.45; transform: scale(0.94); }
+  50%  { opacity: 1;    transform: scale(1.04); filter: drop-shadow(0 0 14px rgba(126, 155, 255, 0.45)); }
+  100% { opacity: 0.45; transform: scale(0.94); }
 }
-@keyframes spinSmooth {
-  to { transform: rotate(360deg); }
-}
+@keyframes spinSmooth { to { transform: rotate(360deg); } }
 @keyframes sheetUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
@@ -297,9 +375,9 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   40%, 60%  { transform: translateX(3px); }
 }
 @keyframes ringPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(17, 19, 21,0.35); }
-  70%  { box-shadow: 0 0 0 10px rgba(17, 19, 21,0); }
-  100% { box-shadow: 0 0 0 0 rgba(17, 19, 21,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(126, 155, 255, 0.40); }
+  70%  { box-shadow: 0 0 0 10px rgba(126, 155, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(126, 155, 255, 0); }
 }
 @keyframes badgeBounce {
   from { transform: scale(0); }
@@ -332,13 +410,16 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f1f3f5 25%, #f8f9fa 37%, #f1f3f5 63%);
+  background: linear-gradient(90deg, #16191D 25%, #23272C 37%, #16191D 63%);
   background-size: 400px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: var(--radius-sm);
 }
+:root[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, #f1f3f5 25%, #f8f9fa 37%, #f1f3f5 63%);
+}
 
-/* ============ Material (persistent nav / overlay layers) ============ */
+/* ============ Material ============ */
 .olyxee-material {
   background: var(--material-background);
   border-color: var(--material-border);
@@ -348,17 +429,34 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 /* ============ Card ============ */
 .apple-card {
-  background: var(--color-neutral-0);
-  border: 1px solid var(--color-neutral-200);
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   transition:
+    border-color var(--duration-standard) var(--ease-standard),
     box-shadow var(--duration-standard) var(--ease-standard),
+    background var(--duration-standard) var(--ease-standard),
     transform var(--duration-standard) var(--ease-standard);
 }
 .apple-card:hover {
+  border-color: var(--line-strong);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+/* The hero card. Iridescent rim light along the top edge only —
+   add `card-sheen` to the one card that leads the page. */
+.card-sheen { overflow: hidden; }
+.card-sheen::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 8%; right: 8%;
+  height: 1px;
+  background: var(--sheen);
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 /* ============ Input ============ */
@@ -366,11 +464,11 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   width: 100%;
   padding: 11px 14px;
   background: var(--color-neutral-100);
-  border: 1.5px solid transparent;
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   font-size: 14px;
   line-height: 1.45;
-  color: var(--color-neutral-900);
+  color: var(--color-text-primary);
   transition:
     background var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard),
@@ -378,11 +476,17 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   outline: none;
 }
 .apple-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(17, 19, 21, 0.12);
-  background: var(--color-neutral-0);
+  border-color: rgba(126, 155, 255, 0.55);
+  box-shadow: 0 0 0 4px rgba(126, 155, 255, 0.16);
+  background: #1F2328;
 }
-.apple-input::placeholder { color: var(--color-neutral-400); }
+.apple-input::placeholder { color: var(--color-text-tertiary); }
+
+:root[data-theme="light"] .apple-input:focus {
+  border-color: rgba(79, 99, 216, 0.45);
+  box-shadow: 0 0 0 4px rgba(79, 99, 216, 0.13);
+  background: #ffffff;
+}
 
 /* ============ Buttons ============ */
 .apple-btn {
@@ -396,50 +500,72 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   font-weight: 600;
   letter-spacing: 0;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   position: relative;
   user-select: none;
   transition:
     transform var(--duration-instant) var(--ease-standard),
     background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
     box-shadow var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
 }
-/* Small, non-elastic press feedback */
 .apple-btn:active { transform: scale(0.98); }
 
+/* Primary = the raised control with a lit rim (the
+   "Track Vehicle" button in the reference). */
 .apple-btn-primary {
-  background: var(--color-primary);
-  color: #ffffff;
-  box-shadow: var(--shadow-xs);
-}
-.apple-btn-primary:hover {
-  background: var(--color-primary-hover);
+  background: #1F2328;
+  border-color: var(--line-strong);
+  color: var(--color-text-primary);
   box-shadow: var(--shadow-sm);
 }
-.apple-btn-primary:active { background: #343a40; }
-
-.apple-btn-accent {
-  background: var(--color-neutral-900);
-  color: #ffffff;
-  box-shadow: var(--shadow-xs);
+.apple-btn-primary:hover {
+  background: #262B31;
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: var(--shadow-md);
 }
-.apple-btn-accent:hover { background: #000000; box-shadow: var(--shadow-sm); }
+.apple-btn-primary:active { background: #1B1E22; }
+
+:root[data-theme="light"] .apple-btn-primary {
+  background: #ffffff;
+  border-color: rgba(17, 19, 21, 0.14);
+  color: #111315;
+}
+:root[data-theme="light"] .apple-btn-primary:hover {
+  background: #f8f9fa;
+  border-color: rgba(17, 19, 21, 0.2);
+}
+:root[data-theme="light"] .apple-btn-primary:active { background: #f1f3f5; }
+
+/* Accent = the rare high-commitment action: solid light on dark
+   (inverts to solid dark on light for the same visual weight). */
+.apple-btn-accent {
+  background: #F2F4F6;
+  color: #0C0E10;
+  box-shadow: var(--shadow-sm);
+}
+.apple-btn-accent:hover { background: #ffffff; box-shadow: var(--shadow-md); }
+
+:root[data-theme="light"] .apple-btn-accent { background: #111315; color: #ffffff; }
+:root[data-theme="light"] .apple-btn-accent:hover { background: #000000; }
 
 .apple-btn-secondary {
   background: var(--color-neutral-100);
+  border-color: var(--line-soft);
   color: var(--color-neutral-700);
 }
-.apple-btn-secondary:hover { background: var(--color-neutral-200); }
+.apple-btn-secondary:hover { background: var(--color-neutral-200); color: var(--color-neutral-900); }
 
 .apple-btn-ghost {
   background: transparent;
-  color: var(--color-neutral-700);
+  color: var(--color-neutral-600);
 }
-.apple-btn-ghost:hover { background: var(--color-neutral-100); }
+.apple-btn-ghost:hover { background: rgba(255, 255, 255, 0.05); color: var(--color-neutral-900); }
+:root[data-theme="light"] .apple-btn-ghost:hover { background: rgba(17, 19, 21, 0.05); }
 
 .apple-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
@@ -449,10 +575,16 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 .tap:focus-visible,
 .list-row:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(17, 19, 21, 0.28);
+  box-shadow: 0 0 0 3px rgba(126, 155, 255, 0.55);
+}
+:root[data-theme="light"] .apple-btn:focus-visible,
+:root[data-theme="light"] .ios-seg button:focus-visible,
+:root[data-theme="light"] .tap:focus-visible,
+:root[data-theme="light"] .list-row:focus-visible {
+  box-shadow: 0 0 0 3px rgba(79, 99, 216, 0.4);
 }
 
-/* ============ Tap-press for arbitrary elements ============ */
+/* ============ Tap-press ============ */
 .tap {
   transition: transform var(--duration-instant) var(--ease-standard),
     background var(--duration-fast) var(--ease-standard);
@@ -461,37 +593,53 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 /* ============ Stat card ============ */
 .stat-card {
-  background: var(--color-neutral-0);
-  border: 1px solid var(--color-neutral-200);
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 20px;
+  overflow: hidden;
   transition:
-    background var(--duration-standard) var(--ease-standard),
+    border-color var(--duration-standard) var(--ease-standard),
     transform var(--duration-standard) var(--ease-standard),
     box-shadow var(--duration-standard) var(--ease-standard);
 }
+/* Underlit base edge — the stat strip in the reference glows from
+   below, not above. Keeps stats distinct from ordinary cards. */
+.stat-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 14%; right: 14%;
+  height: 1px;
+  background: var(--sheen);
+  opacity: 0.45;
+  transition: opacity var(--duration-standard) var(--ease-standard);
+}
 .stat-card:hover {
   transform: translateY(-2px);
+  border-color: var(--line-strong);
   box-shadow: var(--shadow-md);
 }
+.stat-card:hover::after { opacity: 0.85; }
 
 /* ============ Segmented Control ============ */
 .ios-seg {
   display: inline-flex;
   padding: 3px;
   background: var(--color-neutral-100);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius-md);
   position: relative;
   gap: 2px;
 }
 .ios-seg button {
   position: relative;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--color-neutral-700);
+  color: var(--color-text-secondary);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -499,10 +647,25 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
     background var(--duration-fast) var(--ease-standard);
   z-index: 1;
 }
+.ios-seg button:hover { color: var(--color-text-primary); }
 .ios-seg button.active {
-  background: var(--color-neutral-0);
-  color: var(--color-neutral-900);
+  background: #23272C;
+  color: var(--color-text-primary);
   box-shadow: var(--shadow-xs);
+}
+:root[data-theme="light"] .ios-seg button.active {
+  background: #ffffff;
+  color: var(--color-text-primary);
+}
+/* Lit underline on the active tab — the second and last place the
+   sheen appears. */
+.ios-seg button.active::after {
+  content: "";
+  position: absolute;
+  left: 18%; right: 18%; bottom: 2px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--sheen);
 }
 
 /* ============ Switch ============ */
@@ -521,28 +684,32 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   position: absolute;
   top: 2px; left: 2px;
   width: 22px; height: 22px;
-  background: #ffffff;
+  background: #F2F4F6;
   border-radius: 50%;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   transition: transform var(--duration-emphasised) var(--ease-emphasised);
 }
 .ios-switch.on { background: var(--color-success); }
 .ios-switch.on::after { transform: translateX(18px); }
+:root[data-theme="light"] .ios-switch::after { background: #ffffff; box-shadow: 0 1px 3px rgba(17, 19, 21, 0.2); }
 
-/* ============ Sheet (bottom-up modal) ============ */
+/* ============ Sheet ============ */
 .ios-scrim {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.32);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
   animation: scrim var(--duration-standard) var(--ease-enter) both;
   z-index: 9000;
 }
+:root[data-theme="light"] .ios-scrim { background: rgba(17, 19, 21, 0.32); }
 .ios-sheet {
   position: fixed;
   left: 50%; bottom: 0;
   transform: translateX(-50%);
   width: min(560px, 100%);
-  background: var(--color-neutral-0);
+  background: #16191D;
+  border: 1px solid var(--line);
+  border-bottom: none;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   box-shadow: var(--shadow-overlay);
   animation: sheetUp var(--duration-complex) var(--ease-enter) both;
@@ -550,6 +717,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   max-height: 92vh;
   overflow-y: auto;
 }
+:root[data-theme="light"] .ios-sheet { background: #ffffff; }
 .ios-sheet-handle {
   width: 36px;
   height: 4px;
@@ -561,6 +729,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   .ios-sheet {
     bottom: auto; top: 50%;
     transform: translate(-50%, -50%);
+    border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     animation: popIn var(--duration-emphasised) var(--ease-emphasised) both;
   }
@@ -572,8 +741,9 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: rgba(17,19,21,0.92);
-  color: #fff;
+  background: rgba(31, 35, 40, 0.92);
+  border: 1px solid var(--line-strong);
+  color: #F2F4F6;
   border-radius: var(--radius-lg);
   font-size: 13px;
   font-weight: 500;
@@ -586,14 +756,18 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 .ios-spinner {
   display: inline-block;
   width: 18px; height: 18px;
-  border: 2px solid rgba(0,0,0,0.12);
-  border-top-color: var(--color-primary);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-top-color: #7E9BFF;
   border-radius: 50%;
   animation: spinSmooth 0.7s linear infinite;
 }
 .ios-spinner-inverse {
-  border-color: rgba(255,255,255,0.3);
-  border-top-color: #ffffff;
+  border-color: rgba(0, 0, 0, 0.25);
+  border-top-color: #0C0E10;
+}
+:root[data-theme="light"] .ios-spinner {
+  border-color: rgba(17, 19, 21, 0.12);
+  border-top-color: #4f63d8;
 }
 
 /* ============ List rows ============ */
@@ -608,43 +782,284 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
     transform var(--duration-instant) var(--ease-standard);
   cursor: pointer;
 }
-.list-row:hover { background: var(--color-neutral-100); }
+.list-row:hover { background: rgba(255, 255, 255, 0.045); }
 .list-row:active { transform: scale(0.99); }
+:root[data-theme="light"] .list-row:hover { background: rgba(17, 19, 21, 0.045); }
+/* Selected row sits proud of the list, as in the driver list */
+.list-row.is-selected {
+  background: #1F2328;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="light"] .list-row.is-selected {
+  background: #f1f3f5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 14px rgba(17, 19, 21, 0.08);
+}
+
+/* Status dots for driver / vehicle state */
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.status-online  { background: var(--color-success); box-shadow: 0 0 8px rgba(95, 210, 160, 0.6); }
+.status-route   { background: var(--color-info);    box-shadow: 0 0 8px rgba(126, 155, 255, 0.6); }
+.status-idle    { background: var(--color-warning); }
+.status-offline { background: var(--color-neutral-400); }
 
 /* ============ Map ============ */
 .custom-marker { background: transparent !important; border: none !important; }
+.leaflet-container { background: var(--color-void) !important; }
+/* Neutralise bright basemap tiles to match the shell — dark mode
+   only. In light mode the basemap already matches the UI. */
+:root:not([data-theme="light"]) .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.86) contrast(0.92) saturate(0.6);
+}
 .leaflet-popup-content-wrapper {
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--line) !important;
   border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-lg) !important;
   padding: 0 !important;
-  border: none !important;
 }
 .leaflet-popup-content { margin: 12px 16px !important; line-height: 1.5 !important; }
-.leaflet-popup-tip { box-shadow: none !important; }
+.leaflet-popup-tip { background: var(--color-surface) !important; box-shadow: none !important; }
 .leaflet-control-zoom a {
   border-radius: var(--radius-md) !important;
   width: 34px !important; height: 34px !important;
   line-height: 34px !important;
   font-size: 16px !important;
-  color: var(--color-neutral-900) !important;
+  color: var(--color-text-primary) !important;
   border: none !important;
   background: var(--material-background) !important;
   backdrop-filter: var(--material-blur) !important;
   transition: background var(--duration-fast) var(--ease-standard) !important;
 }
-.leaflet-control-zoom a:hover { background: #ffffff !important; }
+.leaflet-control-zoom a:hover { background: var(--color-neutral-200) !important; }
 .leaflet-control-zoom {
-  border: none !important;
+  border: 1px solid var(--line) !important;
   border-radius: var(--radius-md) !important;
   overflow: hidden;
   box-shadow: var(--shadow-md) !important;
 }
+.leaflet-control-attribution {
+  background: var(--material-background) !important;
+  color: var(--color-text-tertiary) !important;
+}
+.leaflet-control-attribution a { color: var(--color-text-secondary) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPATIBILITY LAYER — dark mode only
+   Remaps the hardcoded light utilities already scattered through
+   the page components onto dark surfaces. Gated behind
+   :not([data-theme="light"]) so that switching to light mode lets
+   those same classes render as Tailwind originally compiled them
+   (already the correct light appearance) with zero extra rules
+   needed. As pages get refactored onto the tokens above, entries
+   here can be deleted.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Backgrounds ────────────────────────────────────────────── */
+html:not([data-theme="light"]) .bg-white,
+html:not([data-theme="light"]) .bg-white\/85, html:not([data-theme="light"]) .bg-white\/90,
+html:not([data-theme="light"]) .bg-white\/95, html:not([data-theme="light"]) .bg-white\/80,
+html:not([data-theme="light"]) .bg-white\/70, html:not([data-theme="light"]) .bg-white\/60,
+html:not([data-theme="light"]) .bg-white\/50,
+html:not([data-theme="light"]) .bg-\[\#fff\], html:not([data-theme="light"]) .bg-\[\#ffffff\],
+html:not([data-theme="light"]) .bg-\[\#FFF\], html:not([data-theme="light"]) .bg-\[\#FFFFFF\] {
+  background-color: #121417 !important;
+}
+
+html:not([data-theme="light"]) .bg-\[\#f8f9fa\], html:not([data-theme="light"]) .bg-\[\#F8F9FA\],
+html:not([data-theme="light"]) .bg-\[\#fcfcfd\], html:not([data-theme="light"]) .bg-\[\#FCFCFD\],
+html:not([data-theme="light"]) .bg-gray-50, html:not([data-theme="light"]) .bg-slate-50,
+html:not([data-theme="light"]) .bg-neutral-50, html:not([data-theme="light"]) .bg-zinc-50,
+html:not([data-theme="light"]) .bg-stone-50 {
+  background-color: #08090B !important;
+}
+
+html:not([data-theme="light"]) .bg-\[\#F1F3F5\], html:not([data-theme="light"]) .bg-\[\#f1f3f5\],
+html:not([data-theme="light"]) .bg-gray-100, html:not([data-theme="light"]) .bg-slate-100,
+html:not([data-theme="light"]) .bg-neutral-100, html:not([data-theme="light"]) .bg-zinc-100 {
+  background-color: #1B1E22 !important;
+}
+
+html:not([data-theme="light"]) .bg-\[\#E9ECEF\], html:not([data-theme="light"]) .bg-\[\#e9ecef\],
+html:not([data-theme="light"]) .bg-\[\#DEE2E6\], html:not([data-theme="light"]) .bg-\[\#dee2e6\],
+html:not([data-theme="light"]) .bg-gray-200, html:not([data-theme="light"]) .bg-slate-200,
+html:not([data-theme="light"]) .bg-neutral-200, html:not([data-theme="light"]) .bg-zinc-200,
+html:not([data-theme="light"]) .bg-gray-300, html:not([data-theme="light"]) .bg-slate-300,
+html:not([data-theme="light"]) .bg-neutral-300 {
+  background-color: #23272C !important;
+}
+
+/* Dark chips stay dark but lift off the page instead of sinking */
+html:not([data-theme="light"]) .bg-\[\#111315\], html:not([data-theme="light"]) .bg-\[\#111\],
+html:not([data-theme="light"]) .bg-black, html:not([data-theme="light"]) .bg-gray-900,
+html:not([data-theme="light"]) .bg-neutral-900, html:not([data-theme="light"]) .bg-slate-900 {
+  background-color: #23272C !important;
+}
+html:not([data-theme="light"]) .bg-\[\#343A40\], html:not([data-theme="light"]) .bg-gray-800,
+html:not([data-theme="light"]) .bg-neutral-800, html:not([data-theme="light"]) .bg-slate-800 {
+  background-color: #2E3339 !important;
+}
+
+/* Low-opacity black tints invert to white tints */
+html:not([data-theme="light"]) .bg-black\/5, html:not([data-theme="light"]) .bg-black\/\[0\.04\],
+html:not([data-theme="light"]) .bg-black\/\[0\.03\], html:not([data-theme="light"]) .bg-black\/\[0\.02\] {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+html:not([data-theme="light"]) .bg-black\/10, html:not([data-theme="light"]) .bg-black\/\[0\.06\],
+html:not([data-theme="light"]) .bg-black\/\[0\.08\] {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Hover states */
+html:not([data-theme="light"]) .hover\:bg-gray-50:hover, html:not([data-theme="light"]) .hover\:bg-slate-50:hover,
+html:not([data-theme="light"]) .hover\:bg-neutral-50:hover,
+html:not([data-theme="light"]) .hover\:bg-\[\#F8F9FA\]:hover, html:not([data-theme="light"]) .hover\:bg-\[\#f8f9fa\]:hover {
+  background-color: rgba(255, 255, 255, 0.045) !important;
+}
+html:not([data-theme="light"]) .hover\:bg-gray-100:hover, html:not([data-theme="light"]) .hover\:bg-slate-100:hover,
+html:not([data-theme="light"]) .hover\:bg-neutral-100:hover,
+html:not([data-theme="light"]) .hover\:bg-\[\#F1F3F5\]:hover, html:not([data-theme="light"]) .hover\:bg-\[\#f1f3f5\]:hover,
+html:not([data-theme="light"]) .hover\:bg-\[\#E9ECEF\]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+html:not([data-theme="light"]) .hover\:bg-white:hover { background-color: #1F2328 !important; }
+
+/* ── Text ───────────────────────────────────────────────────── */
+html:not([data-theme="light"]) .text-\[\#111315\], html:not([data-theme="light"]) .text-\[\#111\],
+html:not([data-theme="light"]) .text-black, html:not([data-theme="light"]) .text-gray-900,
+html:not([data-theme="light"]) .text-slate-900, html:not([data-theme="light"]) .text-neutral-900,
+html:not([data-theme="light"]) .text-gray-800, html:not([data-theme="light"]) .text-slate-800,
+html:not([data-theme="light"]) .text-neutral-800 {
+  color: #F2F4F6 !important;
+}
+html:not([data-theme="light"]) .text-\[\#343A40\], html:not([data-theme="light"]) .text-gray-700,
+html:not([data-theme="light"]) .text-slate-700, html:not([data-theme="light"]) .text-neutral-700 {
+  color: #E4E7EA !important;
+}
+html:not([data-theme="light"]) .text-\[\#5C636A\], html:not([data-theme="light"]) .text-gray-600,
+html:not([data-theme="light"]) .text-slate-600, html:not([data-theme="light"]) .text-neutral-600 {
+  color: #C6CBD1 !important;
+}
+html:not([data-theme="light"]) .text-\[\#868E96\], html:not([data-theme="light"]) .text-gray-500,
+html:not([data-theme="light"]) .text-slate-500, html:not([data-theme="light"]) .text-neutral-500 {
+  color: #9AA1A9 !important;
+}
+html:not([data-theme="light"]) .text-\[\#ADB5BD\], html:not([data-theme="light"]) .text-gray-400,
+html:not([data-theme="light"]) .text-slate-400, html:not([data-theme="light"]) .text-neutral-400 {
+  color: #6B7279 !important;
+}
+/* White text on what used to be a dark chip is still white */
+html:not([data-theme="light"]) .text-white { color: #F2F4F6 !important; }
+
+/* ── Borders ────────────────────────────────────────────────── */
+html:not([data-theme="light"]) .border-\[\#E9ECEF\], html:not([data-theme="light"]) .border-\[\#e9ecef\],
+html:not([data-theme="light"]) .border-\[\#DEE2E6\], html:not([data-theme="light"]) .border-\[\#dee2e6\],
+html:not([data-theme="light"]) .border-\[\#F1F3F5\], html:not([data-theme="light"]) .border-\[\#f1f3f5\],
+html:not([data-theme="light"]) .border-gray-100, html:not([data-theme="light"]) .border-gray-200,
+html:not([data-theme="light"]) .border-gray-300,
+html:not([data-theme="light"]) .border-slate-100, html:not([data-theme="light"]) .border-slate-200,
+html:not([data-theme="light"]) .border-slate-300,
+html:not([data-theme="light"]) .border-neutral-100, html:not([data-theme="light"]) .border-neutral-200,
+html:not([data-theme="light"]) .border-neutral-300,
+html:not([data-theme="light"]) .border-black\/\[0\.04\], html:not([data-theme="light"]) .border-black\/\[0\.06\],
+html:not([data-theme="light"]) .border-black\/\[0\.08\],
+html:not([data-theme="light"]) .border-black\/5, html:not([data-theme="light"]) .border-black\/10,
+html:not([data-theme="light"]) .border-white,
+html:not([data-theme="light"]) .divide-gray-200 > * + *, html:not([data-theme="light"]) .divide-gray-100 > * + * {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+html:not([data-theme="light"]) .border-\[\#ADB5BD\], html:not([data-theme="light"]) .border-gray-400,
+html:not([data-theme="light"]) .border-\[\#111315\], html:not([data-theme="light"]) .border-black {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* ── Shadows ────────────────────────────────────────────────── */
+html:not([data-theme="light"]) .shadow-sm, html:not([data-theme="light"]) .shadow,
+html:not([data-theme="light"]) .shadow-\[0_1px_2px_rgba\(17\2c 19\2c 21\2c 0\.03\)\] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+html:not([data-theme="light"]) .shadow-md { box-shadow: var(--shadow-md) !important; }
+html:not([data-theme="light"]) .shadow-lg, html:not([data-theme="light"]) .shadow-xl,
+html:not([data-theme="light"]) .shadow-2xl { box-shadow: var(--shadow-lg) !important; }
+
+/* ── Form controls ──────────────────────────────────────────── */
+html:not([data-theme="light"]) input, html:not([data-theme="light"]) textarea,
+html:not([data-theme="light"]) select {
+  color: #F2F4F6;
+  color-scheme: dark;
+}
+html:not([data-theme="light"]) input::placeholder, html:not([data-theme="light"]) textarea::placeholder {
+  color: #6B7279;
+}
+html:not([data-theme="light"]) input:-webkit-autofill,
+html:not([data-theme="light"]) input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F2F4F6;
+  -webkit-box-shadow: 0 0 0 1000px #1B1E22 inset;
+}
+:root[data-theme="light"] input, :root[data-theme="light"] textarea, :root[data-theme="light"] select {
+  color: #111315;
+  color-scheme: light;
+}
+:root[data-theme="light"] input::placeholder, :root[data-theme="light"] textarea::placeholder {
+  color: #adb5bd;
+}
+:root[data-theme="light"] input:-webkit-autofill,
+:root[data-theme="light"] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111315;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+}
+
+/* ── Chat surfaces (kept from the previous dark-ui block) ───── */
+html:not([data-theme="light"]) .chat-shell, html:not([data-theme="light"]) .chat-composer-dock {
+  background: #08090B !important;
+}
+html:not([data-theme="light"]) .chat-composer, html:not([data-theme="light"]) .chat-tool-menu,
+html:not([data-theme="light"]) .chat-suggestion-card {
+  background: #16191D !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+html:not([data-theme="light"]) .chat-tool-item {
+  background: #101214 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+html:not([data-theme="light"]) .chat-tool-item:hover, html:not([data-theme="light"]) .chat-suggestion-card:hover {
+  background: #23272C !important;
+}
+html:not([data-theme="light"]) .chat-tool-icon { background: #23272C !important; }
+
+/* ── Escape hatch ───────────────────────────────────────────────
+   Anything that must stay on a light background — print views,
+   invoices, PDF previews, embedded third-party widgets — goes
+   inside .force-light. */
+.force-light,
+.force-light * {
+  color-scheme: light;
+}
+.force-light {
+  background: #ffffff !important;
+  color: #111315 !important;
+}
+.force-light .bg-white { background-color: #ffffff !important; }
+.force-light .text-\[\#111315\] { color: #111315 !important; }
+.force-light .border-\[\#E9ECEF\] { border-color: #e9ecef !important; }
+
+/* ── Public tracking page ───────────────────────────────────────
+   Customer-facing, often opened in daylight on a phone. It stays
+   on-theme for brand consistency but drops the ambient wash. */
+.public-tracking body::before { display: none; }
 
 /* ============ Responsive tightening ============ */
 @media (max-width: 640px) {
   .apple-card { border-radius: var(--radius-md); }
   .apple-btn { padding: 10px 16px; font-size: 13px; }
   .stat-card { padding: 16px; }
+  .card-sheen::before { left: 4%; right: 4%; }
 }
 @media (max-width: 480px) {
   .apple-input { padding: 11px 12px; font-size: 16px; }

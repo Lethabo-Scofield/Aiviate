@@ -7,6 +7,7 @@ import { setPendingAsk } from "../lib/askBus";
 import { useAuth } from "../contexts/AuthContext";
 import Integrations from "../pages/Integrations";
 import Settings from "../pages/Settings";
+import Silk from "./Silk";
 
 function ProfilePanelModal({ panel, onClose }) {
   const title = panel === "integrations" ? "Integrations" : "Settings";
@@ -205,19 +206,28 @@ export default function Layout() {
           </div>
         )}
 
-        <div className={`px-5 sm:px-8 lg:px-12 ${isHome ? "pt-8" : "py-6"} pb-10`}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-              className="max-w-[960px] mx-auto"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+        {/*
+          This is the box that holds <Outlet />, i.e. every page.
+          silk-host clips and positions the bands; Silk draws them;
+          silk-content lifts the real page content above them so
+          nothing gets buried underneath.
+        */}
+        <div className={`px-5 sm:px-8 lg:px-12 ${isHome ? "pt-8" : "py-6"} pb-10 silk-host`}>
+          <Silk variant="a" weight="panel" />
+          <div className="silk-content">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+                className="max-w-[960px] mx-auto"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </main>
 
