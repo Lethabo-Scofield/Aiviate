@@ -29,7 +29,12 @@ from intelligence.workflow_engine import run_autonomous_workflows
 from intelligence.auto_optimizer import optimize_job_stops
 from intelligence.autopilot import autopilot_status, run_autopilot, update_settings
 from intelligence import command_parser, natural_parser
-from intelligence.llm_chat import LLMUnavailable, answer as llm_answer, is_configured as llm_is_configured
+from intelligence.llm_chat import (
+    LLMUnavailable,
+    answer as llm_answer,
+    is_configured as llm_is_configured,
+    local_fallback_answer,
+)
 from intelligence.driver_notifier import notify_driver
 from agents import Orchestrator
 from agents.context import build_context as _agents_ctx
@@ -797,12 +802,7 @@ def _llm_response_or_error(db, company_id, text, parse_error=None):
         result["input"] = text
         return result
     except (LLMUnavailable, requests.RequestException) as exc:
-        return {
-            "ok": False,
-            "summary": f"LLM fallback is configured but failed: {exc}",
-            "input": text,
-            "llm": False,
-        }
+        return local_fallback_answer(db, company_id, text, reason=str(exc))
 
 
 @intelligence_bp.route("/api/intelligence/command", methods=["POST"])

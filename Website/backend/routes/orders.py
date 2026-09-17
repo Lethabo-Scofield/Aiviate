@@ -222,18 +222,34 @@ def _store_order_from_stop(stop):
     }
 
 
+def _run_with_db_retry(operation, attempts=3):
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            return operation()
+        except Exception as exc:
+            last_error = exc
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.5 * (attempt + 1))
+    raise last_error
+
+
 def _list_operational_orders(company_id):
-    db = get_db_session()
-    try:
-        stops = (
-            db.query(Stop)
-            .filter(Stop.company_id == company_id, Stop.order_id.like(f"{ORDER_ID_PREFIX}%"))
-            .order_by(Stop.created_at.desc())
-            .all()
-        )
-        return [_store_order_from_stop(s) for s in stops]
-    finally:
-        db.close()
+    def operation():
+        db = get_db_session()
+        try:
+            stops = (
+                db.query(Stop)
+                .filter(Stop.company_id == company_id, Stop.order_id.like(f"{ORDER_ID_PREFIX}%"))
+                .order_by(Stop.created_at.desc())
+                .all()
+            )
+            return [_store_order_from_stop(s) for s in stops]
+        finally:
+            db.close()
+
+    return _run_with_db_retry(operation)
 
 
 def _ensure_default_store_orders(db, company_id):
@@ -451,10 +467,20 @@ def list_store_orders():
             traceback.print_exc()
 
     if not orders_db_configured():
+        try:
+            orders = _list_operational_orders(g.company_id)
+        except Exception:
+            traceback.print_exc()
+            return jsonify({
+                "configured": True,
+                "source": "operational_stops",
+                "warning": "Operational database is unavailable.",
+                "orders": [],
+            }), 503
         return jsonify({
             "configured": True,
             "source": "operational_stops",
-            "orders": _list_operational_orders(g.company_id),
+            "orders": orders,
         })
 
     try:
@@ -468,15 +494,22 @@ def list_store_orders():
             "orders": [],
         })
 
-    db = get_db_session()
     try:
-        imported_ids = {
-            s.order_id for s in db.query(Stop.order_id)
-            .filter(Stop.company_id == g.company_id, Stop.order_id.like(f"{ORDER_ID_PREFIX}%"))
-            .all()
-        }
-    finally:
-        db.close()
+        def load_imported_ids():
+            db = get_db_session()
+            try:
+                return {
+                    s.order_id for s in db.query(Stop.order_id)
+                    .filter(Stop.company_id == g.company_id, Stop.order_id.like(f"{ORDER_ID_PREFIX}%"))
+                    .all()
+                }
+            finally:
+                db.close()
+
+        imported_ids = _run_with_db_retry(load_imported_ids)
+    except Exception:
+        traceback.print_exc()
+        imported_ids = set()
 
     for o in orders:
         external_id = str(o.get("id") or "")

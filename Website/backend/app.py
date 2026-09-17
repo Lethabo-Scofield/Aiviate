@@ -1,8 +1,10 @@
 import os
+import traceback
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 from sqlalchemy import text, inspect
+from werkzeug.exceptions import HTTPException
 
 from config import ALLOWED_ORIGINS
 from models import init_db, engine
@@ -58,6 +60,22 @@ def create_app():
     @app.route("/api/health")
     def health():
         return jsonify({"status": "ok", "service": "Aiviate Dispatch API"})
+
+    @app.errorhandler(HTTPException)
+    def handle_http_error(error):
+        return jsonify({
+            "error": error.description or error.name,
+            "status": error.code,
+        }), error.code
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(error):
+        traceback.print_exc()
+        return jsonify({
+            "error": "Internal server error",
+            "detail": str(error) if app.debug else None,
+            "status": 500,
+        }), 500
 
     return app
 

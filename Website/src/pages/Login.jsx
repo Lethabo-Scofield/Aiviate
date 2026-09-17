@@ -47,37 +47,38 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#0f1113] text-[#f8f9fa] flex items-center justify-center px-4">
       <div className="w-full max-w-[380px]">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-5">
             <img src="/logo.png" alt="Aiviate" className="w-14 h-14" />
           </div>
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Aiviate</h1>
-          <p className="text-[15px] text-[#868E96] mt-1">The AI operations brain for your fleet.</p>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#f8f9fa] tracking-tight">Aiviate</h1>
+          <p className="text-[15px] text-[#c8cdd2] mt-1">The AI operations brain for your fleet.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="px-4 py-3 rounded-xl bg-[#343A40]/[0.06]">
-              <p className="text-[13px] text-[#343A40]">{error}</p>
+            <div className="px-4 py-3 rounded-xl bg-white/[0.06] border border-white/10">
+              <p className="text-[13px] text-[#f8f9fa]">{error}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Email</label>
+            <label className="block text-[13px] font-medium text-[#f8f9fa] mb-1.5">Email</label>
             <input
-              type="email"
+              type="text"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="you@company.com"
-              className="apple-input"
+              placeholder="you@company.com or demo"
+              className="apple-input auth-input"
             />
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#111315] mb-1.5">Password</label>
+            <label className="block text-[13px] font-medium text-[#f8f9fa] mb-1.5">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -85,12 +86,12 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Enter your password"
-                className="apple-input pr-10"
+                className="apple-input auth-input pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c7c7cc] hover:text-[#868E96] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f969d] hover:text-[#f8f9fa] transition-colors"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -112,9 +113,9 @@ export default function Login() {
         </form>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-black/[0.06]" />
-          <span className="text-[11px] uppercase tracking-wider text-[#ADB5BD] font-semibold">or</span>
-          <div className="flex-1 h-px bg-black/[0.06]" />
+          <div className="flex-1 h-px bg-white/[0.10]" />
+          <span className="text-[11px] uppercase tracking-wider text-[#8f969d] font-semibold">or</span>
+          <div className="flex-1 h-px bg-white/[0.10]" />
         </div>
 
         <button
@@ -126,13 +127,13 @@ export default function Login() {
           <Sparkles size={15} />
           {demoLoading ? "Loading demo..." : "Try the demo"}
         </button>
-        <p className="text-center text-[11px] text-[#ADB5BD] mt-2">
-          Or sign in with <span className="font-mono text-[#868E96]">demo</span> / <span className="font-mono text-[#868E96]">demo</span>
+        <p className="text-center text-[11px] text-[#8f969d] mt-2">
+          Demo credentials: <span className="font-mono text-[#c8cdd2]">demo</span> / <span className="font-mono text-[#c8cdd2]">demo</span>
         </p>
 
-        <p className="text-center mt-6 text-[13px] text-[#868E96]">
+        <p className="text-center mt-6 text-[13px] text-[#c8cdd2]">
           Don't have an account?{" "}
-          <Link to="/register" className="text-[#111315] font-semibold hover:underline">
+          <Link to="/register" className="text-[#f8f9fa] font-semibold hover:underline">
             Create one
           </Link>
         </p>
