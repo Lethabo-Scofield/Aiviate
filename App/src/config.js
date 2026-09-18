@@ -2,29 +2,23 @@
 //
 // Values are read from Expo public env vars (the `EXPO_PUBLIC_` prefix is
 // inlined at build time by the Expo/Metro bundler — no extra dependency
-// required) with safe local-development fallbacks.
+// required) with the deployed API as the safe fallback.
 //
 // Configure per environment with a `.env` file at the App/ root, e.g.:
-//   EXPO_PUBLIC_API_URL=https://api.aiviate.example.com/api
-//   EXPO_PUBLIC_AIVIATE_API_URL=https://api.aiviate.example.com/api
+//   EXPO_PUBLIC_API_URL=https://aiviate.olyxee.com/api
+//   EXPO_PUBLIC_AIVIATE_API_URL=https://aiviate.olyxee.com/api
 //   EXPO_PUBLIC_APP_SCHEME=aviate
 //
 // NOTE for native devices: `localhost` points at the phone, not your machine.
-// When testing the backend on your laptop, set EXPO_PUBLIC_API_URL to your
-// LAN IP (e.g. http://192.168.1.10:8000/api) or a tunnel URL.
+// When testing a local backend, override EXPO_PUBLIC_API_URL with your LAN IP
+// (e.g. http://192.168.1.10:8000/api), emulator host URL, or tunnel URL.
 
-import { Platform } from 'react-native';
-
-const DEFAULT_WEB_API = 'http://localhost:8000/api';
-// Android emulator maps the host machine to 10.0.2.2; iOS simulator can use
-// localhost. Real devices must override via EXPO_PUBLIC_API_URL.
-const DEFAULT_NATIVE_API =
-  Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
+const DEPLOYED_API = 'https://aiviate.olyxee.com/api';
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   process.env.EXPO_PUBLIC_AIVIATE_API_URL ||
-  (Platform.OS === 'web' ? DEFAULT_WEB_API : DEFAULT_NATIVE_API);
+  DEPLOYED_API;
 
 export const DEFAULT_DRIVER_EMAIL = process.env.EXPO_PUBLIC_DEFAULT_DRIVER_EMAIL || '';
 export const DEFAULT_DRIVER_PASSWORD = process.env.EXPO_PUBLIC_DEFAULT_DRIVER_PASSWORD || '';
