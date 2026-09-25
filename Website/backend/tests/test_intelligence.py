@@ -14,7 +14,7 @@ from intelligence.anomaly_detector import (
     detect_blocked_drivers,
 )
 from intelligence.recommendation_engine import build_recommendations
-from intelligence import command_parser
+from intelligence import command_parser, natural_parser
 
 
 def _ago(minutes):
@@ -212,6 +212,11 @@ class CommandParserTests(unittest.TestCase):
     def test_case_insensitive_head(self):
         r = command_parser.parse("HELP")
         self.assertEqual(r["intent"], "help")
+
+    def test_gmail_confirmation_phrase_is_normalized(self):
+        normalized = natural_parser.normalize("Check Gmail and tell me whether the supplier confirmed order AIV-1042")
+        parsed = command_parser.parse(normalized)
+        self.assertEqual(parsed["intent"], "stats")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,16 @@ import {
   Users, Truck,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
-import { API_BASE, getStoreOrders, getStoreIntegration, updateStoreIntegration } from "../services/api";
+import {
+  API_BASE,
+  completeGmailAuth,
+  disconnectIntegration,
+  getGmailAuthUrl,
+  getIntegrations,
+  getStoreOrders,
+  getStoreIntegration,
+  updateStoreIntegration,
+} from "../services/api";
 import {
   siGmail,
   siQuickbooks,
@@ -76,6 +85,9 @@ export default function Integrations() {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [showDevGuide, setShowDevGuide] = useState(false);
+  const [gmailConnection, setGmailConnection] = useState(null);
+  const [gmailConnecting, setGmailConnecting] = useState(false);
+  const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
   const fileRef = useRef(null);
 
   const check = async (isRefresh = false) => {
@@ -104,6 +116,28 @@ export default function Integrations() {
         if (res.settings) setBranding({ display_name: res.settings.display_name, logo: res.settings.logo });
       })
       .catch(() => {});
+    getIntegrations()
+      .then((res) => {
+        const gmail = (res.connections || []).find((connection) => connection.provider === "gmail");
+        setGmailConnection(gmail || null);
+      })
+      .catch(() => setGmailConnection(null));
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    if (!code) return;
+
+    const redirectUri = "http://localhost:5173/integrations";
+    (async () => {
+      try {
+        const res = await completeGmailAuth({ code, state, redirect_uri: redirectUri });
+        setGmailConnection(res.connection || { provider: "gmail", display_name: "Gmail" });
+        window.history.replaceState({}, "", "/integrations");
+      } catch (err) {
+        setEditError(err.message || "Google OAuth did not finish successfully");
+      }
+    })();
   }, []);
 
   const storeName = branding.display_name || "Aiviate Operational Store";
@@ -149,8 +183,35 @@ export default function Integrations() {
 
   const previewLogo = draftLogo === "" ? null : (draftLogo ?? branding.logo);
 
+  const handleConnectGmail = async () => {
+    try {
+      setGmailConnecting(true);
+      const redirectUri = "http://localhost:5173/integrations";
+      const res = await getGmailAuthUrl({ redirect_uri: redirectUri });
+      window.location.assign(res.url);
+      const nextConnection = { provider: "gmail", provider_user_email: "waiting for Google consent", display_name: "Gmail" };
+      setGmailConnection(nextConnection);
+    } catch (err) {
+      setEditError(err.message || "Could not start Gmail connection");
+    } finally {
+      setGmailConnecting(false);
+    }
+  };
+
+  const handleDisconnectGmail = async () => {
+    try {
+      setGmailDisconnecting(true);
+      await disconnectIntegration("gmail");
+      setGmailConnection(null);
+    } catch (err) {
+      setEditError(err.message || "Could not disconnect Gmail");
+    } finally {
+      setGmailDisconnecting(false);
+    }
+  };
+
   return (
-    <div className="animate-fade-in max-w-3xl">
+    <div className="animate-fade-in w-full max-w-[1200px]">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Integrations</h1>
         <p className="text-[13px] sm:text-[14px] text-[#868E96] mt-1">
@@ -295,22 +356,49 @@ export default function Integrations() {
       )}
 
       <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Available</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        {AVAILABLE.map(({ name, desc, Icon, brand }) => (
-          <div key={name} className="apple-card p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] flex items-center justify-center">
-                {brand ? <BrandIcon icon={brand} size={16} /> : <Icon size={15} className="text-[#111315]" strokeWidth={1.8} />}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-8">
+        {AVAILABLE.map(({ name, desc, Icon, brand }) => {
+          const isGmail = name === "Gmail";
+          const connected = isGmail && gmailConnection;
+          return (
+            <div key={name} className="apple-card p-4">
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] flex items-center justify-center">
+                  {brand ? <BrandIcon icon={brand} size={16} /> : <Icon size={15} className="text-[#111315]" strokeWidth={1.8} />}
+                </div>
+                <p className="text-[13px] font-semibold text-[#111315]">{name}</p>
               </div>
-              <p className="text-[13px] font-semibold text-[#111315]">{name}</p>
+              <p className="text-[11.5px] text-[#868E96] leading-snug mb-2.5">{desc}</p>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${connected ? "bg-[#E8F7EE] text-[#1D7A46]" : "bg-[#F1F3F5] text-[#ADB5BD]"}`}>
+                  {connected ? "Connected" : "Setup required"}
+                </span>
+                {isGmail ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleConnectGmail}
+                      disabled={gmailConnecting || gmailDisconnecting}
+                      className="text-[11px] font-medium text-[#343A40] hover:text-[#111315] disabled:opacity-60"
+                    >
+                      {gmailConnecting ? "Connecting..." : connected ? "Reconnect" : "Configure"}
+                    </button>
+                    {connected && (
+                      <button
+                        onClick={handleDisconnectGmail}
+                        disabled={gmailConnecting || gmailDisconnecting}
+                        className="text-[11px] font-medium text-[#A61E4D] hover:text-[#7A1F3D] disabled:opacity-60"
+                      >
+                        {gmailDisconnecting ? "Disconnecting..." : "Disconnect"}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button className="text-[11px] font-medium text-[#343A40] hover:text-[#111315]">Configure</button>
+                )}
+              </div>
             </div>
-            <p className="text-[11.5px] text-[#868E96] leading-snug mb-2.5">{desc}</p>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F1F3F5] text-[#ADB5BD] font-semibold">Setup required</span>
-              <button className="text-[11px] font-medium text-[#343A40] hover:text-[#111315]">Configure</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">No API? Integrate with code</p>

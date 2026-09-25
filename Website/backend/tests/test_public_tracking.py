@@ -1,4 +1,6 @@
+import importlib
 import os
+import sys
 import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -7,6 +9,20 @@ os.environ.setdefault("DATABASE_URL", "postgresql://user:pass@localhost/test")
 os.environ.setdefault("JWT_SECRET", "test-secret")
 
 from routes.public_tracking import _safe_status
+
+
+class DatabaseUrlTests(unittest.TestCase):
+    def test_sqlite_url_is_left_as_sqlite_for_local_dev(self):
+        os.environ["DATABASE_URL"] = "sqlite:///tmp_aiviate_local.db"
+        os.environ.pop("NEON_DATABASE_URL", None)
+        sys.modules.pop("models", None)
+        models = importlib.import_module("models")
+        self.assertEqual(models.DATABASE_URL, "sqlite:///tmp_aiviate_local.db")
+
+        os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost/test"
+        sys.modules.pop("models", None)
+        models = importlib.import_module("models")
+        self.assertTrue(models.DATABASE_URL.startswith("postgresql+pg8000://"))
 
 
 class PublicTrackingPrivacyTests(unittest.TestCase):

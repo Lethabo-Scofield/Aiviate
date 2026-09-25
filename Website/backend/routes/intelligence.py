@@ -14,6 +14,7 @@ import requests
 from flask import jsonify, g, request
 from sqlalchemy import desc
 
+from integrations.gmail_service import summarize_confirmation_messages
 from routes import intelligence_bp
 from middleware import require_auth, require_admin
 from models import Driver, Device, SafetyEvent, Alert, AuditLog, Job, Stop
@@ -794,7 +795,62 @@ def _looks_like_exact_command(text, normalized, parsed):
     return parsed.get("intent") in ACTION_INTENTS
 
 
+def _extract_order_ref(text):
+    import re
+    match = re.search(r"(?:order|order number|ref|reference)\s*[:#-]?\s*([A-Za-z0-9-]+)", text, flags=re.I)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r"\b[A-Z]{2,}-\d+\b", text)
+    if match:
+        return match.group(0).strip()
+    return None
+
+
+def _gmail_confirmation_answer(db, company_id, text):
+    from models import IntegrationConnection, reveal_integration_token
+    from integrations.gmail_service import build_search_query, fetch_gmail_messages
+    import re
+
+    order_ref = _extract_order_ref(text)
+    if not order_ref:
+        return None
+
+    conn = (
+        db.query(IntegrationConnection)
+        .filter(
+            IntegrationConnection.company_id == company_id,
+            IntegrationConnection.provider == "gmail",
+            IntegrationConnection.is_active.is_(True),
+        )
+        .first()
+    )
+    if not conn:
+        return None
+
+    try:
+        token = reveal_integration_token(conn.access_token)
+        query = build_search_query(order_ref=order_ref, limit=10)
+        messages = fetch_gmail_messages(token, query, max_results=10)
+        result = summarize_confirmation_messages(messages, order_ref=order_ref)
+        if result:
+            return {
+                "ok": True,
+                "type": "gmail",
+                "summary": result["summary"],
+                "llm": False,
+                "model": "gmail-confirmation",
+                "provider": "gmail",
+                "input": text,
+            }
+    except Exception:
+        return None
+    return None
+
+
 def _llm_response_or_error(db, company_id, text, parse_error=None):
+    gmail_result = _gmail_confirmation_answer(db, company_id, text)
+    if gmail_result:
+        return gmail_result
     if not llm_is_configured():
         return None
     try:
@@ -826,7 +882,7 @@ def run_command():
                 "ok": False,
                 "summary": (
                     _humanize_parse_error(parsed["error"], text)
-                    + " The LLM layer is not enabled on this backend; set OPENAI_API_KEY and restart the API."
+                    + " The LLM layer is not enabled on this backend; set OPENAI_API_KEY or GOOGLE_API_KEY/GEMINI_API_KEY and restart the API."
                 ),
                 "input": text,
                 "llm": False,
@@ -843,7 +899,6 @@ def run_command():
         cid = g.company_id
         if (
             intent in READONLY_INTENTS
-            and llm_is_configured()
             and not _looks_like_exact_command(text, normalized, parsed)
         ):
             llm_result = _llm_response_or_error(db, cid, text)

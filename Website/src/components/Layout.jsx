@@ -29,7 +29,7 @@ function ProfilePanelModal({ panel, onClose }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 14, scale: 0.98 }}
             transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-            className="w-full max-w-[980px] overflow-hidden rounded-[26px] border border-white/70 bg-[#F8F9FA] shadow-[0_30px_90px_rgba(17,19,21,0.24)]"
+            className="relative w-[min(94vw,1200px)] max-w-[1200px] overflow-hidden rounded-[26px] border border-white/70 bg-[#F8F9FA] shadow-[0_30px_90px_rgba(17,19,21,0.24)]"
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/[0.06] bg-white/85 px-5 py-3 backdrop-blur-md">
               <p className="text-[14px] font-semibold text-[#111315]">{title}</p>
@@ -41,7 +41,7 @@ function ProfilePanelModal({ panel, onClose }) {
                 <X size={15} strokeWidth={1.6} />
               </button>
             </div>
-            <div className="max-h-[78vh] overflow-y-auto p-5 sm:p-7">
+            <div className="max-h-[78vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-7">
               {panel === "integrations" ? <Integrations /> : <Settings />}
             </div>
           </motion.div>
