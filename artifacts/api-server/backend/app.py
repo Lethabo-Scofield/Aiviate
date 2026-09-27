@@ -15,6 +15,7 @@ from routes import (
     integrations_bp,
 )
 from routes.public_tracking import public_bp
+from routes.driver_live import driver_live_bp
 
 
 def create_app():
@@ -58,6 +59,7 @@ def create_app():
     app.register_blueprint(public_bp)
     app.register_blueprint(operations_bp)
     app.register_blueprint(integrations_bp)
+    app.register_blueprint(driver_live_bp)
 
     @app.route("/")
     def root():
