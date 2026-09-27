@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 if (typeof document !== 'undefined' && !document.getElementById('aviate-map-css')) {
@@ -90,6 +90,7 @@ const MapView = ({
   const markerObjsRef = useRef([]);
   const puckRef = useRef(null);
   const [ready, setReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   const { markers, polyline, leg } = useMemo(() => collectChildren(children), [children]);
 
@@ -125,17 +126,31 @@ const MapView = ({
   // Init map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: STYLE_URL,
-      center: [cLng, cLat],
-      zoom: navTarget ? focusZoom : 12,
-      pitch: navTarget ? 60 : 0,
-      bearing: navTarget ? desiredBearing : 0,
-      attributionControl: false,
-    });
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+    let map;
+    try {
+      // MapLibre 6 requires WebGL2. Some browser previews disable GPU access;
+      // keep the route and stop controls usable instead of crashing the app.
+      if (!document.createElement('canvas').getContext('webgl2')) {
+        setMapError(true);
+        return;
+      }
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: STYLE_URL,
+        center: [cLng, cLat],
+        zoom: navTarget ? focusZoom : 12,
+        pitch: navTarget ? 60 : 0,
+        bearing: navTarget ? desiredBearing : 0,
+        attributionControl: false,
+      });
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+    } catch (error) {
+      map?.remove();
+      console.warn('Route map could not be displayed:', error);
+      setMapError(true);
+      return;
+    }
     map.on('load', () => {
       mapRef.current = map;
       setReady(true);
@@ -280,7 +295,18 @@ const MapView = ({
 
   return (
     <div style={{ ...flatten(style), overflow: 'hidden', position: 'relative' }}>
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {mapError ? (
+        <div role="status" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '100%', height: '100%', boxSizing: 'border-box', padding: 20,
+          background: '#F1F4F5', color: '#0F2A3D', textAlign: 'center',
+          fontFamily: 'system-ui, sans-serif', fontSize: 14, lineHeight: 1.45,
+        }}>
+          Map unavailable in this browser. Use the stop details below to continue your route.
+        </div>
+      ) : (
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      )}
     </div>
   );
 };

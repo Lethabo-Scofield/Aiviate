@@ -10,3 +10,5 @@ When diagnosing a driver-app login failure, do not treat a successful curl to th
 **How to apply:** If login appears network-broken again, first identify which account store and which runtime (web or native) the user uses. Verify the browser request URL and preflight; verify native connectivity separately. Never ask the user for their password to test.
 
 In this workspace, the Expo Preview host itself forwards `/api` requests to the shared backend. This matters when a separate Replit development host is inaccessible to a user's browser or phone: the app can use the same host that delivered its bundle for the restricted driver relay. Confirm this behavior through the public Expo Preview URL rather than assuming Metro serves every path locally.
+
+The user confirmed on 2026-09-28 that sign-in to their original-site driver account worked after switching Preview requests to the Expo host. This is confirmation of the same-host approach, not just a result inferred from invalid-password probes.
