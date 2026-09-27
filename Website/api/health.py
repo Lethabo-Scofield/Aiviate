@@ -1,3 +1,8 @@
-from _bootstrap import build_app
+from flask import Flask, jsonify
 
-app = build_app()
+app = Flask(__name__)
+
+
+@app.route("/api/health")
+def health():
+    return jsonify({"service": "Aiviate Dispatch API", "status": "ok"})
