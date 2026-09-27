@@ -1,9 +1,15 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function DriverLayout() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
@@ -16,7 +22,8 @@ export default function DriverLayout() {
           <div className="flex items-center gap-3">
             <img src="/default-avatar.png" alt="Profile" className="w-8 h-8 rounded-full object-cover" />
             <button
-              onClick={logout}
+              onClick={handleLogout}
+              aria-label="Log out"
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#F1F3F5] transition-colors"
             >
               <LogOut size={15} className="text-[#c7c7cc]" />

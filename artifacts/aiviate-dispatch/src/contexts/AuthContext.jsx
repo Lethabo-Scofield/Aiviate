@@ -93,15 +93,21 @@ export function AuthProvider({ children }) {
     if (isDemoShortcut) {
       return loginDemo();
     }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     let res;
     try {
       res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
-    } catch {
+    } catch (error) {
+      if (error.name === "AbortError") throw new Error("Sign in timed out. Please try again.");
       throw new Error("Cannot connect to server. Please check that the backend is running.");
+    } finally {
+      window.clearTimeout(timeout);
     }
     const data = await parseJSON(res);
     if (!res.ok) throw new Error(data.error || "Login failed");
