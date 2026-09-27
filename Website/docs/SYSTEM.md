@@ -207,7 +207,7 @@ time_min = (distance_km / 35 × 60) + sum(service_times)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEON_DATABASE_URL` | Yes | PostgreSQL connection string |
+| `NEON_DATABASE_URL` | Yes | PostgreSQL connection string. `DATABASE_URL`, `POSTGRES_URL`, or `ORDERS_DATABASE_KEY` are accepted fallbacks. |
 | `JWT_SECRET` | Yes | JWT signing secret (auto-generated if missing) |
 | `ALLOWED_ORIGINS` | No | CORS allowed origins (default: `*`) |
 | `FLASK_DEBUG` | No | Enable Flask debug mode (`true`/`false`) |
@@ -231,7 +231,7 @@ In development, two workflows run in parallel:
 
 **Backend (Render):**
 1. Root directory: `backend/`
-2. Set env vars: `NEON_DATABASE_URL`, `JWT_SECRET`, `ALLOWED_ORIGINS`
+2. Set env vars: `NEON_DATABASE_URL` (or `DATABASE_URL`/`POSTGRES_URL`; production can fall back to `ORDERS_DATABASE_KEY`), `JWT_SECRET`, `ALLOWED_ORIGINS`
 3. Start command: `cd backend && gunicorn --bind 0.0.0.0:$PORT wsgi:app`
 4. Uses `backend/render.yaml` for auto-configuration
 
