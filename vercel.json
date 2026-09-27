@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "vercel_app.py": {
+      "includeFiles": "{artifacts/api-server/backend/**,artifacts/aiviate-dispatch/dist/public/**}",
+      "excludeFiles": "{.migration-backup/**,artifacts/api-server/aiviate-engine/**,artifacts/mockup-sandbox/**}"
+    }
+  }
+}

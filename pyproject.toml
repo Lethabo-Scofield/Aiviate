@@ -22,3 +22,9 @@ dependencies = [
     "sqlalchemy>=2.1.1",
     "uvicorn>=0.54.0",
 ]
+
+[tool.vercel]
+entrypoint = "vercel_app:app"
+
+[tool.vercel.scripts]
+build = "pnpm install --frozen-lockfile && PORT=19317 BASE_PATH=/ pnpm --filter @workspace/aiviate-dispatch run build"

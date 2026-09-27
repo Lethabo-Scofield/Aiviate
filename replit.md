@@ -7,6 +7,7 @@ A logistics dispatch app for managing orders, drivers, delivery routes, fleet op
 - The managed `artifacts/aiviate-dispatch: web` workflow serves the original Vite/React frontend at `/`.
 - The managed `artifacts/api-server: API Server` workflow serves the original Flask REST API at `/api` and starts its private FastAPI route-planning engine on localhost:8099. Start/restart both workflows to use the app.
 - Frontend build: `PORT=19317 BASE_PATH=/ pnpm --filter @workspace/aiviate-dispatch run build`.
+- Vercel uses the root `pyproject.toml` entrypoint (`vercel_app.py`) and its build script to serve the same website and Flask API as one serverless function. The local route-planning engine is not started by Vercel; engine-dependent actions require a separately hosted engine.
 - Python dependencies are recorded in the root `pyproject.toml` and `uv.lock`; the API workflow uses `uv run`. Do not use the scaffold's unused Express routes for product features.
 
 ## Project layout

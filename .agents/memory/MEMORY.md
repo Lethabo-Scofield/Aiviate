@@ -1,0 +1,1 @@
+- [Vercel workspace entrypoint](vercel-root-entrypoint.md) — Vercel deploys this workspace root and auto-detects Flask; use its root-importable app, not archived API wrappers or the planner engine.
