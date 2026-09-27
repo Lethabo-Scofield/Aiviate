@@ -10,6 +10,7 @@ import traceback
 import uuid
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+import os
 import re
 
 import requests
@@ -480,6 +481,133 @@ def _exec_notify(db, company_id, driver_id, message, actor):
     )
 
 
+def _call_agent_base_url():
+    return (
+        os.environ.get("CALL_AGENT_API_URL")
+        or os.environ.get("AIVIATE_CALL_AGENT_URL")
+        or ""
+    ).strip().rstrip("/")
+
+
+def _exec_call(db, company_id, order_ref, reason, actor):
+    """Create a controlled customer call through the Call Agent backend."""
+    ref = (order_ref or "").strip().strip('"').strip("'")
+    reason = (reason or "customer follow-up").strip().strip('"').strip("'")
+    if not ref:
+        return _resp(False, "Which order should I call about?")
+
+    candidates = [ref]
+    if not ref.startswith("STORE-"):
+        candidates.append(f"STORE-{ref}")
+    if not ref.startswith("MERCH-"):
+        candidates.append(f"MERCH-{ref}")
+
+    stop = (
+        db.query(Stop)
+        .filter(Stop.company_id == company_id, Stop.order_id.in_(candidates))
+        .order_by(desc(Stop.created_at))
+        .first()
+    )
+    if not stop:
+        return _resp(False, f"I couldn't find order {ref} in this workspace.")
+    if not (stop.phone or "").strip():
+        return _resp(False, f"Order {stop.order_id} has no customer phone number to call.")
+
+    call_agent_url = _call_agent_base_url()
+    if not call_agent_url:
+        return _resp(
+            False,
+            "The Call Agent service URL is not configured. Set CALL_AGENT_API_URL on the backend, then retry the call request.",
+            type="call_result",
+            order_ref=stop.order_id,
+        )
+
+    payload = {
+        "tenant_id": company_id,
+        "incident_id": None,
+        "reason": reason,
+        "order_reference": stop.order_id,
+        "approved_summary": reason,
+        "recipient": {
+            "type": "customer",
+            "name": stop.customer_name,
+            "phone": stop.phone,
+        },
+        "permitted_disclosure_fields": [
+            "order_reference",
+            "delivery_status",
+            "delivery_window",
+            "driver_name",
+        ],
+    }
+    idem = f"call:{company_id}:{stop.order_id}:{reason.lower()[:80]}"
+    headers = {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idem,
+        "X-Correlation-ID": f"corr-{uuid.uuid4().hex}",
+    }
+    service_token = os.environ.get("AIVIATE_SERVICE_TOKEN", "").strip()
+    if service_token:
+        headers["X-Aiviate-Service-Token"] = service_token
+        headers["Authorization"] = f"Bearer {service_token}"
+
+    try:
+        response = requests.post(
+            f"{call_agent_url}/internal/v1/calls",
+            json=payload,
+            headers=headers,
+            timeout=15,
+        )
+        response.raise_for_status()
+        result = response.json() if response.content else {}
+    except requests.RequestException as exc:
+        traceback.print_exc()
+        detail = None
+        if getattr(exc, "response", None) is not None:
+            try:
+                detail = exc.response.json()
+            except ValueError:
+                detail = exc.response.text[:500]
+        return _resp(
+            False,
+            "The Call Agent could not create the call right now.",
+            type="call_result",
+            order_ref=stop.order_id,
+            detail=detail or str(exc),
+        )
+
+    call = result.get("call") or result
+    call_id = call.get("call_id") or call.get("id")
+    status = call.get("status") or ("simulated" if result.get("simulation") else "created")
+    log_action(
+        db,
+        company_id=company_id,
+        action_type="call_agent_call_requested",
+        summary=f"Requested customer call for {stop.order_id}: {reason}",
+        actor=actor,
+        confidence=1.0,
+        requires_approval=False,
+        related_id=stop.id,
+        details={
+            "order_reference": stop.order_id,
+            "customer_name": stop.customer_name,
+            "call_id": call_id,
+            "status": status,
+            "simulation": bool(result.get("simulation")),
+            "reason": reason,
+        },
+    )
+    return _resp(
+        True,
+        f"Call Agent {'simulated' if result.get('simulation') else 'created'} a customer call for {stop.order_id}.",
+        type="call_result",
+        order_ref=stop.order_id,
+        call_id=call_id,
+        status=status,
+        simulation=bool(result.get("simulation")),
+    )
+
+
 def _exec_alerts(db, company_id):
     rows = (
         db.query(Alert)
@@ -760,6 +888,7 @@ ACTION_INTENTS = {
     "unblock",
     "acknowledge",
     "notify",
+    "call",
 }
 
 READONLY_INTENTS = {
@@ -810,6 +939,19 @@ def _is_gmail_request(text):
     return bool(re.search(r"\b(?:gmail|e-?mail)\b", text or "", flags=re.I))
 
 
+def _generic_gmail_query(text):
+    cleaned = re.sub(
+        r"\b(?:search|check|look\s+for|find|in|my|the|gmail|e-?mail|emails?|mailbox|inbox|please|tell\s+me|whether|if)\b",
+        " ",
+        text or "",
+        flags=re.I,
+    )
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ?.!,:;\"'")
+    if not cleaned:
+        return "in:inbox -label:trash"
+    return f"in:inbox -label:trash {cleaned}"
+
+
 def _message_datetime(message):
     try:
         value = parsedate_to_datetime(message.get("date", ""))
@@ -854,13 +996,6 @@ def _gmail_confirmation_answer(db, company_id, text):
     )
 
     order_ref = _extract_order_ref(text)
-    if not order_ref:
-        return {
-            "ok": False,
-            "summary": "Please include an order reference so I can search Gmail for the matching supplier email.",
-            "input": text,
-            "llm": False,
-        }
 
     conn = (
         db.query(IntegrationConnection)
@@ -882,7 +1017,7 @@ def _gmail_confirmation_answer(db, company_id, text):
     try:
         token = reveal_integration_token(conn.access_token)
         refresh_token = reveal_integration_token(conn.refresh_token)
-        query = build_search_query(order_ref=order_ref, limit=10)
+        query = build_search_query(order_ref=order_ref, limit=10) if order_ref else _generic_gmail_query(text)
         messages, refreshed_token = fetch_gmail_messages_with_refresh(
             token, refresh_token, query, max_results=10
         )
@@ -919,10 +1054,30 @@ def _gmail_confirmation_answer(db, company_id, text):
         }
 
     if not messages:
+        target = order_ref or query
         return {
             "ok": True,
-            "summary": f"I searched connected Gmail for {order_ref} but found no matching emails. I can’t verify a supplier confirmation, sender, or expected delivery date.",
+            "summary": f"I searched connected Gmail for {target} but found no matching emails.",
             "provider": "gmail",
+            "query": query,
+            "input": text,
+            "llm": False,
+        }
+
+    if not order_ref:
+        top = sorted(messages, key=_message_datetime, reverse=True)[:5]
+        parts = []
+        for message in top:
+            subject = message.get("subject") or "(no subject)"
+            sender = message.get("from") or "Unknown sender"
+            snippet = message.get("snippet") or message.get("body_preview") or ""
+            parts.append(f"{sender} — {subject}: {snippet[:180]}")
+        return {
+            "ok": True,
+            "summary": f"I searched connected Gmail and found {len(messages)} matching email(s). " + " | ".join(parts),
+            "provider": "gmail",
+            "query": query,
+            "items": top,
             "input": text,
             "llm": False,
         }
@@ -951,6 +1106,7 @@ def _gmail_confirmation_answer(db, company_id, text):
         "ok": True,
         "summary": summary,
         "provider": "gmail",
+        "query": query,
         "input": text,
         "llm": False,
     }
@@ -1042,6 +1198,8 @@ def run_command():
                 result = _exec_map(db, cid)
             elif intent == "notify":
                 result = _exec_notify(db, cid, args[0], args[1], actor)
+            elif intent == "call":
+                result = _exec_call(db, cid, args[0], args[1], actor)
             elif intent == "alerts":
                 result = _exec_alerts(db, cid)
             elif intent == "audit":

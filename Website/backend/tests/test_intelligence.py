@@ -211,6 +211,17 @@ class CommandParserTests(unittest.TestCase):
         r = command_parser.parse('assign "JOB ONE" "DRIVER TWO"')
         self.assertEqual(r["args"], ["JOB ONE", "DRIVER TWO"])
 
+    def test_call_command_keeps_reason_text(self):
+        r = command_parser.parse('call STORE-42 "confirm availability before dispatch"')
+        self.assertEqual(r["intent"], "call")
+        self.assertEqual(r["args"], ["STORE-42", "confirm availability before dispatch"])
+
+    def test_natural_call_customer_phrase(self):
+        normalized = natural_parser.normalize("call customer STORE-42 about availability")
+        self.assertEqual(normalized, 'call STORE-42 "availability"')
+        parsed = command_parser.parse(normalized)
+        self.assertEqual(parsed["intent"], "call")
+
     def test_case_insensitive_head(self):
         r = command_parser.parse("HELP")
         self.assertEqual(r["intent"], "help")

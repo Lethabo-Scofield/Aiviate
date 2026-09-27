@@ -129,6 +129,14 @@ _PATTERNS: List[Tuple[re.Pattern, object]] = [
     (re.compile(r"^\s*let\s+(\S+?)\s+know\s+(?:that\s+)?(.+?)\s*$", re.I),
      lambda m: f'notify {m.group(1)} "{m.group(2).strip()}"'),
 
+    # ── call customer through Call Agent ───────────────────────────
+    # Calls are restricted to an order/customer reference; the APP looks up
+    # the customer phone and sends a controlled request to the Call Agent.
+    (re.compile(r"^\s*(call|phone)\s+(?:the\s+)?customer\s+(?:for\s+)?(?:order\s+)?([A-Za-z0-9-]+)\s*(?:about|because|for|to)?\s*(.*?)\s*$", re.I),
+     lambda m: f'call {m.group(2)} "{(m.group(3) or "customer follow-up").strip()}"'),
+    (re.compile(r"^\s*(call|phone)\s+(?:order\s+)?([A-Za-z0-9-]+)\s*(?:about|because|for|to)?\s*(.*?)\s*$", re.I),
+     lambda m: f'call {m.group(2)} "{(m.group(3) or "customer follow-up").strip()}"'),
+
     # ── block / unblock ─────────────────────────────────────────────
     (re.compile(r"^\s*(block|pause|stop)\s+(?:driver\s+)?(.+?)\s*$", re.I),
      lambda m: f'block "{m.group(2).strip()}"'),

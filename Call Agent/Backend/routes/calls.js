@@ -5,11 +5,23 @@ const { correlationId, isSimulationMode } = require("../services/aiviateClient")
 const router = express.Router();
 const calls = new Map();
 
+function serviceAuthorized(req) {
+  const expected = process.env.AIVIATE_SERVICE_TOKEN || "";
+  if (!expected) return true;
+  const headerToken = req.headers["x-aiviate-service-token"] || "";
+  const bearerToken = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  return headerToken === expected || bearerToken === expected;
+}
+
 function idempotencyKey(req) {
   return req.headers["idempotency-key"] || req.body?.idempotency_key || null;
 }
 
 router.post("/", async (req, res) => {
+  if (!serviceAuthorized(req)) {
+    return res.status(401).json({ error: "Service authentication required", correlation_id: correlationId(req) });
+  }
+
   const idem = idempotencyKey(req);
   if (idem && calls.has(idem)) {
     return res.json({ duplicate: true, call: calls.get(idem), correlation_id: correlationId(req) });

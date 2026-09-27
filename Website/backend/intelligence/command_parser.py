@@ -28,6 +28,7 @@ COMMANDS: Dict[str, Dict] = {
     "unblock":         {"argc": 1, "desc": "unblock <driver_id>"},
     "acknowledge":     {"argc": 1, "desc": "acknowledge <recommendation_id>"},
     "notify":          {"argc": 2, "desc": "notify <driver_id> <message…>  — send an alert to a driver"},
+    "call":            {"argc": 2, "desc": "call <order_ref> <reason…>  — request a customer call through the Call Agent"},
 }
 
 ALIASES = {
@@ -95,6 +96,11 @@ def parse(text: str) -> Dict:
     if intent == "notify":
         return {"intent": intent, "args": [args[0], " ".join(args[1:])]}
 
+    # `call` is variadic in the reason portion: keep arg[0] as the order
+    # reference and join the rest as the reason for the controlled call.
+    if intent == "call":
+        return {"intent": intent, "args": [args[0], " ".join(args[1:])]}
+
     return {"intent": intent, "args": args[:expected] if expected > 0 else []}
 
 
@@ -120,6 +126,7 @@ FRIENDLY_EXAMPLES: List[Dict] = [
     {"phrase": "plan my day",                    "does": "Builds routes from your stops and assigns drivers"},
     {"phrase": "fix all routes",                 "does": "Re-optimizes every active route"},
     {"phrase": "tell Mike to hurry up",          "does": "Sends an in-app message to that driver"},
+    {"phrase": "call customer STORE-42 about availability", "does": "Requests a verified customer call through the Call Agent"},
     {"phrase": "block Sarah",                    "does": "Pauses a driver from new assignments"},
 ]
 

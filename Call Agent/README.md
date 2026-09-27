@@ -40,6 +40,8 @@ RETELL_FROM_NUMBER=
 RETELL_WEBHOOK_SECRET=
 ```
 
+The APP backend must also set `CALL_AGENT_API_URL` to this service's public URL so the Aiviate chat/agent can request approved calls through `POST /internal/v1/calls`.
+
 Keep `CALL_AGENT_SIMULATION_MODE=true` until Retell credentials and approved call policies are verified.
 
 ## Frontend Folder

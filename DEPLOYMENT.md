@@ -98,6 +98,7 @@ DB_CONNECT_TIMEOUT=10
 SKIP_DB_INIT=true
 ENGINE_URL=
 AIVIATE_SERVICE_TOKEN=
+CALL_AGENT_API_URL=
 MERCHANT_API_RATE_LIMIT_PER_MINUTE=120
 ```
 
@@ -110,6 +111,7 @@ Notes:
 - `SKIP_DB_INIT=true` is recommended for serverless cold starts. The current backend still has small compatibility column creation for existing tables, but full schema migration should be moved to a release step.
 - `ENGINE_URL` must point to a deployed decision-engine service if route planning should work in production.
 - `AIVIATE_SERVICE_TOKEN` must match the Call Agent service token.
+- `CALL_AGENT_API_URL` must point at the deployed Call Agent backend, for example `https://call-agent.example.com`.
 
 ## Database Migration
 
