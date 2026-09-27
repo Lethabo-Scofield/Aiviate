@@ -63,9 +63,11 @@ export async function request(path, { method = 'GET', body, headers = {}, auth =
     });
   } catch (e) {
     clearTimeout(timer);
-    // fetch rejects on network failure / abort — model both as retryable network errors.
+    const host = API_URL.replace(/^https?:\/\//, '').split('/')[0];
     throw new ApiError(
-      e.name === 'AbortError' ? 'Request timed out' : 'Network request failed',
+      e.name === 'AbortError'
+        ? `Driver service timed out (${path}). Please retry.`
+        : `Cannot reach the driver service at ${host} (${path}). Please reopen the app and retry.`,
       { isNetwork: true, code: e.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK' },
     );
   }

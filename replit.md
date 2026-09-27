@@ -24,6 +24,6 @@ A logistics dispatch app for managing orders, drivers, delivery routes, fleet op
 
 The Flask app uses `NEON_DATABASE_URL` if supplied, otherwise `DATABASE_URL`, with its original local fallback. The import did not move records from the source database. Set the original database connection as a Replit secret if the app needs to show those records; do not copy values from imported environment files into source.
 
-The driver app uses the original live API for driver accounts and jobs, not the Replit development database. Expo web Preview calls the restricted, development-only `/api/live-driver` relay because the live API does not permit cross-origin browser requests. Native Expo clients connect directly to the live API. Do not send users' driver passwords through chat or copy them into source.
+The driver app uses the original live API for driver accounts and jobs, not the Replit development database. Both browser Preview and Expo Go in this workspace call the restricted, development-only `/api/live-driver` relay through the Expo Preview domain, avoiding cross-origin and separate-development-domain failures. Builds outside Preview connect directly to the live API. Do not send users' driver passwords through chat or copy them into source.
 
 `SESSION_SECRET` is available for persistent JWT signing when `JWT_SECRET` is unset. The planner generates its own private local key on first start. Keep that key and its local SQLite file out of Git.

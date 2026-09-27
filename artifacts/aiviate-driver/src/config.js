@@ -9,21 +9,19 @@
 //   EXPO_PUBLIC_AIVIATE_API_URL=https://aiviate.olyxee.com/api
 //   EXPO_PUBLIC_APP_SCHEME=aviate
 //
-// Native clients contact the live service directly. Expo web Preview routes
-// through a fixed-destination Replit relay because the live API does not
-// permit cross-origin requests from browsers.
-
-import { Platform } from 'react-native';
+// In the Replit Preview, both web and Expo Go use the same domain that serves
+// the app. Its /api route forwards to a restricted relay for the live service.
+// Outside Preview, native builds use the original live API directly.
 
 const DEPLOYED_API = 'https://aiviate.olyxee.com/api';
-const WEB_PREVIEW_API = Platform.OS === 'web' && process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api/live-driver`
+const PREVIEW_API = process.env.EXPO_PUBLIC_DRIVER_PREVIEW_HOST
+  ? `https://${process.env.EXPO_PUBLIC_DRIVER_PREVIEW_HOST}/api/live-driver`
   : null;
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   process.env.EXPO_PUBLIC_AIVIATE_API_URL ||
-  WEB_PREVIEW_API ||
+  PREVIEW_API ||
   DEPLOYED_API;
 
 export const DEFAULT_DRIVER_EMAIL = process.env.EXPO_PUBLIC_DEFAULT_DRIVER_EMAIL || '';

@@ -8,3 +8,5 @@ When diagnosing a driver-app login failure, do not treat a successful curl to th
 **Why:** The imported app's original accounts live on the original live service, while its Replit development database has different accounts. Pointing everything at the Replit API made a disposable driver sign in successfully but could never validate a driver created on the original site. A direct call to the live API then failed CORS in browser Preview.
 
 **How to apply:** If login appears network-broken again, first identify which account store and which runtime (web or native) the user uses. Verify the browser request URL and preflight; verify native connectivity separately. Never ask the user for their password to test.
+
+In this workspace, the Expo Preview host itself forwards `/api` requests to the shared backend. This matters when a separate Replit development host is inaccessible to a user's browser or phone: the app can use the same host that delivered its bundle for the restricted driver relay. Confirm this behavior through the public Expo Preview URL rather than assuming Metro serves every path locally.
