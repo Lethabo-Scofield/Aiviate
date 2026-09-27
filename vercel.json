@@ -1,17 +1,26 @@
 {
   "version": 2,
-  "installCommand": "cd Website && npm ci --no-audit --no-fund",
-  "buildCommand": "cd Website && npm run build",
-  "outputDirectory": "Website/dist",
-  "framework": "vite",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/index"
+      "src": "api/index.py",
+      "use": "@vercel/python"
     },
     {
-      "source": "/:path*",
-      "destination": "/index.html"
+      "src": "Website/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
