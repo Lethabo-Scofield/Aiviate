@@ -15,6 +15,8 @@ from intelligence.anomaly_detector import (
 )
 from intelligence.recommendation_engine import build_recommendations
 from intelligence import command_parser, natural_parser
+from intelligence.llm_chat import build_email_fallback_summary
+from routes.intelligence import _gmail_confirmation_answer
 
 
 def _ago(minutes):
@@ -213,10 +215,22 @@ class CommandParserTests(unittest.TestCase):
         r = command_parser.parse("HELP")
         self.assertEqual(r["intent"], "help")
 
-    def test_gmail_confirmation_phrase_is_normalized(self):
-        normalized = natural_parser.normalize("Check Gmail and tell me whether the supplier confirmed order AIV-1042")
+    def test_gmail_confirmation_phrase_is_not_normalized_to_stats(self):
+        prompt = "Check Gmail and tell me whether the supplier confirmed order AIV-1042"
+        normalized = natural_parser.normalize(prompt)
+        self.assertEqual(normalized, prompt)
         parsed = command_parser.parse(normalized)
-        self.assertEqual(parsed["intent"], "stats")
+        self.assertIn("error", parsed)
+
+    def test_non_gmail_question_skips_gmail_fallback(self):
+        result = _gmail_confirmation_answer(None, "CMP-1", "What jobs are available?")
+        self.assertIsNone(result)
+
+    def test_email_fallback_has_order_context(self):
+        summary = build_email_fallback_summary("Check Gmail and tell me whether the supplier confirmed order AV-2041.")
+        self.assertIn("AV-2041", summary)
+        self.assertIn("Gmail", summary)
+        self.assertIn("confirmation", summary.lower())
 
 
 if __name__ == "__main__":

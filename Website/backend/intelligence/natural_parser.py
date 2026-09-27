@@ -25,10 +25,6 @@ _PATTERNS: List[Tuple[re.Pattern, object]] = [
     # ── help ─────────────────────────────────────────────────────────
     (re.compile(r"^\s*\??\s*(help|what can you do|what do you do|how does this work)\s*\??\s*$", re.I), "help"),
 
-    # ── Gmail / supplier confirmation checks ────────────────────────
-    (re.compile(r"^\s*(check|look\s+at|search|scan)\s+gmail\b.*$", re.I), "stats"),
-    (re.compile(r"^\s*(check|look\s+at|search|scan)\b.*?supplier.*?(confirmed|confirmation).*?(order|ref)\b.*$", re.I), "stats"),
-
     # ── autopilot ─────────────────────────────────────────────────────
     (re.compile(r"^\s*(agent\s*zero|agentzero|aiviate)[,:\s]+.*?(full\s+)?details?.*?(completed\s+)?(autopilot|auto\s*pilot).*?(task|action|work).*$", re.I), "autopilot"),
     (re.compile(r"^\s*(show|give|open|explain|tell)\b.*?(full\s+)?details?.*?(completed\s+)?(autopilot|auto\s*pilot).*?(task|action|work).*$", re.I), "autopilot"),

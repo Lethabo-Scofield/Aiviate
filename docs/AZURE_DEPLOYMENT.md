@@ -64,11 +64,14 @@ NEON_DATABASE_URL=
 JWT_SECRET=
 ALLOWED_ORIGINS=
 DB_CONNECT_TIMEOUT=10
-SKIP_DB_INIT=true
+SKIP_DB_INIT=false
 ENGINE_URL=
 AIVIATE_ENGINE_API_KEY=
 AIVIATE_SERVICE_TOKEN=
 MERCHANT_API_RATE_LIMIT_PER_MINUTE=120
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=
 ```
 
 ### Decision engine
@@ -215,12 +218,17 @@ az webapp config appsettings set \
     JWT_SECRET="<your-secret>" \
     ALLOWED_ORIGINS="https://<your-static-web-app-domain>" \
     DB_CONNECT_TIMEOUT=10 \
-    SKIP_DB_INIT=true \
+    SKIP_DB_INIT=false \
     ENGINE_URL="https://aviate-engine.<region>.azurecontainerapps.io" \
     AIVIATE_ENGINE_API_KEY="<engine-api-key>" \
     AIVIATE_SERVICE_TOKEN="<shared-service-token>" \
-    MERCHANT_API_RATE_LIMIT_PER_MINUTE=120
+    MERCHANT_API_RATE_LIMIT_PER_MINUTE=120 \
+    GOOGLE_CLIENT_ID="<google-oauth-client-id>" \
+    GOOGLE_CLIENT_SECRET="<google-oauth-client-secret>" \
+    GOOGLE_REDIRECT_URI="https://<your-frontend-domain>/integrations"
 ```
+
+  Use `SKIP_DB_INIT=true` only after your database schema is already provisioned and migration management is handled externally.
 
 ### Deploy code
 

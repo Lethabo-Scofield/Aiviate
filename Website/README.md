@@ -13,9 +13,11 @@ A multi-tenant logistics dispatch SaaS for managing delivery routes in Johannesb
 
 ## Quick Start
 
-1. Set environment variables: `NEON_DATABASE_URL`, `JWT_SECRET`
+1. Set environment variables: `NEON_DATABASE_URL` (or `DATABASE_URL`), `JWT_SECRET`
 2. Install dependencies: `pip install -r backend/requirements.txt` and `npm install`
 3. Start backend: `cd backend && python app.py`
 4. Start frontend: `npm run dev`
+
+Note: If no database URL is provided, the backend falls back to a temporary local SQLite file for startup resilience. Use a real Postgres URL in production.
 
 See `SYSTEM_DOCUMENTATION.md` for full API docs, database schema, and deployment guide.

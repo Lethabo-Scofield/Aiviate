@@ -8,7 +8,13 @@ import requests
 from flask import g, jsonify, request
 
 from intelligence.audit_logger import log_action
-from integrations.gmail_service import build_google_oauth_url, build_search_query, fetch_gmail_messages
+from integrations.gmail_service import (
+    GmailReauthorizationRequired,
+    build_google_oauth_url,
+    build_search_query,
+    fetch_gmail_messages_with_refresh,
+    gmail_api_error_summary,
+)
 from middleware import require_admin, require_auth
 from models import IntegrationConnection, Company, obfuscate_integration_token, reveal_integration_token
 from routes import integrations_bp
@@ -19,6 +25,29 @@ def _current_workspace(client_company_id=None):
     if client_company_id:
         return client_company_id
     return getattr(g, "company_id", None)
+
+
+def _normalize_redirect_uri(value):
+    if not value:
+        return ""
+    return value.strip().rstrip("/")
+
+
+def _resolve_google_redirect_uri(requested_redirect_uri=None):
+    configured = _normalize_redirect_uri(os.environ.get("GOOGLE_REDIRECT_URI"))
+    requested = _normalize_redirect_uri(requested_redirect_uri)
+
+    if configured and requested and requested != configured:
+        raise ValueError(
+            "Google redirect URI mismatch. "
+            "Set frontend and backend to use GOOGLE_REDIRECT_URI exactly. "
+            f"Expected: {configured}"
+        )
+
+    redirect_uri = configured or requested
+    if not redirect_uri:
+        raise ValueError("Google redirect URI is not configured")
+    return redirect_uri
 
 
 @integrations_bp.route("/api/integrations", methods=["GET"])
@@ -45,13 +74,11 @@ def list_integrations():
 def gmail_auth_url():
     payload = request.get_json(silent=True) or {}
     company_id = _current_workspace()
-    redirect_uri = payload.get("redirect_uri") or os.environ.get("GOOGLE_REDIRECT_URI")
-    if not redirect_uri:
-        return jsonify({"error": "Google redirect URI is not configured"}), 400
     state = payload.get("state") or f"company:{company_id}:{uuid.uuid4().hex}"
     try:
+        redirect_uri = _resolve_google_redirect_uri(payload.get("redirect_uri"))
         url = build_google_oauth_url(company_id, redirect_uri, state=state)
-        return jsonify({"url": url, "state": state})
+        return jsonify({"url": url, "state": state, "redirect_uri": redirect_uri})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -63,9 +90,13 @@ def gmail_callback():
     body = request.get_json(silent=True) or {}
     code = body.get("code")
     state = body.get("state")
-    redirect_uri = body.get("redirect_uri") or os.environ.get("GOOGLE_REDIRECT_URI")
-    if not code or not redirect_uri:
-        return jsonify({"error": "code and redirect_uri are required"}), 400
+    if not code:
+        return jsonify({"error": "code is required"}), 400
+
+    try:
+        redirect_uri = _resolve_google_redirect_uri(body.get("redirect_uri"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     client_id = os.environ.get("GOOGLE_CLIENT_ID")
     client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -177,7 +208,13 @@ def gmail_search():
         if not conn:
             return jsonify({"error": "No Gmail connection is active for this workspace"}), 404
         token = reveal_integration_token(conn.access_token)
-        messages = fetch_gmail_messages(token, query, max_results=body.get("max_results", 10))
+        refresh_token = reveal_integration_token(conn.refresh_token)
+        messages, refreshed_token = fetch_gmail_messages_with_refresh(
+            token, refresh_token, query, max_results=body.get("max_results", 10)
+        )
+        if refreshed_token != token:
+            conn.access_token = obfuscate_integration_token(refreshed_token)
+            db.commit()
         log_action(
             db,
             company_id=company_id,
@@ -190,6 +227,15 @@ def gmail_search():
             details={"query": query},
         )
         return jsonify({"results": messages, "query": query})
+    except GmailReauthorizationRequired as exc:
+        db.rollback()
+        return jsonify({"error": str(exc)}), 401
+    except requests.HTTPError as exc:
+        db.rollback()
+        traceback.print_exc()
+        if exc.response is not None and exc.response.status_code == 403:
+            return jsonify({"error": gmail_api_error_summary(exc)}), 403
+        return jsonify({"error": "Gmail could not be reached right now. Please try again shortly."}), 502
     except Exception:
         db.rollback()
         traceback.print_exc()
@@ -216,6 +262,23 @@ def disconnect_integration(provider):
         )
         if not conn:
             return jsonify({"success": True})
+
+        if provider.lower() == "gmail":
+            try:
+                token = reveal_integration_token(conn.access_token) if conn.access_token else ""
+                if token:
+                    requests.post(
+                        "https://oauth2.googleapis.com/revoke",
+                        data={"token": token},
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                        timeout=15,
+                    )
+            except Exception:
+                traceback.print_exc()
+
+            conn.access_token = None
+            conn.refresh_token = None
+
         conn.is_active = False
         conn.updated_at = datetime.now(timezone.utc)
         db.commit()

@@ -11,9 +11,10 @@ from models import init_db, engine
 from routes import (
     auth_bp, jobs_bp, drivers_bp, stops_bp, optimization_bp, stats_bp,
     safety_bp, devices_bp, alerts_bp, liveops_bp, intelligence_bp, agents_bp,
-    autopilot_bp, engine_bp, orders_bp, support_bp, public_bp, operations_bp,
+    autopilot_bp, engine_bp, orders_bp, support_bp, operations_bp,
     integrations_bp,
 )
+from routes.public_tracking import public_bp
 
 
 def create_app():
@@ -57,6 +58,10 @@ def create_app():
     app.register_blueprint(public_bp)
     app.register_blueprint(operations_bp)
     app.register_blueprint(integrations_bp)
+
+    @app.route("/")
+    def root():
+        return jsonify({"status": "ok", "service": "Aiviate Dispatch API"})
 
     @app.route("/api/health")
     def health():

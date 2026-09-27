@@ -1,9 +1,15 @@
 import unittest
+from unittest.mock import Mock, patch
+
+import requests
 
 from integrations.gmail_service import (
+    GmailReauthorizationRequired,
     build_google_oauth_url,
     build_search_query,
     extract_message_summary,
+    fetch_gmail_messages_with_refresh,
+    gmail_api_error_summary,
     summarize_confirmation_messages,
 )
 
@@ -58,6 +64,78 @@ class GmailIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIn("confirmed", result["summary"].lower())
         self.assertIn("AIV-1042", result["summary"])
+
+    @patch("integrations.gmail_service.requests.post")
+    @patch("integrations.gmail_service.fetch_gmail_messages")
+    def test_expired_access_token_is_refreshed_and_retried(self, fetch_messages, post):
+        unauthorized = requests.Response()
+        unauthorized.status_code = 401
+        fetch_messages.side_effect = [
+            requests.HTTPError(response=unauthorized),
+            [{"id": "msg-1"}],
+        ]
+        token_response = Mock()
+        token_response.content = b'{"access_token":"new-access"}'
+        token_response.status_code = 200
+        token_response.json.return_value = {"access_token": "new-access"}
+        post.return_value = token_response
+
+        with patch.dict("os.environ", {
+            "GOOGLE_CLIENT_ID": "client-id",
+            "GOOGLE_CLIENT_SECRET": "client-secret",
+        }):
+            messages, token = fetch_gmail_messages_with_refresh(
+                "expired-access", "stored-refresh", '"AIV-1042"'
+            )
+
+        self.assertEqual(messages, [{"id": "msg-1"}])
+        self.assertEqual(token, "new-access")
+        self.assertEqual(fetch_messages.call_count, 2)
+        self.assertEqual(post.call_args.kwargs["data"]["grant_type"], "refresh_token")
+
+    @patch("integrations.gmail_service.fetch_gmail_messages")
+    def test_expired_access_without_refresh_token_requires_reauthorization(self, fetch_messages):
+        unauthorized = requests.Response()
+        unauthorized.status_code = 401
+        fetch_messages.side_effect = requests.HTTPError(response=unauthorized)
+
+        with self.assertRaises(GmailReauthorizationRequired):
+            fetch_gmail_messages_with_refresh("expired-access", None, '"AIV-1042"')
+
+    @patch("integrations.gmail_service.get_message_details")
+    @patch("integrations.gmail_service.requests.get")
+    def test_message_detail_401_is_propagated_for_refresh(self, get_request, get_details):
+        listing = Mock()
+        listing.status_code = 200
+        listing.json.return_value = {"messages": [{"id": "msg-1"}]}
+        get_request.return_value = listing
+        unauthorized = requests.Response()
+        unauthorized.status_code = 401
+        get_details.side_effect = requests.HTTPError(response=unauthorized)
+
+        with self.assertRaises(requests.HTTPError):
+            from integrations.gmail_service import fetch_gmail_messages
+            fetch_gmail_messages("expired-access", '"AIV-1042"')
+
+    def test_gmail_api_403_reason_has_actionable_guidance(self):
+        response = requests.Response()
+        response.status_code = 403
+        response._content = (
+            b'{"error":{"message":"Gmail API has not been used in project.",'
+            b'"errors":[{"reason":"accessNotConfigured"}]}}'
+        )
+        summary = gmail_api_error_summary(requests.HTTPError(response=response))
+        self.assertIn("Gmail API is disabled", summary)
+
+    def test_missing_gmail_scope_has_reconnect_guidance(self):
+        response = requests.Response()
+        response.status_code = 403
+        response._content = (
+            b'{"error":{"message":"Insufficient Permission",'
+            b'"errors":[{"reason":"insufficientPermissions"}]}}'
+        )
+        summary = gmail_api_error_summary(requests.HTTPError(response=response))
+        self.assertIn("gmail.readonly", summary)
 
 
 if __name__ == "__main__":

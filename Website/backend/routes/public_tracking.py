@@ -5,11 +5,14 @@ import uuid
 from datetime import datetime, timezone, timedelta
 
 from flask import jsonify, request
+from flask import Blueprint
 from sqlalchemy import text
 
-from routes import public_bp
 from models import AuditLog, Company, Driver, Job, PublicTrackingToken, Stop, engine
 from utils import get_db_session, record_domain_event
+
+
+public_bp = Blueprint("public", __name__)
 
 
 TRACKING_TOKEN_BYTES = 32

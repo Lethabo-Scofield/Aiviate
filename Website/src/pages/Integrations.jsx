@@ -126,12 +126,19 @@ export default function Integrations() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
+    const oauthError = params.get("error");
+
+    if (oauthError) {
+      setEditError(`Google OAuth failed: ${oauthError}`);
+      window.history.replaceState({}, "", "/integrations");
+      return;
+    }
+
     if (!code) return;
 
-    const redirectUri = "http://localhost:5173/integrations";
     (async () => {
       try {
-        const res = await completeGmailAuth({ code, state, redirect_uri: redirectUri });
+        const res = await completeGmailAuth({ code, state });
         setGmailConnection(res.connection || { provider: "gmail", display_name: "Gmail" });
         window.history.replaceState({}, "", "/integrations");
       } catch (err) {
@@ -186,8 +193,7 @@ export default function Integrations() {
   const handleConnectGmail = async () => {
     try {
       setGmailConnecting(true);
-      const redirectUri = "http://localhost:5173/integrations";
-      const res = await getGmailAuthUrl({ redirect_uri: redirectUri });
+      const res = await getGmailAuthUrl({});
       window.location.assign(res.url);
       const nextConnection = { provider: "gmail", provider_user_email: "waiting for Google consent", display_name: "Gmail" };
       setGmailConnection(nextConnection);

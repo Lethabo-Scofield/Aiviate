@@ -1,5 +1,6 @@
 import base64
 import os
+import tempfile
 from decimal import Decimal
 import secrets
 from datetime import datetime, timezone, timedelta
@@ -32,7 +33,12 @@ def normalize_database_url(raw_url):
 
 DATABASE_URL = os.environ.get("NEON_DATABASE_URL") or os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("NEON_DATABASE_URL or DATABASE_URL environment variable is not set")
+    fallback_db = os.path.join(tempfile.gettempdir(), "aiviate_fallback.db")
+    DATABASE_URL = f"sqlite:///{fallback_db}"
+    print(
+        "WARNING: NEON_DATABASE_URL/DATABASE_URL not set. "
+        f"Falling back to {DATABASE_URL}."
+    )
 
 DATABASE_URL = normalize_database_url(DATABASE_URL)
 
