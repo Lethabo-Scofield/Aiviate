@@ -1,4 +1,6 @@
+import base64
 import os
+import tempfile
 from decimal import Decimal
 import secrets
 from datetime import datetime, timezone, timedelta
@@ -11,24 +13,46 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from db_url import env_int, resolve_database_url
 
-DATABASE_URL = resolve_database_url()
 
-_parsed = urlparse(DATABASE_URL)
-_params = parse_qs(_parsed.query)
-_use_ssl = _params.pop("sslmode", [None])[0] in ("require", "verify-ca", "verify-full", None)
-_params.pop("channel_binding", None)
-_new_query = urlencode({k: v[0] for k, v in _params.items()})
-DATABASE_URL = urlunparse(_parsed._replace(
-    scheme="postgresql+pg8000",
-    query=_new_query,
-))
+def normalize_database_url(raw_url):
+    """Use SQLite for local development while preserving Neon/Postgres URL handling in production."""
+    if not raw_url:
+        return raw_url, False
+
+    parsed = urlparse(raw_url)
+    if parsed.scheme.startswith("sqlite"):
+        return raw_url, False
+
+    params = parse_qs(parsed.query)
+    use_ssl = params.pop("sslmode", [None])[0] in ("require", "verify-ca", "verify-full", None)
+    params.pop("channel_binding", None)
+    new_query = urlencode({k: v[0] for k, v in params.items()})
+    normalized_url = urlunparse(parsed._replace(
+        scheme="postgresql+pg8000",
+        query=new_query,
+    ))
+    return normalized_url, use_ssl
+
+
+try:
+    DATABASE_URL = resolve_database_url()
+except RuntimeError:
+    fallback_db = os.path.join(tempfile.gettempdir(), "aiviate_fallback.db")
+    DATABASE_URL = f"sqlite:///{fallback_db}"
+    print(
+        "WARNING: No configured database URL found. "
+        f"Falling back to {DATABASE_URL}."
+    )
+
+DATABASE_URL, _use_ssl = normalize_database_url(DATABASE_URL)
 
 _connect_args = {}
-if _use_ssl:
-    _ssl_ctx = _ssl.create_default_context()
-    _ssl_ctx.check_hostname = False
-    _ssl_ctx.verify_mode = _ssl.CERT_NONE
-    _connect_args["ssl_context"] = _ssl_ctx
+if DATABASE_URL.startswith("postgresql"):
+    if _use_ssl:
+        _ssl_ctx = _ssl.create_default_context()
+        _ssl_ctx.check_hostname = False
+        _ssl_ctx.verify_mode = _ssl.CERT_NONE
+        _connect_args["ssl_context"] = _ssl_ctx
 _connect_args["timeout"] = env_int("DB_CONNECT_TIMEOUT", 10)
 
 engine = create_engine(DATABASE_URL, poolclass=NullPool, pool_pre_ping=True, connect_args=_connect_args)
@@ -388,6 +412,63 @@ class IntegrationSettings(Base):
     @staticmethod
     def new_merchant_api_key():
         return f"aiv_live_{secrets.token_urlsafe(32)}"
+
+
+def _integration_secret():
+    return (os.environ.get("AIVIATE_INTEGRATION_SECRET") or os.environ.get("JWT_SECRET") or "aiviate-dev-secret").encode("utf-8")
+
+
+def obfuscate_integration_token(value):
+    if value in (None, ""):
+        return None
+    key = _integration_secret()
+    raw = value.encode("utf-8")
+    masked = bytearray()
+    for i, byte in enumerate(raw):
+        masked.append(byte ^ key[i % len(key)])
+    return base64.b64encode(bytes(masked)).decode("ascii")
+
+
+def reveal_integration_token(value):
+    if value in (None, ""):
+        return None
+    key = _integration_secret()
+    raw = base64.b64decode(value.encode("ascii"))
+    revealed = bytearray()
+    for i, byte in enumerate(raw):
+        revealed.append(byte ^ key[i % len(key)])
+    return bytes(revealed).decode("utf-8")
+
+
+class IntegrationConnection(Base):
+    __tablename__ = "integration_connections"
+
+    id = Column(String, primary_key=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    provider = Column(String, nullable=False)
+    provider_user_email = Column(String, nullable=True)
+    display_name = Column(String, nullable=True)
+    access_token = Column(Text, nullable=True)
+    refresh_token = Column(Text, nullable=True)
+    scopes = Column(JSON, default=list)
+    connection_metadata = Column("metadata", JSON, default=dict)
+    is_active = Column(Boolean, default=True)
+    connected_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "provider": self.provider,
+            "provider_user_email": self.provider_user_email,
+            "display_name": self.display_name,
+            "scopes": self.scopes or [],
+            "metadata": self.connection_metadata or {},
+            "is_active": bool(self.is_active),
+            "connected_at": self.connected_at.isoformat() if self.connected_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class PublicTrackingToken(Base):

@@ -176,6 +176,46 @@ export async function updateStoreIntegration(payload) {
   return handleResponse(res);
 }
 
+export async function getIntegrations() {
+  const res = await fetch(`${API_BASE}/integrations`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function getGmailAuthUrl(payload = {}) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/auth-url`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+export async function completeGmailAuth(payload = {}) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/callback`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+export async function disconnectIntegration(provider) {
+  const res = await fetch(`${API_BASE}/integrations/${encodeURIComponent(provider)}/disconnect`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+  });
+  return handleResponse(res);
+}
+
+export async function searchGmail(payload = {}) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/search`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
 export async function importStoreOrders(orderIds = null) {
   const res = await fetch(`${API_BASE}/store/orders/import`, {
     method: 'POST',

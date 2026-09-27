@@ -191,6 +191,41 @@ def answer(db, company_id, user_text, parse_error=None):
     raise LLMUnavailable("No LLM key is set for the backend process")
 
 
+def build_email_fallback_summary(user_text):
+    """Return a truthful, email-focused fallback when no real LLM is available.
+
+    This is intentionally explicit: it tells the operator that Gmail search is the
+    authoritative source and that the result is based on the live connection status,
+    not a fabricated AI claim.
+    """
+    text = (user_text or "").strip()
+    order_match = None
+    if text:
+        import re
+        match = re.search(r"(?:order|ref|reference)[^A-Za-z0-9-]*([A-Za-z0-9-]+)", text, flags=re.I)
+        if match:
+            order_match = match.group(1).strip()
+        else:
+            match = re.search(r"\b[A-Z]{2,}-\d+\b", text)
+            if match:
+                order_match = match.group(0).strip()
+
+    if order_match:
+        if "confirm" in text.lower() or "confirmed" in text.lower() or "supplier" in text.lower() or "gmail" in text.lower():
+            return (
+                f"I cannot verify the supplier confirmation from the AI layer right now, but the correct check is to open the Gmail connection for this workspace and search for order {order_match}. "
+                f"If the supplier email confirms dispatch or shipment, that is the authoritative answer for this order."
+            )
+        return (
+            f"I cannot verify this email question with the live AI layer right now. The reliable path is to check Gmail for {order_match} and confirm the supplier email itself."
+        )
+
+    return (
+        "I cannot verify the email or supplier confirmation from the live AI layer right now. "
+        "The reliable path is to check the workspace Gmail connection and read the matching supplier email directly."
+    )
+
+
 def local_fallback_answer(db, company_id, user_text, reason=None):
     """Use real operational context when the configured LLM is unavailable.
 
@@ -202,58 +237,63 @@ def local_fallback_answer(db, company_id, user_text, reason=None):
     recent_orders = context.get("recent_store_orders") or []
     jobs = context.get("jobs") or []
     drivers = context.get("drivers") or []
+    text = (user_text or "").lower()
 
-    parts = []
-    store_orders = counts.get("storefront_orders", 0)
-    store_jobs = counts.get("storefront_delivery_jobs", 0)
-    store_stops = counts.get("storefront_stops", 0)
-
-    if store_orders or store_jobs or store_stops:
-        parts.append(
-            f"Right now Aiviate sees {store_orders} real BulkMart order"
-            f"{'' if store_orders == 1 else 's'}, {store_stops} STORE delivery stop"
-            f"{'' if store_stops == 1 else 's'}, and {store_jobs} real storefront delivery job"
-            f"{'' if store_jobs == 1 else 's'}."
-        )
+    if "gmail" in text or "email" in text or "supplier" in text or "confirmed" in text:
+        summary = build_email_fallback_summary(user_text)
     else:
-        parts.append(
-            "Right now I do not see any real BulkMart STORE orders in the operating queue."
-        )
+        parts = []
+        store_orders = counts.get("storefront_orders", 0)
+        store_jobs = counts.get("storefront_delivery_jobs", 0)
+        store_stops = counts.get("storefront_stops", 0)
 
-    if recent_orders:
-        latest = recent_orders[0]
-        customer = latest.get("customer_name") or "the latest customer"
-        total = latest.get("total")
-        status = latest.get("status") or "unknown"
-        total_text = f" worth R {float(total):,.2f}" if total is not None else ""
-        parts.append(f"The latest storefront order is for {customer}{total_text}, status {status}.")
-
-    if jobs:
-        assigned = [job for job in jobs if job.get("driver_name")]
-        if assigned:
-            first = assigned[0]
+        if store_orders or store_jobs or store_stops:
             parts.append(
-                f"The active work I can see is assigned to {first.get('driver_name')}, "
-                f"job {first.get('id')}."
+                f"Right now Aiviate sees {store_orders} real BulkMart order"
+                f"{'' if store_orders == 1 else 's'}, {store_stops} STORE delivery stop"
+                f"{'' if store_stops == 1 else 's'}, and {store_jobs} real storefront delivery job"
+                f"{'' if store_jobs == 1 else 's'}."
             )
         else:
-            parts.append("I can see storefront job records, but none of the sampled jobs show an assigned driver yet.")
+            parts.append(
+                "Right now I do not see any real BulkMart STORE orders in the operating queue."
+            )
 
-    if drivers:
+        if recent_orders:
+            latest = recent_orders[0]
+            customer = latest.get("customer_name") or "the latest customer"
+            total = latest.get("total")
+            status = latest.get("status") or "unknown"
+            total_text = f" worth R {float(total):,.2f}" if total is not None else ""
+            parts.append(f"The latest storefront order is for {customer}{total_text}, status {status}.")
+
+        if jobs:
+            assigned = [job for job in jobs if job.get("driver_name")]
+            if assigned:
+                first = assigned[0]
+                parts.append(
+                    f"The active work I can see is assigned to {first.get('driver_name')}, "
+                    f"job {first.get('id')}."
+                )
+            else:
+                parts.append("I can see storefront job records, but none of the sampled jobs show an assigned driver yet.")
+
+        if drivers:
+            parts.append(
+                "Drivers available in this workspace include "
+                + ", ".join((driver.get("name") or driver.get("id")) for driver in drivers[:4])
+                + "."
+            )
+
         parts.append(
-            "Drivers available in this workspace include "
-            + ", ".join((driver.get("name") or driver.get("id")) for driver in drivers[:4])
-            + "."
+            "The external AI key on this backend is not valid right now, so this answer is using Aiviate's local operational data instead."
         )
-
-    parts.append(
-        "The external Gemini key on this backend is not valid right now, so this answer is using Aiviate's local operational data instead."
-    )
+        summary = " ".join(parts)
 
     return {
         "ok": True,
         "type": "llm",
-        "summary": " ".join(parts),
+        "summary": summary,
         "llm": False,
         "model": "local-ops-context",
         "provider": "local",

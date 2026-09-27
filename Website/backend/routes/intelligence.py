@@ -9,6 +9,8 @@ Endpoints:
 import traceback
 import uuid
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+import re
 
 import requests
 from flask import jsonify, g, request
@@ -794,7 +796,170 @@ def _looks_like_exact_command(text, normalized, parsed):
     return parsed.get("intent") in ACTION_INTENTS
 
 
+def _extract_order_ref(text):
+    match = re.search(r"(?:order|order number|ref|reference)\s*[:#-]?\s*([A-Za-z0-9-]+)", text, flags=re.I)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r"\b[A-Z]{2,}-\d+\b", text)
+    if match:
+        return match.group(0).strip()
+    return None
+
+
+def _is_gmail_request(text):
+    return bool(re.search(r"\b(?:gmail|e-?mail)\b", text or "", flags=re.I))
+
+
+def _message_datetime(message):
+    try:
+        value = parsedate_to_datetime(message.get("date", ""))
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+    except (TypeError, ValueError, OverflowError):
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _expected_delivery_date(text):
+    date = (
+        r"\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|"
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+        r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|"
+        r"Dec(?:ember)?)\s+\d{1,2}(?:,?\s+\d{4})?|"
+        r"\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|"
+        r"Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|"
+        r"Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{4})?"
+    )
+    match = re.search(
+        rf"\b(?:expected delivery(?: date)?|delivery date|deliver(?:y)? by|"
+        rf"expected to arrive|arrival date|ETA)\s*(?:is|on|by|:)?\s*({date})",
+        text,
+        flags=re.I,
+    )
+    return match.group(1) if match else None
+
+
+def _gmail_confirmation_answer(db, company_id, text):
+    if not _is_gmail_request(text):
+        return None
+
+    from models import (
+        IntegrationConnection,
+        obfuscate_integration_token,
+        reveal_integration_token,
+    )
+    from integrations.gmail_service import (
+        GmailReauthorizationRequired,
+        build_search_query,
+        fetch_gmail_messages_with_refresh,
+        gmail_api_error_summary,
+    )
+
+    order_ref = _extract_order_ref(text)
+    if not order_ref:
+        return {
+            "ok": False,
+            "summary": "Please include an order reference so I can search Gmail for the matching supplier email.",
+            "input": text,
+            "llm": False,
+        }
+
+    conn = (
+        db.query(IntegrationConnection)
+        .filter(
+            IntegrationConnection.company_id == company_id,
+            IntegrationConnection.provider == "gmail",
+            IntegrationConnection.is_active.is_(True),
+        )
+        .first()
+    )
+    if not conn:
+        return {
+            "ok": False,
+            "summary": "Gmail is not connected for this workspace. Connect Gmail from Integrations, then ask me to search this order again.",
+            "input": text,
+            "llm": False,
+        }
+
+    try:
+        token = reveal_integration_token(conn.access_token)
+        refresh_token = reveal_integration_token(conn.refresh_token)
+        query = build_search_query(order_ref=order_ref, limit=10)
+        messages, refreshed_token = fetch_gmail_messages_with_refresh(
+            token, refresh_token, query, max_results=10
+        )
+        if refreshed_token != token:
+            conn.access_token = obfuscate_integration_token(refreshed_token)
+            db.commit()
+    except GmailReauthorizationRequired as exc:
+        return {
+            "ok": False,
+            "summary": str(exc),
+            "input": text,
+            "llm": False,
+        }
+    except requests.HTTPError as exc:
+        traceback.print_exc()
+        if exc.response is not None and exc.response.status_code == 403:
+            summary = gmail_api_error_summary(exc)
+        else:
+            summary = "Gmail could not be reached right now. Please try the search again shortly."
+        return {
+            "ok": False,
+            "summary": summary,
+            "input": text,
+            "llm": False,
+        }
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return {
+            "ok": False,
+            "summary": "Gmail search failed due to a temporary service error. Please try again shortly.",
+            "input": text,
+            "llm": False,
+        }
+
+    if not messages:
+        return {
+            "ok": True,
+            "summary": f"I searched connected Gmail for {order_ref} but found no matching emails. I can’t verify a supplier confirmation, sender, or expected delivery date.",
+            "provider": "gmail",
+            "input": text,
+            "llm": False,
+        }
+
+    latest = max(messages, key=_message_datetime)
+    evidence = " ".join((latest.get("subject", ""), latest.get("snippet", ""), latest.get("body_preview", "")))
+    lowered = evidence.lower()
+    negative = ("not confirmed", "not yet confirmed", "unable to confirm", "cannot confirm", "not scheduled", "delayed", "cancelled", "canceled", "out of stock")
+    positive = ("confirmed", "scheduled", "dispatched", "shipped", "on its way", "will deliver", "delivery is set")
+    if any(term in lowered for term in negative):
+        confirmation = "Not confirmed"
+    elif any(term in lowered for term in positive):
+        confirmation = "Confirmed"
+    else:
+        confirmation = "No clear confirmation found"
+
+    delivery_date = _expected_delivery_date(evidence)
+    summary = (
+        f"Gmail search for {order_ref}: {confirmation}. "
+        f"Sender: {latest.get('from') or 'not available'}. "
+        f"Subject: {latest.get('subject') or '(no subject)'}. "
+        f"Expected delivery: {delivery_date or 'not stated in this email'}. "
+        f"Evidence: {(latest.get('snippet') or latest.get('body_preview') or 'No message preview available.')[:500]}"
+    )
+    return {
+        "ok": True,
+        "summary": summary,
+        "provider": "gmail",
+        "input": text,
+        "llm": False,
+    }
+
+
 def _llm_response_or_error(db, company_id, text, parse_error=None):
+    gmail_result = _gmail_confirmation_answer(db, company_id, text)
+    if gmail_result:
+        return gmail_result
     if not llm_is_configured():
         return None
     try:
@@ -811,6 +976,13 @@ def _llm_response_or_error(db, company_id, text, parse_error=None):
 def run_command():
     body = request.get_json(silent=True) or {}
     text = body.get("text", "")
+    if _is_gmail_request(text):
+        db = get_db_session()
+        try:
+            return jsonify(_gmail_confirmation_answer(db, g.company_id, text)), 200
+        finally:
+            db.close()
+
     # Translate natural phrasing → underlying command grammar (deterministic).
     normalized = natural_parser.normalize(text)
     parsed = command_parser.parse(normalized)
@@ -826,7 +998,7 @@ def run_command():
                 "ok": False,
                 "summary": (
                     _humanize_parse_error(parsed["error"], text)
-                    + " The LLM layer is not enabled on this backend; set OPENAI_API_KEY and restart the API."
+                    + " The LLM layer is not enabled on this backend; set OPENAI_API_KEY or GOOGLE_API_KEY/GEMINI_API_KEY and restart the API."
                 ),
                 "input": text,
                 "llm": False,
@@ -843,7 +1015,6 @@ def run_command():
         cid = g.company_id
         if (
             intent in READONLY_INTENTS
-            and llm_is_configured()
             and not _looks_like_exact_command(text, normalized, parsed)
         ):
             llm_result = _llm_response_or_error(db, cid, text)

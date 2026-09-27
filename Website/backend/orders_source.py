@@ -28,8 +28,12 @@ def _get_engine():
             raise RuntimeError("ORDERS_DATABASE_KEY environment variable is not set")
 
         # Use the pg8000 driver (pure Python) — psycopg2 is not available in
-        # the slim serverless runtime. Mirrors the URL handling in models.py.
+        # the slim serverless runtime. SQLite is supported for local-only tests.
         parsed = urlparse(url)
+        if parsed.scheme.startswith("sqlite"):
+            _engine = create_engine(url, poolclass=NullPool)
+            return _engine
+
         params = parse_qs(parsed.query)
         use_ssl = params.pop("sslmode", [None])[0] in ("require", "verify-ca", "verify-full", None)
         params.pop("channel_binding", None)
