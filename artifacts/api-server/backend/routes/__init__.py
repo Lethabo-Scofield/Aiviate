@@ -1,0 +1,23 @@
+from flask import Blueprint
+
+auth_bp = Blueprint("auth", __name__)
+jobs_bp = Blueprint("jobs", __name__)
+drivers_bp = Blueprint("drivers", __name__)
+stops_bp = Blueprint("stops", __name__)
+optimization_bp = Blueprint("optimization", __name__)
+stats_bp = Blueprint("stats", __name__)
+safety_bp = Blueprint("safety", __name__)
+devices_bp = Blueprint("devices", __name__)
+alerts_bp = Blueprint("alerts", __name__)
+liveops_bp = Blueprint("liveops", __name__)
+intelligence_bp = Blueprint("intelligence", __name__)
+agents_bp = Blueprint("agents", __name__)
+autopilot_bp = Blueprint("autopilot", __name__)
+engine_bp = Blueprint("engine", __name__)
+orders_bp = Blueprint("orders", __name__)
+support_bp = Blueprint("support", __name__)
+public_bp = Blueprint("public", __name__)
+operations_bp = Blueprint("operations", __name__)
+integrations_bp = Blueprint("integrations", __name__)
+
+from . import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, demo, intelligence, agents, autopilot, engine, orders, support, public_tracking, operations, integrations

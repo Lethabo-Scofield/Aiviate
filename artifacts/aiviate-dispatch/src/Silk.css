@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════════════════════
+   Aiviate — silk layer
+   The curved light-catching bands from the design reference.
+   Import AFTER index.css:
+       @import "./silk.css";
+
+   Usage in JSX — drop <Silk /> as the first child of any panel
+   that has `position: relative; overflow: hidden`:
+
+       <div className="apple-card silk-host">
+         <Silk variant="a" />
+         <div className="silk-content"> ...page content... </div>
+       </div>
+
+   The component itself is in silk.jsx.
+   ═══════════════════════════════════════════════════════════════ */
+
+.silk-host {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The SVG sits behind everything, never intercepts clicks, and is
+   hidden from screen readers. */
+.silk {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+/* Everything else in the panel must sit above it. */
+.silk-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Bands are tuned per surface: full panels carry the most, cards
+   carry a whisper. Opacity is the only knob — never change the
+   band geometry per instance or the folds stop lining up. */
+.silk-panel  { opacity: 1; }
+.silk-card   { opacity: 0.55; }
+.silk-subtle { opacity: 0.3; }
+
+/* On small screens the bands crowd the content. Drop to the two
+   widest ones by hiding the tight-radius group. */
+@media (max-width: 640px) {
+  .silk-tight { display: none; }
+  .silk { opacity: 0.7; }
+}
+
+/* The sheen is decoration with no semantic content, so it goes
+   entirely under reduced-motion and forced-colors. */
+@media (prefers-reduced-motion: reduce) {
+  .silk-drift { animation: none !important; }
+}
+@media (forced-colors: active) {
+  .silk { display: none; }
+}
+
+/* ── Slow drift ───────────────────────────────────────────────
+   In the reference the bands are static. A very slow horizontal
+   drift makes the shell feel alive without ever drawing the eye.
+   Remove this class from the JSX if you want it dead still. */
+@keyframes silkDrift {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(-1.4%, 0.6%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+.silk-drift {
+  animation: silkDrift 34s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ── Stat-card under-glow ─────────────────────────────────────
+   Each stat in the reference is lit a different colour from
+   below. Apply one of these alongside .stat-card. */
+.glow-blue::after  { background: linear-gradient(90deg, transparent, #5B7CFA 35%, #7E9BFF 65%, transparent); }
+.glow-iris::after  { background: linear-gradient(90deg, transparent, #5B7CFA 20%, #A46BF5 45%, #FF8A6B 70%, transparent); }
+.glow-warm::after  { background: linear-gradient(90deg, transparent, #FF8A6B 35%, #FFC46B 65%, transparent); }
+
+.glow-blue, .glow-iris, .glow-warm { position: relative; overflow: hidden; }
+.glow-blue::after, .glow-iris::after, .glow-warm::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 12%; right: 12%;
+  height: 1.5px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+/* The bloom beneath the line — this is what sells it as light
+   rather than a coloured border. */
+.glow-blue::before, .glow-iris::before, .glow-warm::before {
+  content: "";
+  position: absolute;
+  bottom: -28px; left: 18%; right: 18%;
+  height: 46px;
+  border-radius: 50%;
+  filter: blur(18px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.glow-blue::before { background: #5B7CFA; }
+.glow-iris::before { background: #A46BF5; }
+.glow-warm::before { background: #FF8A6B; }

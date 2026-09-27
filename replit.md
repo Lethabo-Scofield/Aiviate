@@ -1,45 +1,24 @@
-# [Project name]
+# Aiviate Dispatch
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A logistics dispatch app for managing orders, drivers, delivery routes, fleet operations, and public tracking.
 
-## Run & Operate
+## Run & operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The managed `artifacts/aiviate-dispatch: web` workflow serves the original Vite/React frontend at `/`.
+- The managed `artifacts/api-server: API Server` workflow serves the original Flask REST API at `/api` and starts its private FastAPI route-planning engine on localhost:8099. Start/restart both workflows to use the app.
+- Frontend build: `PORT=19317 BASE_PATH=/ pnpm --filter @workspace/aiviate-dispatch run build`.
+- Python dependencies are recorded in the root `pyproject.toml` and `uv.lock`; the API workflow uses `uv run`. Do not use the scaffold's unused Express routes for product features.
 
-## Stack
+## Project layout
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- `artifacts/aiviate-dispatch/src/`: imported pages, components, theme, routes, and API client. `src/App.jsx` is the active React Router entry.
+- `artifacts/api-server/backend/`: imported Flask app and data model.
+- `artifacts/api-server/aiviate-engine/`: imported route-planning engine.
+- `artifacts/api-server/run_services.py`: starts both Python services for the API artifact.
+- `.migration-backup/`: untouched imported source for comparison.
 
-## Where things live
+## Data and configuration
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+The Flask app uses `NEON_DATABASE_URL` if supplied, otherwise `DATABASE_URL`, with its original local fallback. The import did not move records from the source database. Set the original database connection as a Replit secret if the app needs to show those records; do not copy values from imported environment files into source.
 
-## Architecture decisions
-
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+`SESSION_SECRET` is available for persistent JWT signing when `JWT_SECRET` is unset. The planner generates its own private local key on first start. Keep that key and its local SQLite file out of Git.

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Aiviate Dispatch"
+description = "A logistics dispatch dashboard for managing drivers, delivery jobs, routes, orders, and live operations."
+version = "1.0.0"
+id = "artifacts/aiviate-dispatch"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19317
+
+[services.development]
+run = "pnpm --filter @workspace/aiviate-dispatch run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/aiviate-dispatch", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/aiviate-dispatch/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19317"
+BASE_PATH = "/"

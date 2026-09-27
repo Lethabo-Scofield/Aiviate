@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
-    "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "dev": "uv run --project ../.. python run_services.py --reload",
+    "build": "uv sync --project ../.. --no-dev",
+    "start": "uv run --project ../.. python run_services.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

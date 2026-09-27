@@ -28,6 +28,11 @@ node_modules
 !.vscode/extensions.json
 
 # misc
+artifacts/api-server/.aiviate_engine_key
+artifacts/api-server/aiviate-engine/*.db
+artifacts/api-server/aiviate-engine/*.db-*
+.pythonlibs/
+**/__pycache__/
 /.sass-cache
 /connect.lock
 /coverage
