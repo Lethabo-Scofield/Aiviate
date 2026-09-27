@@ -2,14 +2,6 @@
   "installCommand": "npm ci --no-audit --no-fund",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/index.py": {
-      "runtime": "@vercel/python@4.5.0",
-      "maxDuration": 60,
-      "includeFiles": "backend/**",
-      "excludeFiles": "{node_modules,dist,.pythonlibs,.local,.git,.cache,.config,.upm,__pycache__,src,public,attached_assets}/**"
-    }
-  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" },
     { "source": "/:path*", "destination": "/index.html" }
