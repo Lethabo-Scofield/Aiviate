@@ -4,19 +4,23 @@ import { useAuth } from "../contexts/AuthContext";
 import { FullScreenLoader } from "./Loader";
 
 export default function ProtectedRoute({ children }) {
-  const { user, loading, loginDemo } = useAuth();
+  const { user, loading, loginPreviewDriver } = useAuth();
   const attemptedPreviewLogin = useRef(false);
   const [previewLoginFailed, setPreviewLoginFailed] = useState(false);
   const previewHome = import.meta.env.DEV && window.location.pathname === "/";
 
   useEffect(() => {
-    if (!previewHome || loading || user || attemptedPreviewLogin.current) return;
+    if (!previewHome || loading || user?.role === "driver" || attemptedPreviewLogin.current) return;
     attemptedPreviewLogin.current = true;
-    loginDemo().catch(() => setPreviewLoginFailed(true));
-  }, [previewHome, loading, user, loginDemo]);
+    loginPreviewDriver().catch(() => setPreviewLoginFailed(true));
+  }, [previewHome, loading, user, loginPreviewDriver]);
 
-  if (loading || (previewHome && !user && !previewLoginFailed)) {
+  if (loading || (previewHome && user?.role !== "driver" && !previewLoginFailed)) {
     return <FullScreenLoader />;
+  }
+
+  if (previewHome && previewLoginFailed) {
+    return <Navigate to="/login" replace />;
   }
 
   if (!user) {

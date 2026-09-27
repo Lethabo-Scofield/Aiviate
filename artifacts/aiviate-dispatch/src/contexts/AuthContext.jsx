@@ -125,6 +125,14 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const loginPreviewDriver = async () => {
+    const res = await fetch(`${API_BASE}/auth/preview-driver-login`, { method: "POST" });
+    const data = await parseJSON(res);
+    if (!res.ok) throw new Error(data.error || "Driver preview login failed");
+    saveAuth(data.token, data.user);
+    return data.user;
+  };
+
   const register = async (name, email, password, companyName) => {
     let res;
     try {
@@ -143,7 +151,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, loginDemo, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginDemo, loginPreviewDriver, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
