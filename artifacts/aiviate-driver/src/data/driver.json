@@ -1,0 +1,16 @@
+{
+  "id": 101,
+  "name": "Sipho Ngubane",
+  "initials": "SN",
+  "avatar_url": "https://i.pravatar.cc/240?u=sipho-ngubane",
+  "employee_id": "EMP-00184",
+  "phone": "+27 82 555 0142",
+  "email": "sipho.n@aviate.co.za",
+  "vehicle": "Toyota Hilux Bakkie",
+  "vehicle_plate": "CA-184-732",
+  "joined": "March 2024",
+  "rating": 4.8,
+  "completed_routes": 312,
+  "total_stops": 1487,
+  "total_km": 8264
+}

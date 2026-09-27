@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "AIVIATE_PREVIEW_DRIVER=1 uv run --project ../.. python run_services.py --reload",
+    "dev": "uv run --project ../.. python run_services.py --reload",
     "build": "uv sync --project ../.. --no-dev",
     "start": "uv run --project ../.. python run_services.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"

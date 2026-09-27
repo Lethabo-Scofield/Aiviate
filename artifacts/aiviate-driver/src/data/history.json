@@ -1,0 +1,9 @@
+[
+  { "id": "RT-2010", "date": "Today · 09:42", "stops": 4, "distance_km": 12.3, "duration_min": 41 },
+  { "id": "RT-2011", "date": "Today · 11:08", "stops": 6, "distance_km": 19.7, "duration_min": 58 },
+  { "id": "RT-2012", "date": "Today · 12:30", "stops": 3, "distance_km": 8.2,  "duration_min": 24 },
+  { "id": "RT-2001", "date": "Yesterday",     "stops": 5, "distance_km": 21.4, "duration_min": 64 },
+  { "id": "RT-2002", "date": "Yesterday",     "stops": 7, "distance_km": 28.9, "duration_min": 82 },
+  { "id": "RT-1995", "date": "2 days ago",    "stops": 4, "distance_km": 15.8, "duration_min": 48 },
+  { "id": "RT-1990", "date": "3 days ago",    "stops": 8, "distance_km": 34.1, "duration_min": 95 }
+]

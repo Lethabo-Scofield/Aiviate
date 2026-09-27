@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Aiviate Driver",
+    "slug": "aiviate-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "aviate",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aviate.driver",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Aiviate uses your location during active trips to show your position on the map.",
+        "NSCameraUsageDescription": "Aiviate uses your camera to scan package barcodes."
+      }
+    },
+    "android": {
+      "package": "com.aviate.driver",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F2A3D"
+      },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-location", "expo-camera", "expo-splash-screen", "expo-font"]
+  }
+}

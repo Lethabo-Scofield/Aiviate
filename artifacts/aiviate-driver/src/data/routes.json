@@ -1,0 +1,153 @@
+[
+  {
+    "id": "RT-2041",
+    "status": "available",
+    "assigned_by": "Dispatch · Jane M.",
+    "created_at": "Today · 08:30",
+    "total_distance_km": 18.5,
+    "total_duration_min": 52,
+    "stops": [
+      {
+        "id": "S1",
+        "type": "pickup",
+        "address": "Sandton City Mall, Loading Bay B",
+        "lat": -26.107,
+        "lng": 28.0567,
+        "customer": "Sandton Hub",
+        "cargo": "5x sealed envelopes",
+        "notes": "Use service entrance",
+        "barcode": "AVT-2041-S1"
+      },
+      {
+        "id": "S2",
+        "type": "dropoff",
+        "address": "Rosebank Mall, Reception",
+        "lat": -26.1465,
+        "lng": 28.0436,
+        "customer": "Lerato Dlamini",
+        "cargo": "1 envelope",
+        "notes": "Signature required",
+        "barcode": "AVT-2041-S2"
+      },
+      {
+        "id": "S3",
+        "type": "dropoff",
+        "address": "Hyde Park Corner",
+        "lat": -26.1303,
+        "lng": 28.0345,
+        "customer": "Thabo Mokoena",
+        "cargo": "2 envelopes",
+        "notes": "Leave with concierge",
+        "barcode": "AVT-2041-S3"
+      },
+      {
+        "id": "S4",
+        "type": "dropoff",
+        "address": "Melrose Arch Piazza",
+        "lat": -26.1351,
+        "lng": 28.0668,
+        "customer": "Nomsa Khumalo",
+        "cargo": "1 envelope",
+        "notes": "",
+        "barcode": "AVT-2041-S4"
+      },
+      {
+        "id": "S5",
+        "type": "dropoff",
+        "address": "Illovo Junction",
+        "lat": -26.1276,
+        "lng": 28.0521,
+        "customer": "Acme Legal",
+        "cargo": "1 envelope",
+        "notes": "Reception desk",
+        "barcode": "AVT-2041-S5"
+      }
+    ]
+  },
+  {
+    "id": "RT-2042",
+    "status": "available",
+    "assigned_by": "Dispatch · Mark T.",
+    "created_at": "Today · 09:15",
+    "total_distance_km": 32.4,
+    "total_duration_min": 78,
+    "stops": [
+      {
+        "id": "S1",
+        "type": "pickup",
+        "address": "OR Tambo Cargo Terminal A",
+        "lat": -26.1391,
+        "lng": 28.2461,
+        "customer": "Acme Logistics",
+        "cargo": "3 freight crates",
+        "notes": "Loading bay 4",
+        "barcode": "AVT-2042-S1"
+      },
+      {
+        "id": "S2",
+        "type": "dropoff",
+        "address": "Bedfordview Office Park",
+        "lat": -26.1762,
+        "lng": 28.1432,
+        "customer": "BD Holdings",
+        "cargo": "1 crate",
+        "notes": "Loading dock at rear",
+        "barcode": "AVT-2042-S2"
+      },
+      {
+        "id": "S3",
+        "type": "dropoff",
+        "address": "Eastgate Shopping Centre",
+        "lat": -26.1832,
+        "lng": 28.1166,
+        "customer": "Eastgate Mgmt",
+        "cargo": "2 crates",
+        "notes": "Mall service entrance",
+        "barcode": "AVT-2042-S3"
+      }
+    ]
+  },
+  {
+    "id": "RT-2031",
+    "status": "assigned",
+    "assigned_by": "Dispatch · Jane M.",
+    "created_at": "Today · 07:45",
+    "total_distance_km": 14.2,
+    "total_duration_min": 38,
+    "stops": [
+      {
+        "id": "S1",
+        "type": "pickup",
+        "address": "Fourways Mall, Loading Bay",
+        "lat": -26.0131,
+        "lng": 28.0123,
+        "customer": "Fourways Depot",
+        "cargo": "2 grocery totes",
+        "notes": "",
+        "barcode": "AVT-2031-S1"
+      },
+      {
+        "id": "S2",
+        "type": "dropoff",
+        "address": "Lonehill Shopping Centre",
+        "lat": -26.0223,
+        "lng": 28.0186,
+        "customer": "David Williams",
+        "cargo": "1 tote",
+        "notes": "Call on arrival: 082 555 0182",
+        "barcode": "AVT-2031-S2"
+      },
+      {
+        "id": "S3",
+        "type": "dropoff",
+        "address": "Cedar Square, Fourways",
+        "lat": -26.0226,
+        "lng": 28.0124,
+        "customer": "Maria Fontaine",
+        "cargo": "1 tote",
+        "notes": "Leave at security",
+        "barcode": "AVT-2031-S3"
+      }
+    ]
+  }
+]

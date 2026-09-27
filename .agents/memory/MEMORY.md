@@ -1,1 +1,2 @@
 - [Vercel workspace entrypoint](vercel-root-entrypoint.md) — Vercel deploys this workspace root and auto-detects Flask; use its root-importable app, not archived API wrappers or the planner engine.
+- [Legacy Expo navigation](legacy-expo-navigation.md) — Expo 57 may enforce Router navigation checks even with a custom entrypoint; verify the imported app's real navigator.
