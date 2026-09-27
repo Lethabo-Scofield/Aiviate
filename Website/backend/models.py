@@ -9,7 +9,7 @@ from sqlalchemy.pool import NullPool
 import ssl as _ssl
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-from db_url import resolve_database_url
+from db_url import env_int, resolve_database_url
 
 DATABASE_URL = resolve_database_url()
 
@@ -29,7 +29,7 @@ if _use_ssl:
     _ssl_ctx.check_hostname = False
     _ssl_ctx.verify_mode = _ssl.CERT_NONE
     _connect_args["ssl_context"] = _ssl_ctx
-_connect_args["timeout"] = int(os.environ.get("DB_CONNECT_TIMEOUT", "10"))
+_connect_args["timeout"] = env_int("DB_CONNECT_TIMEOUT", 10)
 
 engine = create_engine(DATABASE_URL, poolclass=NullPool, pool_pre_ping=True, connect_args=_connect_args)
 SessionLocal = sessionmaker(bind=engine)

@@ -17,6 +17,7 @@ from models import Stop, Company, IntegrationSettings, AuditLog
 from optimize_route import geocode_address, DEPOT
 from orders_source import fetch_orders, orders_db_configured, source_kind
 from utils import get_db_session, record_domain_event
+from db_url import env_int
 
 ORDER_ID_PREFIX = "STORE-"
 MERCHANT_ORDER_ID_PREFIX = "MERCH-"
@@ -44,7 +45,7 @@ def _idempotency_key():
 
 
 def _rate_limit_or_error(api_key_hash):
-    limit = int(os.environ.get("MERCHANT_API_RATE_LIMIT_PER_MINUTE", "120"))
+    limit = env_int("MERCHANT_API_RATE_LIMIT_PER_MINUTE", 120)
     now = time.time()
     window = int(now // 60)
     key = (api_key_hash, window)

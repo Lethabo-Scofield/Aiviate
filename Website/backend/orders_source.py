@@ -11,6 +11,8 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
+from db_url import env_int
+
 _engine = None
 
 
@@ -43,7 +45,7 @@ def _get_engine():
             ssl_ctx.check_hostname = False
             ssl_ctx.verify_mode = _ssl.CERT_NONE
             connect_args["ssl_context"] = ssl_ctx
-        connect_args["timeout"] = int(os.environ.get("DB_CONNECT_TIMEOUT", "10"))
+        connect_args["timeout"] = env_int("DB_CONNECT_TIMEOUT", 10)
 
         _engine = create_engine(url, poolclass=NullPool, connect_args=connect_args)
     return _engine

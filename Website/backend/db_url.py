@@ -21,3 +21,14 @@ def resolve_database_url():
         "Database connection string is not set. Configure one of: "
         + ", ".join(DATABASE_ENV_KEYS)
     )
+
+
+def env_int(name, default):
+    raw = os.environ.get(name)
+    if raw is None or str(raw).strip() == "":
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        print(f"WARNING: {name}={raw!r} is not a valid integer; using {default}.")
+        return default
