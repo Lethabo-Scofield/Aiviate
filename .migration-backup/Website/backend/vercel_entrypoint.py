@@ -1,10 +1,10 @@
-import sys
+"""Single Vercel entrypoint for every Flask API route."""
 import os
 import traceback
 
 from flask import Flask, jsonify
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+os.environ.setdefault("SKIP_DB_INIT", "true")
 
 try:
     from app import create_app

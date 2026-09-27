@@ -1,8 +1,6 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from _bootstrap import build_app  # noqa: E402
-
-app = build_app()
+from vercel_entrypoint import app  # noqa: E402

@@ -15,7 +15,7 @@ A logistics dispatch app for managing orders, drivers, delivery routes, fleet op
 - `artifacts/api-server/backend/`: imported Flask app and data model.
 - `artifacts/api-server/aiviate-engine/`: imported route-planning engine.
 - `artifacts/api-server/run_services.py`: starts both Python services for the API artifact.
-- `.migration-backup/`: untouched imported source for comparison.
+- `.migration-backup/`: original Vercel project layout for comparison and Vercel redeployment; its duplicate API entrypoints have been consolidated into a single catch-all function.
 
 ## Data and configuration
 
