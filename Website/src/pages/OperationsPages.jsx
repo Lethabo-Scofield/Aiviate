@@ -11,7 +11,7 @@ import {
   ClipboardCheck,
   Headphones,
   Mail,
-  Map,
+  Map as MapIcon,
   Mic,
   MicOff,
   Package,
@@ -40,6 +40,8 @@ import {
 } from "../services/api";
 import ResultBlock from "../components/ResultBlock";
 import { takePendingAsk } from "../lib/askBus";
+import { useSpeechToText } from "../lib/useSpeechToText";
+import { DictationButtons, DictationNotice } from "../components/DictationControls";
 import {
   getChatHistoryItem,
   takeQueuedChatOpen,
@@ -68,7 +70,7 @@ const ICONS = {
   customers: Users,
   communications: Mail,
   activity: Activity,
-  intelligence: Map,
+  intelligence: MapIcon,
   policies: ShieldCheck,
 };
 
@@ -377,6 +379,7 @@ function EmptyChatState({ onPrompt, onVoice, assistantName, voiceEnabled }) {
 }
 
 function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assistantName, voiceEnabled }) {
+  const dictation = useSpeechToText({ value, onChange });
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-[820px]">
       <div className="chat-composer rounded-[22px] border border-[#DEE2E6] bg-white p-2 shadow-[0_8px_28px_rgba(17,19,21,0.08)] focus-within:border-[#111315]/50">
@@ -387,9 +390,9 @@ function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assi
               onClick={onVoice}
               className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F3F5] text-[#111315] transition-colors hover:bg-[#E9ECEF]"
               aria-label="Start voice mode"
-              title="Voice mode"
+              title="Voice mode (talk with read-aloud replies)"
             >
-              <Mic size={16} strokeWidth={1.6} />
+              <Headphones size={16} strokeWidth={1.6} />
             </button>
           )}
           <textarea
@@ -403,9 +406,10 @@ function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assi
                 onSubmit(e);
               }
             }}
-            placeholder={`Message ${assistantName}...`}
+            placeholder={dictation.listening ? "Listening..." : `Message ${assistantName}...`}
             className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-3 py-3 text-[15px] leading-[1.45] text-[#111315] outline-none placeholder:text-[#ADB5BD]"
           />
+          <DictationButtons dictation={dictation} />
           <button
             type="submit"
             disabled={busy || !value.trim()}
@@ -415,8 +419,9 @@ function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assi
             <ArrowUpRight size={16} strokeWidth={1.6} />
           </button>
         </div>
-        <div className="flex items-center px-3 pb-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1">
           <ConnectorPicker compact />
+          <DictationNotice dictation={dictation} className="min-w-0 flex-1" />
         </div>
       </div>
     </form>

@@ -254,7 +254,18 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.16;
   color: var(--color-text-primary);
   font-weight: 500;
-  font-size: 50px;
+  overflow-wrap: break-word;
+}
+
+/* Page titles stay large but scale down on phones so long words
+   ("Communications") no longer clip. */
+h1 { font-size: clamp(32px, 9vw, 50px); }
+
+/* h2-h6 default size lives in the base layer so Tailwind text-*
+   utilities on card and section titles actually take effect
+   (an unlayered font-size here used to override every one of them). */
+@layer base {
+  h2, h3, h4, h5, h6 { font-size: clamp(26px, 7vw, 50px); }
 }
 
 p, li { line-height: 1.62; }
