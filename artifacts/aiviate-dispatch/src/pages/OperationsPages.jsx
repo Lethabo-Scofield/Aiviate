@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import {
   getActivity,
-  getAgents,
   getApprovals,
   getDrivers,
   getExceptions,
@@ -174,15 +173,42 @@ function resultSpeechText(result) {
   return result.summary || (result.ok ? "Done." : "Aiviate could not answer that yet.");
 }
 
-function ChatAnswer({ result, onReply, sending }) {
+function ChatAnswer({ result, onReply, sending, animate = false, onProgress }) {
+  const text = resultSpeechText(result);
+  const characters = Array.from(text);
+  const [visibleCount, setVisibleCount] = useState(() =>
+    animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : characters.length
+  );
+  const typing = animate && visibleCount < characters.length;
   const hasDetails = result?.type === "gmail_unconnected" || (result?.ok && (result?.provider === "gmail" || (result?.type && !["greeting", "llm"].includes(result.type))));
+
+  useEffect(() => {
+    if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVisibleCount(characters.length);
+      return;
+    }
+    let count = 0;
+    setVisibleCount(0);
+    const timer = window.setInterval(() => {
+      count += 1;
+      setVisibleCount(count);
+      if (count >= characters.length) window.clearInterval(timer);
+    }, Math.max(5, Math.min(24, 3500 / characters.length)));
+    return () => window.clearInterval(timer);
+  }, [animate, text]);
+
+  useEffect(() => {
+    if (visibleCount % 8 === 0 || visibleCount === characters.length) onProgress?.();
+  }, [visibleCount, characters.length, onProgress]);
 
   return (
     <div className="space-y-3 animate-fade-in">
-      <p className={`text-[15px] leading-[1.68] ${result?.ok === false ? "text-[#343A40]" : "text-[#111315]"}`}>
-        {resultSpeechText(result)}
+      <p aria-hidden={animate ? "true" : undefined} className={`whitespace-pre-wrap text-[15px] leading-[1.68] ${result?.ok === false ? "text-[#343A40]" : "text-[#111315]"}`}>
+        {animate ? characters.slice(0, visibleCount).join("") : text}
+        {typing && <span aria-hidden="true" className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-current motion-safe:animate-pulse" />}
       </p>
-      {hasDetails && (
+      {animate && <span className="sr-only" role="status">{text}</span>}
+      {hasDetails && !typing && (
         <div className="animate-fade-in border-t border-[#E9ECEF] pt-3">
           <ResultBlock result={result} onReply={onReply} sending={sending} />
         </div>
@@ -191,7 +217,7 @@ function ChatAnswer({ result, onReply, sending }) {
   );
 }
 
-function ChatTurn({ turn, assistantName, onReply, sending }) {
+function ChatTurn({ turn, assistantName, onReply, sending, onProgress }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -211,7 +237,7 @@ function ChatTurn({ turn, assistantName, onReply, sending }) {
           ) : (
             <div className="space-y-3">
               {turn.activity && <ChatActivity activity={turn.activity} assistantName={assistantName} result={turn.result} />}
-              <ChatAnswer result={turn.result} onReply={onReply} sending={sending} />
+              <ChatAnswer result={turn.result} onReply={onReply} sending={sending} animate={turn.animate} onProgress={onProgress} />
             </div>
           )}
         </div>
@@ -352,8 +378,6 @@ function useAsync(loader, deps = []) {
 export function OperationsCommand() {
   const [askText, setAskText] = useState("");
   const [thread, setThread] = useState([]);
-  const [overview, setOverview] = useState({ agents: null, loading: true, error: null });
-  const [overviewScan, setOverviewScan] = useState(0);
   const [conversationId, setConversationId] = useState(null);
   const [chatBusy, setChatBusy] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -365,27 +389,6 @@ export function OperationsCommand() {
   const chatScrollRef = useRef(null);
   const followLatestRef = useRef(true);
   const replyInFlightRef = useRef(false);
-  const isEmpty = thread.length === 0;
-
-  useEffect(() => {
-    if (!isEmpty) return;
-    let active = true;
-    setOverview((previous) => ({ ...previous, loading: true, error: null }));
-    getAgents()
-      .then((agentData) => {
-        if (active) setOverview({
-          agents: agentData.agents,
-          loading: false,
-          error: null,
-        });
-      })
-      .catch((error) => {
-        if (active) setOverview((previous) => ({
-          ...previous, loading: false, error: error?.message || "Could not load the operations overview.",
-        }));
-      });
-    return () => { active = false; };
-  }, [isEmpty, overviewScan]);
 
   const askHere = useCallback(async (raw, options = {}) => {
     const text = (raw || "").trim();
@@ -426,8 +429,9 @@ export function OperationsCommand() {
     followLatestRef.current = true;
     setThread((items) => [...items, { id, input: text, toolContext, busy: true, result: null, activity }]);
     setChatBusy(true);
+    const startedAt = performance.now();
+    let result;
     try {
-      let result;
       if (gmailRequest) {
         if (!gmailConnected) {
           result = { ok: false, type: "gmail_unconnected", summary: "Gmail is not connected to this workspace. Connect Gmail to search messages and review replies." };
@@ -462,22 +466,20 @@ export function OperationsCommand() {
           }
         }
       } else {
-        const startedAt = performance.now();
         result = await sendCommand(commandText);
-        // Sample previews remain marked as samples. The short dwell makes request activity legible.
-        if (sampleProvider && performance.now() - startedAt < 450) {
-          setThread((items) => items.map((item) => item.id === id ? { ...item, activity: { ...activity, label: "Formatting sample results" } } : item));
-          await new Promise((resolve) => setTimeout(resolve, Math.max(0, 450 - (performance.now() - startedAt))));
-        }
       }
-      setThread((items) => items.map((item) => item.id === id ? { ...item, busy: false, result } : item));
     } catch (e) {
-      setThread((items) => items.map((item) => item.id === id
-        ? { ...item, busy: false, result: { ok: false, requestFailed: true, summary: e?.message || "Aiviate could not answer that yet." } }
-        : item));
-    } finally {
-      setChatBusy(false);
+      result = { ok: false, requestFailed: true, summary: e?.message || "Aiviate could not answer that yet." };
     }
+    const remaining = Math.max(0, 6000 - (performance.now() - startedAt));
+    if (remaining > 0) {
+      setThread((items) => items.map((item) => item.id === id
+        ? { ...item, activity: { ...activity, phase: "preparing", label: "Preparing response" } }
+        : item));
+      await new Promise((resolve) => setTimeout(resolve, remaining));
+    }
+    setThread((items) => items.map((item) => item.id === id ? { ...item, busy: false, result, animate: true } : item));
+    setChatBusy(false);
   }, [conversationId, chatBusy, catalog.connections, catalog.demos, selectedTool, thread]);
 
   const handleGmailReply = async (message, body) => {
@@ -552,7 +554,7 @@ export function OperationsCommand() {
     upsertChatHistory({
       id: conversationId,
       title: titleFromThread(completedThread),
-      thread: completedThread,
+      thread: completedThread.map(({ animate, ...turn }) => turn),
       updated_at: new Date().toISOString(),
     });
   }, [conversationId, thread]);
@@ -599,10 +601,10 @@ export function OperationsCommand() {
         {thread.length === 0 ? (
           <EmptyChatOverview
             onPrompt={askHere}
-            agents={overview.agents}
-            loading={overview.loading}
-            error={overview.error}
-            onRetry={() => setOverviewScan((value) => value + 1)}
+            onProgress={() => {
+              const container = chatScrollRef.current;
+              if (container && followLatestRef.current) container.scrollTop = container.scrollHeight;
+            }}
           />
         ) : (
           <div className="mx-auto max-w-[820px] space-y-8 pb-8">
@@ -613,6 +615,10 @@ export function OperationsCommand() {
                 assistantName={agentPrefs.assistant_name || "Aiviate"}
                 onReply={catalog.connections.some((entry) => entry.provider === "gmail" && entry.is_active !== false) ? handleGmailReply : undefined}
                 sending={chatBusy}
+                onProgress={() => {
+                  const container = chatScrollRef.current;
+                  if (container && followLatestRef.current) container.scrollTop = container.scrollHeight;
+                }}
               />
             ))}
           </div>

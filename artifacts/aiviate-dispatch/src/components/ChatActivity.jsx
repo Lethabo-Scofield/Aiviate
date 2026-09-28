@@ -52,7 +52,7 @@ export default function ChatActivity({ activity, assistantName = "Aiviate", resu
       <div className="space-y-1.5 text-[12px] leading-snug text-[#5C636A]">
         <div className="flex items-center gap-2" data-testid="status-agent-connection">
           {complete && !connectionFailed ? <Check size={13} className="shrink-0" aria-hidden="true" /> : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#7F8A90] motion-safe:animate-pulse" aria-hidden="true" />}
-          <span>{connectionFailed ? "Request failed" : sample ? (complete ? "Sample preview ready" : "Opening sample preview") : complete ? "Connected to Aiviate" : "Connecting to Aiviate"}</span>
+          <span>{connectionFailed ? "Request failed" : complete ? (sample ? "Sample preview ready" : "Connected to Aiviate") : activity.phase === "preparing" ? "Response ready" : sample ? "Opening sample preview" : "Connecting to Aiviate"}</span>
         </div>
         <div className="flex items-center gap-2" data-testid="status-agent-source">
           {provider ? <ProviderLogo provider={provider} size={15} /> : <Icon size={13} className="shrink-0" aria-hidden="true" />}
