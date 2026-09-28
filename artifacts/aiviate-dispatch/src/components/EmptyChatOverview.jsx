@@ -82,14 +82,14 @@ export default function EmptyChatOverview({ onPrompt, onProgress }) {
         if (!await speak(
           "handoff",
           "Document Research Agent",
-          "Report Agent, please generate a concise report from these PDFs."
+          "Report Agent, please generate a financial and operations report from these PDFs."
         )) return;
 
-        add({ id: "report", name: "Report Agent", working: "Request received · generating a report from the three sample PDFs" });
+        add({ id: "report", name: "Report Agent", working: "Request received · calculating figures and charts from the three sample PDFs" });
         if (!await pause(6000)) return;
         const reportUrl = URL.createObjectURL(createReportPdf(SAMPLE_DOCUMENTS));
         objectUrls.push(reportUrl);
-        if (!await speak("report", "Report Agent", "The report is ready. You can download it below.", true)) return;
+        if (!await speak("report", "Report Agent", "The financial report is ready, with route totals, cost charts and accounting detail. Download it below.", true)) return;
         update("report", { reportUrl });
       } catch {
         if (active) {
@@ -163,12 +163,12 @@ export default function EmptyChatOverview({ onPrompt, onProgress }) {
                   {message.reportUrl && (
                     <a
                       href={message.reportUrl}
-                      download="aiviate-simulated-operations-report.pdf"
+                      download="aiviate-simulated-financial-report.pdf"
                       className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[12px] font-semibold text-[#343A40] hover:bg-[#F1F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#343A40]"
                       data-testid="download-simulated-report"
                     >
                       <PdfIcon size={21} />
-                      Download sample report.pdf
+                      Download financial report.pdf
                       <Download size={14} aria-hidden="true" />
                     </a>
                   )}
