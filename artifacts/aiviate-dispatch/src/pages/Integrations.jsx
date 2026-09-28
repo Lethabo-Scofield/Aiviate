@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  ShoppingBag, RefreshCw, ArrowRight, Globe, Lock,
+  ShoppingBag, RefreshCw, ArrowRight, Lock,
   Pencil, Check, X, ImagePlus, Trash2, Code2, ChevronDown, ChevronUp,
-  Users, Truck,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
+import { ProviderLogo } from "../components/IntegrationTools";
+import { setPendingAsk } from "../lib/askBus";
 import {
   API_BASE,
   completeGmailAuth,
@@ -16,24 +17,6 @@ import {
   getStoreIntegration,
   updateStoreIntegration,
 } from "../services/api";
-import {
-  siGmail,
-  siQuickbooks,
-  siSage,
-  siShopify,
-  siWhatsapp,
-  siWoocommerce,
-  siXero,
-  siZoho,
-} from "simple-icons";
-
-function BrandIcon({ icon, size = 16 }) {
-  return (
-    <svg role="img" viewBox="0 0 24 24" width={size} height={size} fill={`#${icon.hex}`} xmlns="http://www.w3.org/2000/svg">
-      <path d={icon.path} />
-    </svg>
-  );
-}
 
 const LOGO_SIZE = 128;
 
@@ -60,21 +43,8 @@ function fileToLogoDataUrl(file) {
   });
 }
 
-const AVAILABLE = [
-  { name: "Shopify", desc: "Pull orders straight from your Shopify store.", brand: siShopify },
-  { name: "WooCommerce", desc: "Sync WooCommerce orders automatically.", brand: siWoocommerce },
-  { name: "Gmail", desc: "Turn order emails and support threads into operational context.", brand: siGmail },
-  { name: "WhatsApp", desc: "Customer delivery messages, availability and reschedule requests.", brand: siWhatsapp },
-  { name: "Microsoft Teams", desc: "Post dispatch alerts and exception summaries to your ops channels.", Icon: Users },
-  { name: "QuickBooks", desc: "Connect invoices, COD payments and delivery cost references.", brand: siQuickbooks },
-  { name: "Xero", desc: "Sync accounting contacts, invoices and payment references.", brand: siXero },
-  { name: "Sage", desc: "Connect finance records for delivery reconciliation.", brand: siSage },
-  { name: "Zoho", desc: "Connect CRM, Books or inventory context.", brand: siZoho },
-  { name: "Olyxee Logistics", desc: "Connect the Olyxee logistics workspace once the brand asset is added.", Icon: Truck },
-  { name: "Custom API", desc: "Connect any REST endpoint that serves orders.", Icon: Globe },
-];
-
-export default function Integrations() {
+export default function Integrations({ onTryDemo }) {
+  const navigate = useNavigate();
   const [status, setStatus] = useState(null); // { configured, orderCount, newCount, checkedAt }
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,6 +58,10 @@ export default function Integrations() {
   const [gmailConnection, setGmailConnection] = useState(null);
   const [gmailConnecting, setGmailConnecting] = useState(false);
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState("");
+  const [gmailLoading, setGmailLoading] = useState(true);
+  const [demoCatalog, setDemoCatalog] = useState([]);
+  const [expandedDemo, setExpandedDemo] = useState(null);
   const fileRef = useRef(null);
 
   const check = async (isRefresh = false) => {
@@ -102,7 +76,7 @@ export default function Integrations() {
         checkedAt: new Date(),
       });
     } catch {
-      setStatus({ configured: true, orderCount: 0, newCount: 0, checkedAt: new Date() });
+      setStatus({ configured: false, orderCount: 0, newCount: 0, checkedAt: new Date() });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -118,11 +92,18 @@ export default function Integrations() {
       .catch(() => {});
     getIntegrations()
       .then((res) => {
-        const gmail = (res.connections || []).find((connection) => connection.provider === "gmail");
+        const gmail = (res.connections || []).find((connection) => connection.provider === "gmail" && connection.is_active !== false);
         setGmailConnection(gmail || null);
+        setDemoCatalog(res.demos || []);
+        setConnectionError("");
       })
-      .catch(() => setGmailConnection(null));
+      .catch(() => {
+        setGmailConnection(null);
+        setConnectionError("Could not check connected services. Refresh and try again.");
+      })
+      .finally(() => setGmailLoading(false));
 
+    const gmailRedirectUri = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/integrations`;
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
@@ -130,7 +111,7 @@ export default function Integrations() {
 
     if (oauthError) {
       setEditError(`Google OAuth failed: ${oauthError}`);
-      window.history.replaceState({}, "", "/integrations");
+      window.history.replaceState({}, "", gmailRedirectUri);
       return;
     }
 
@@ -138,9 +119,9 @@ export default function Integrations() {
 
     (async () => {
       try {
-        const res = await completeGmailAuth({ code, state });
+        const res = await completeGmailAuth({ code, state, redirect_uri: gmailRedirectUri });
         setGmailConnection(res.connection || { provider: "gmail", display_name: "Gmail" });
-        window.history.replaceState({}, "", "/integrations");
+        window.history.replaceState({}, "", gmailRedirectUri);
       } catch (err) {
         setEditError(err.message || "Google OAuth did not finish successfully");
       }
@@ -148,6 +129,14 @@ export default function Integrations() {
   }, []);
 
   const storeName = branding.display_name || "Aiviate Operational Store";
+  const tryDemo = (demo, promptIndex = 0) => {
+    const prompt = demo.prompts?.[promptIndex] || `Show me ${demo.name} sample records`;
+    if (onTryDemo) onTryDemo(prompt);
+    else {
+      setPendingAsk(prompt);
+      navigate("/");
+    }
+  };
 
   const startEdit = () => {
     setDraftName(branding.display_name || "");
@@ -193,10 +182,9 @@ export default function Integrations() {
   const handleConnectGmail = async () => {
     try {
       setGmailConnecting(true);
-      const res = await getGmailAuthUrl({});
+      const redirect_uri = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/integrations`;
+      const res = await getGmailAuthUrl({ redirect_uri });
       window.location.assign(res.url);
-      const nextConnection = { provider: "gmail", provider_user_email: "waiting for Google consent", display_name: "Gmail" };
-      setGmailConnection(nextConnection);
     } catch (err) {
       setEditError(err.message || "Could not start Gmail connection");
     } finally {
@@ -221,11 +209,11 @@ export default function Integrations() {
       <div className="mb-6 sm:mb-8">
         <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#111315] tracking-tight">Integrations</h1>
         <p className="text-[13px] sm:text-[14px] text-[#868E96] mt-1">
-          Connect the systems your orders live in, and Aiviate turns them into optimized routes.
+          Explore other services with sample data. Gmail can use a connected account for real inbox search.
         </p>
       </div>
 
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Connected</p>
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Built-in order source</p>
 
       {loading ? (
         <div className="apple-card p-10 text-center mb-8"><Spinner size={22} className="mx-auto" /></div>
@@ -293,8 +281,7 @@ export default function Integrations() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-[15px] font-semibold text-[#111315]">{storeName}</h2>
                     <span className="inline-flex items-center gap-1.5 text-[10.5px] px-2 py-0.5 rounded-full bg-[#5C636A]/10 text-[#5C636A] font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#5C636A] animate-pulse" />
-                      Connected
+                      {status?.configured ? "Built-in" : "Could not check"}
                     </span>
                   </div>
                 )}
@@ -361,53 +348,80 @@ export default function Integrations() {
         </div>
       )}
 
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Available</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-8">
-        {AVAILABLE.map(({ name, desc, Icon, brand }) => {
-          const isGmail = name === "Gmail";
-          const connected = isGmail && gmailConnection;
-          return (
-            <div key={name} className="apple-card p-4">
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] flex items-center justify-center">
-                  {brand ? <BrandIcon icon={brand} size={16} /> : <Icon size={15} className="text-[#111315]" strokeWidth={1.8} />}
-                </div>
-                <p className="text-[13px] font-semibold text-[#111315]">{name}</p>
-              </div>
-              <p className="text-[11.5px] text-[#868E96] leading-snug mb-2.5">{desc}</p>
-              <div className="flex items-center justify-between gap-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${connected ? "bg-[#E8F7EE] text-[#1D7A46]" : "bg-[#F1F3F5] text-[#ADB5BD]"}`}>
-                  {connected ? "Connected" : "Setup required"}
-                </span>
-                {isGmail ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleConnectGmail}
-                      disabled={gmailConnecting || gmailDisconnecting}
-                      className="text-[11px] font-medium text-[#343A40] hover:text-[#111315] disabled:opacity-60"
-                    >
-                      {gmailConnecting ? "Connecting..." : connected ? "Reconnect" : "Configure"}
-                    </button>
-                    {connected && (
-                      <button
-                        onClick={handleDisconnectGmail}
-                        disabled={gmailConnecting || gmailDisconnecting}
-                        className="text-[11px] font-medium text-[#A61E4D] hover:text-[#7A1F3D] disabled:opacity-60"
-                      >
-                        {gmailDisconnecting ? "Disconnecting..." : "Disconnect"}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <button className="text-[11px] font-medium text-[#343A40] hover:text-[#111315]">Configure</button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Third-party connections</p>
+      {connectionError && <p role="alert" className="text-[12px] text-[#A61E4D] mb-3">{connectionError}</p>}
+      <div className="apple-card p-4 sm:p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <ProviderLogo provider="gmail" size={25} />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[14px] font-semibold text-[#111315]">Gmail</h2>
+            <p className="mt-1 text-[12px] text-[#868E96]">
+              {gmailLoading ? "Checking connection…" : gmailConnection
+                ? `Connected${gmailConnection.provider_user_email ? ` as ${gmailConnection.provider_user_email}` : ""} · search your inbox from chat`
+                : "Connect your Google account to search its inbox from chat."}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              onClick={handleConnectGmail}
+              disabled={gmailLoading || gmailConnecting || gmailDisconnecting}
+              className="text-[12px] font-semibold text-[#111315] hover:underline disabled:opacity-50"
+            >
+              {gmailConnecting ? "Connecting…" : gmailConnection ? "Reconnect" : "Connect"}
+            </button>
+            {gmailConnection && (
+              <button onClick={handleDisconnectGmail} disabled={gmailDisconnecting || gmailConnecting} className="text-[12px] text-[#868E96] hover:text-[#111315] disabled:opacity-50">
+                {gmailDisconnecting ? "Disconnecting…" : "Disconnect"}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
+      <section className="mb-8" aria-label="Integration previews">
+        <div className="mb-3">
+          <h2 className="text-[15px] font-semibold text-[#111315]">Explore integrations</h2>
+          <p className="mt-1 text-[12px] leading-relaxed text-[#868E96]">These previews use sample records, not connected external accounts. You can explore them with the agent; nothing is sent or changed.</p>
+        </div>
+        {gmailLoading ? <div role="status" className="apple-card p-5 text-[12px] text-[#868E96]">Loading services…</div>
+          : demoCatalog.length ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {demoCatalog.map((demo) => (
+                <div key={demo.provider} className="apple-card p-4" data-testid={`card-demo-${demo.provider}`}>
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F3F5]"><ProviderLogo provider={demo.provider} size={19} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-[13px] font-semibold text-[#111315]">{demo.name}</h3>
+                      </div>
+                      <p className="mt-1 text-[12px] leading-relaxed text-[#868E96]">{demo.description}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={() => tryDemo(demo)} data-testid={`button-try-demo-${demo.provider}`} className="apple-btn apple-btn-primary px-3 py-1.5 text-[12px]">
+                      Try with agent <ArrowRight size={13} />
+                    </button>
+                    <button type="button" onClick={() => setExpandedDemo((current) => current === demo.provider ? null : demo.provider)} aria-expanded={expandedDemo === demo.provider} data-testid={`button-preview-demo-${demo.provider}`} className="apple-btn apple-btn-secondary px-3 py-1.5 text-[12px]">
+                      {expandedDemo === demo.provider ? "Hide sample" : "Preview sample"}
+                    </button>
+                  </div>
+                  {expandedDemo === demo.provider && (
+                    <div className="mt-3 space-y-2 border-t border-black/[0.06] pt-3" data-testid={`preview-demo-${demo.provider}`}>
+                      {demo.records.map((item) => (
+                        <div key={item.label} className="flex items-start justify-between gap-3 rounded-lg bg-[#F8F9FA] px-3 py-2 text-[11px]">
+                          <div className="min-w-0"><p className="font-semibold text-[#111315]">{item.label}</p><p className="text-[#5C636A]">{item.detail}</p></div>
+                          <span className="shrink-0 text-[#868E96]">{item.meta}</span>
+                        </div>
+                      ))}
+                      {demo.prompts?.[1] && <button type="button" onClick={() => tryDemo(demo, 1)} className="text-[11px] font-medium text-[#111315] hover:underline">Explore a sample issue →</button>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : <p role="status" className="apple-card p-5 text-[12px] text-[#868E96]">Service previews could not load. Please refresh and try again.</p>}
+      </section>
 
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">No API? Integrate with code</p>
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#868E96] mb-2">Built-in developer API · not a third-party connection</p>
       <div className="apple-card p-5 sm:p-6">
         <div className="flex items-start gap-4">
           <div className="w-11 h-11 rounded-2xl bg-[#111315] flex items-center justify-center shrink-0">
@@ -416,8 +430,8 @@ export default function Integrations() {
           <div className="min-w-0 flex-1">
             <h2 className="text-[15px] font-semibold text-[#111315]">Developer integration</h2>
             <p className="text-[12px] text-[#868E96] mt-1 leading-snug">
-              If your system doesn't have a ready-made connector, you can push orders into Aiviate
-              with a few lines of code using the REST API.
+              Import your own orders through Aiviate's built-in REST API. This is separate from
+              external account connections and does not connect to a third-party service.
             </p>
             <button
               onClick={() => setShowDevGuide((v) => !v)}

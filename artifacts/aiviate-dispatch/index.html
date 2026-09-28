@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,21 +9,22 @@
     <meta name="keywords" content="logistics, dispatch, route optimization, fleet management, delivery, driver management, SaaS, last-mile delivery, route planning" />
     <meta name="author" content="Aiviate" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#0f1113" />
+    <meta name="theme-color" content="#f4f5f7" />
     <script>
       (function () {
+        var mode = "light";
         try {
-          var mode = localStorage.getItem("aiviate_theme_mode") || "dark";
-          if (mode === "dark") document.documentElement.classList.add("dark-ui");
-        } catch (e) {
-          document.documentElement.classList.add("dark-ui");
-        }
+          if (localStorage.getItem("aiviate_theme_mode") === "dark") mode = "dark";
+        } catch (e) { /* Storage may be disabled; keep the light default. */ }
+        document.documentElement.dataset.theme = mode;
+        document.documentElement.classList.toggle("dark-ui", mode === "dark");
+        document.querySelector('meta[name="theme-color"]').content = mode === "dark" ? "#0f1113" : "#f4f5f7";
       })();
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />

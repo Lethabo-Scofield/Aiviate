@@ -2,3 +2,5 @@
 - [Legacy Expo navigation](legacy-expo-navigation.md) — Expo 57 may enforce Router navigation checks even with a custom entrypoint; verify the imported app's real navigator.
 - [Driver login CORS diagnosis](driver-login-cors.md) — curl can reach the original live API while Expo web Preview reports a network error because browsers enforce CORS.
 - [GitHub push authentication](github-git-auth.md) — the connected GitHub API integration does not repair Git transport credentials; reconnect GitHub in Replit's Git pane.
+- [Voice preview microphone](voice-preview-microphone.md) — browser tests may have secure, permitted microphone APIs but no input device; separate device failure from app failure.
+- [Gmail tenant boundary](gmail-tenant-boundary.md) — keep in-app email access company-scoped; a workspace-wide connector cannot safely stand in for tenant OAuth.

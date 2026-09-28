@@ -80,7 +80,7 @@ export default function AppTabBar({ state, navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isCompact = width < 360;
-  const labelSize = isCompact ? 10 : 11;
+  const labelSize = isCompact ? 11 : 12;
   const iconSize = isCompact ? 20 : 22;
 
   return (

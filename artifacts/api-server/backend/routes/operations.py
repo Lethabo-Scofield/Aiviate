@@ -8,6 +8,7 @@ from intelligence.operations_agent import (
     list_exceptions,
     run_new_order_workflow,
 )
+from intelligence.voice_agent import answer_voice, speak_briefing
 from middleware import require_admin, require_auth
 from models import AutopilotSettings, AuditLog, utcnow
 from routes import operations_bp
@@ -24,6 +25,42 @@ def operations_snapshot():
     except Exception:
         traceback.print_exc()
         return jsonify({"error": "Failed to load operations snapshot"}), 500
+    finally:
+        db.close()
+
+
+@operations_bp.route("/api/operations/voice-briefing", methods=["POST"])
+@require_auth
+@require_admin
+def operations_voice_briefing():
+    db = get_db_session()
+    try:
+        snapshot = get_operation_snapshot(db, g.company_id)
+        return jsonify(speak_briefing(snapshot))
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"error": "The voice briefing is unavailable right now. Please try again."}), 503
+    finally:
+        db.close()
+
+
+@operations_bp.route("/api/operations/voice-turn", methods=["POST"])
+@require_auth
+@require_admin
+def operations_voice_turn():
+    audio = request.files.get("audio")
+    if not audio:
+        return jsonify({"error": "Record a voice message first."}), 400
+    recording = audio.read(4_000_001)
+    db = get_db_session()
+    try:
+        snapshot = get_operation_snapshot(db, g.company_id)
+        return jsonify(answer_voice(recording, snapshot))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"error": "I couldn't answer by voice just now. Please try again."}), 503
     finally:
         db.close()
 

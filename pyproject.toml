@@ -12,6 +12,7 @@ dependencies = [
     "geopy>=2.5.0",
     "gunicorn>=26.2.0",
     "httpx>=0.28.1",
+    "openai>=3.19.2",
     "openpyxl>=3.1.5",
     "ortools>=9.15.6755",
     "pg8000>=1.31.5",

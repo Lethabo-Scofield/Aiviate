@@ -5,32 +5,28 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Bot,
-  Cable,
   CheckCircle2,
-  ChevronDown,
   ClipboardCheck,
-  Headphones,
   Mail,
   Map,
   Mic,
-  MicOff,
   Package,
   RefreshCw,
   Route,
   ShieldCheck,
-  Sparkles,
   Truck,
   UserCheck,
   Users,
-  Volume2,
-  X,
 } from "lucide-react";
 import {
   getActivity,
+  getAgents,
   getApprovals,
   getDrivers,
   getExceptions,
   getJobs,
+  searchGmail,
+  replyGmail,
   getOperationsSnapshot,
   getPolicies,
   getStoreOrders,
@@ -39,6 +35,11 @@ import {
   updatePolicies,
 } from "../services/api";
 import ResultBlock from "../components/ResultBlock";
+import ChatActivity from "../components/ChatActivity";
+import EmptyChatOverview from "../components/EmptyChatOverview";
+import IntegrationTools, { PROVIDERS, useIntegrationCatalog } from "../components/IntegrationTools";
+import IntegrationSlashMenu from "../components/IntegrationSlashMenu";
+import VoiceMode from "../components/VoiceMode";
 import { takePendingAsk } from "../lib/askBus";
 import {
   getChatHistoryItem,
@@ -46,14 +47,6 @@ import {
   titleFromThread,
   upsertChatHistory,
 } from "../lib/chatHistory";
-import {
-  siGmail,
-  siQuickbooks,
-  siSage,
-  siWhatsapp,
-  siXero,
-  siZoho,
-} from "simple-icons";
 
 const ICONS = {
   operations: Bot,
@@ -98,14 +91,6 @@ function time(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function BrandIcon({ icon, size = 16 }) {
-  return (
-    <svg role="img" viewBox="0 0 24 24" width={size} height={size} fill={`#${icon.hex}`} xmlns="http://www.w3.org/2000/svg">
-      <title>{icon.title}</title>
-      <path d={icon.path} />
-    </svg>
-  );
-}
 
 function PageHeader({ title, body, icon }) {
   const Icon = ICONS[icon] || Bot;
@@ -170,55 +155,51 @@ function LoadingPanel() {
   );
 }
 
+function gmailSearchQuery(text) {
+  const cleaned = text.replace(/\bfrom\s+\/?gmail\b/gi, " ").replace(/\/gmail\b|\bgmail\b/gi, " ").replace(/\s+/g, " ").trim();
+  if (/\b(?:unread|unopened)\b/i.test(cleaned)) return "in:inbox is:unread -label:trash";
+  const from = cleaned.match(/\bfrom\s+([^\n?]+?)(?:\s+(?:and|about|with)\b|$)/i);
+  if (from && !/^\s*(?:and\b|my\b|the\b|inbox\b|messages?\b|emails?\b)/i.test(from[1])) {
+    return `in:inbox -label:trash from:"${from[1].trim().replace(/"/g, "")}"`;
+  }
+  if (/^\s*(?:in:|from:|subject:|after:|before:|label:|is:)/i.test(cleaned)) return cleaned;
+  const search = cleaned.match(/\b(?:search|find|look\s+for)\b(?:\s+(?:my|the|in|for|emails?|messages?))*\s+(.+)$/i);
+  if (search) return `in:inbox -label:trash ${search[1].replace(/[?]+$/, "").trim()}`;
+  if (/\b(?:latest|lastest|last|recent|new|inbox|messages|massages|suppliers?|reply|respond)\b/i.test(cleaned) || !cleaned) return "in:inbox -label:trash";
+  return `in:inbox -label:trash ${cleaned.replace(/[?]+$/, "")}`;
+}
+
 function resultSpeechText(result) {
   if (!result) return "";
   return result.summary || (result.ok ? "Done." : "Aiviate could not answer that yet.");
 }
 
-function TypewriterResult({ result, onDone }) {
-  const [visible, setVisible] = useState("");
-  const [done, setDone] = useState(false);
-  const text = resultSpeechText(result);
-
-  useEffect(() => {
-    setVisible("");
-    setDone(false);
-    let index = 0;
-    const id = window.setInterval(() => {
-      index += 1;
-      setVisible(text.slice(0, index));
-      if (index >= text.length) {
-        window.clearInterval(id);
-        setDone(true);
-        onDone?.(result);
-      }
-    }, 16);
-    return () => window.clearInterval(id);
-  }, [text, result, onDone]);
-
-  const hasDetails = result?.ok && result?.type && !["greeting", "llm"].includes(result.type);
+function ChatAnswer({ result, onReply, sending }) {
+  const hasDetails = result?.type === "gmail_unconnected" || (result?.ok && (result?.provider === "gmail" || (result?.type && !["greeting", "llm"].includes(result.type))));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 animate-fade-in">
       <p className={`text-[15px] leading-[1.68] ${result?.ok === false ? "text-[#343A40]" : "text-[#111315]"}`}>
-        {visible}
-        {!done && <span className="ml-0.5 inline-block h-4 w-[1.5px] translate-y-0.5 animate-pulse bg-[#111315]" />}
+        {resultSpeechText(result)}
       </p>
-      {done && hasDetails && (
+      {hasDetails && (
         <div className="animate-fade-in border-t border-[#E9ECEF] pt-3">
-          <ResultBlock result={result} />
+          <ResultBlock result={result} onReply={onReply} sending={sending} />
         </div>
       )}
     </div>
   );
 }
 
-function ChatTurn({ turn, onTyped, assistantName }) {
+function ChatTurn({ turn, assistantName, onReply, sending }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <div className="max-w-[78%] rounded-2xl bg-[#111315] px-4 py-3 text-[15px] leading-[1.58] text-white">
-          {turn.input}
+        <div className="max-w-[78%]">
+          {turn.toolContext && <p className="mb-1 text-right text-[11px] font-semibold text-[#697980]">
+            {turn.toolContext.name}{turn.toolContext.demo ? " · Sample preview" : ""}
+          </p>}
+          <div className="rounded-2xl bg-[#111315] px-4 py-3 text-[15px] leading-[1.58] text-white">{turn.input}</div>
         </div>
       </div>
 
@@ -226,14 +207,12 @@ function ChatTurn({ turn, onTyped, assistantName }) {
         <img src="/logo.png" alt="" className="mt-1 h-7 w-7 shrink-0 object-contain" />
         <div className="min-w-0 flex-1 px-1 py-1">
           {turn.busy ? (
-            <div className="flex items-center gap-2 text-[13px] text-[#868E96]">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#111315]" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5C636A] [animation-delay:120ms]" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ADB5BD] [animation-delay:240ms]" />
-              <span className="ml-1">{assistantName} is checking the operation</span>
-            </div>
+            <ChatActivity activity={turn.activity || { kind: "operations", label: "Checking the request" }} assistantName={assistantName} />
           ) : (
-            <TypewriterResult result={turn.result} onDone={onTyped} />
+            <div className="space-y-3">
+              {turn.activity && <ChatActivity activity={turn.activity} assistantName={assistantName} result={turn.result} />}
+              <ChatAnswer result={turn.result} onReply={onReply} sending={sending} />
+            </div>
           )}
         </div>
       </div>
@@ -241,144 +220,36 @@ function ChatTurn({ turn, onTyped, assistantName }) {
   );
 }
 
-const CHAT_CONNECTORS = [
-  { name: "Gmail", detail: "Email orders and support", brand: siGmail },
-  { name: "WhatsApp", detail: "Customer messages", brand: siWhatsapp },
-  { name: "Teams", detail: "Ops team alerts", Icon: Users, tone: "#6264A7" },
-  { name: "QuickBooks", detail: "Invoices and payments", brand: siQuickbooks },
-  { name: "Xero", detail: "Accounting sync", brand: siXero },
-  { name: "Sage", detail: "Accounting sync", brand: siSage },
-  { name: "Zoho", detail: "Accounting and CRM", brand: siZoho },
-  { name: "Olyxee Logistics", detail: "Fleet operations", logo: "/logo.png" },
-];
+function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assistantName, voiceEnabled, catalog, onSelectTool }) {
+  const [dismissedSlash, setDismissedSlash] = useState(null);
+  const slashMatch = /(^|\s)\/([^\s/]*)$/.exec(value);
+  const slashOpen = Boolean(slashMatch && !busy && dismissedSlash !== value);
+  const query = slashMatch?.[2]?.toLowerCase() || "";
+  const gmailConnected = catalog.connections.some(({ provider, is_active }) => provider === "gmail" && is_active !== false);
+  const firstSelectable = PROVIDERS.find(({ provider, name }) =>
+    (name.toLowerCase().includes(query) || provider.includes(query)) &&
+    (provider === "gmail" ? gmailConnected : (catalog.demos || []).some((demo) => demo.provider === provider))
+  );
 
-function ConnectorIcon({ connector, size = 16 }) {
-  if (connector.brand) return <BrandIcon icon={connector.brand} size={size} />;
-  if (connector.logo) return <img src={connector.logo} alt="" className="h-4 w-4 object-contain" />;
-  const Icon = connector.Icon || Cable;
-  return <Icon size={size} strokeWidth={1.75} style={{ color: connector.tone || "#111315" }} />;
-}
-
-function ConnectorPicker({ compact = false }) {
-  const [open, setOpen] = useState(false);
-  const openIntegrations = () => {
-    setOpen(false);
-    window.dispatchEvent(new CustomEvent("aiviate:open-panel", { detail: { panel: "integrations" } }));
+  const selectIntegration = (provider) => {
+    if (!slashMatch) return;
+    onChange(value.slice(0, slashMatch.index) + slashMatch[1]);
+    onSelectTool(provider);
+    setDismissedSlash(null);
+    window.requestAnimationFrame(() => inputRef.current?.focus());
   };
+
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-2 rounded-xl bg-[#F1F3F5] px-2.5 py-1.5 text-[12px] font-medium text-[#343A40] transition-colors hover:bg-[#E9ECEF] hover:text-[#111315]"
-        aria-expanded={open}
-      >
-        <Cable size={14} strokeWidth={1.7} />
-        Tools
-        <ChevronDown size={13} strokeWidth={1.7} />
-      </button>
-      {open && (
-        <div className={`chat-tool-menu absolute bottom-full left-0 z-30 mb-2 w-[min(420px,calc(100vw-48px))] rounded-2xl border border-black/[0.08] bg-white p-3 shadow-[0_18px_55px_rgba(17,19,21,0.16)] ${compact ? "sm:left-auto sm:right-0" : ""}`}>
-          <div className="mb-2 px-1">
-            <p className="text-[13px] font-semibold text-[#111315]">Connect tools</p>
-            <p className="text-[11.5px] leading-[1.45] text-[#868E96]">Use real business systems for orders, messages, alerts and finance context.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {CHAT_CONNECTORS.map((connector) => (
-              <button
-                type="button"
-                key={connector.name}
-                onClick={openIntegrations}
-              className="chat-tool-item flex items-center gap-2 rounded-xl border border-[#E9ECEF] bg-[#F8F9FA] px-2.5 py-2 text-left transition-colors hover:border-[#ADB5BD] hover:bg-white"
-              >
-                <span className="chat-tool-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white shadow-[0_1px_2px_rgba(17,19,21,0.04)]">
-                  <ConnectorIcon connector={connector} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[12px] font-semibold text-[#111315]">{connector.name}</span>
-                  <span className="block truncate text-[10.5px] text-[#868E96]">{connector.detail}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={openIntegrations}
-            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#111315] px-3 py-2.5 text-[12px] font-medium text-white transition-colors hover:bg-[#343A40]"
-          >
-            Manage integrations
-          </button>
-        </div>
+    <form onSubmit={(event) => {
+      if (slashMatch) {
+        event.preventDefault();
+        return;
+      }
+      onSubmit(event);
+    }} className="relative mx-auto max-w-[820px]">
+      {slashOpen && (
+        <IntegrationSlashMenu query={query} catalog={catalog} onSelect={selectIntegration} />
       )}
-    </div>
-  );
-}
-
-function PromptToolChips() {
-  return (
-    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-      <ConnectorPicker />
-      {CHAT_CONNECTORS.slice(0, 5).map((connector) => (
-        <button
-          key={connector.name}
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("aiviate:open-panel", { detail: { panel: "integrations" } }))}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E9ECEF] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#343A40] transition-colors hover:border-[#ADB5BD] hover:text-[#111315]"
-        >
-          <ConnectorIcon connector={connector} size={14} />
-          {connector.name}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function EmptyChatState({ onPrompt, onVoice, assistantName, voiceEnabled }) {
-  const prompts = [
-    { title: "What jobs are available?", detail: "Use only real storefront work" },
-    { title: "Where did this order come from?", detail: "Explain the data source" },
-    { title: "What should I do next?", detail: "Give an operator summary" },
-  ];
-  return (
-    <div className="mx-auto flex min-h-[58vh] max-w-[760px] flex-col items-center justify-center text-center">
-      <img src="/logo.png" alt="" className="mb-5 h-14 w-14 object-contain" />
-      <h1 className="text-[32px] font-semibold tracking-tight text-[#111315] sm:text-[44px]">
-        How can I help?
-      </h1>
-      <p className="mt-3 max-w-lg text-[15px] leading-[1.65] text-[#5C636A]">
-        Ask {assistantName} anything about orders, drivers, jobs, or what is happening in the operation.
-      </p>
-      {voiceEnabled && (
-        <button
-          onClick={onVoice}
-          className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#DEE2E6] bg-white px-4 py-2.5 text-[13px] font-medium text-[#111315] transition-colors hover:bg-[#F8F9FA]"
-        >
-          <Headphones size={16} strokeWidth={1.6} />
-          Voice
-        </button>
-      )}
-      <div className="mt-8 grid w-full gap-2">
-        {prompts.map((prompt) => (
-          <button
-            key={prompt.title}
-            onClick={() => onPrompt(prompt.title)}
-            className="chat-suggestion-card group rounded-2xl border border-[#E9ECEF] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,19,21,0.03)] transition-colors hover:border-[#ADB5BD] hover:bg-[#F8F9FA]"
-          >
-            <span className="flex items-center justify-between gap-3 text-[13px] font-medium text-[#111315]">
-              {prompt.title}
-              <Sparkles size={14} strokeWidth={1.55} className="text-[#ADB5BD] transition-colors group-hover:text-[#5C636A]" />
-            </span>
-            <span className="block pt-1 text-[11px] text-[#868E96]">{prompt.detail}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assistantName, voiceEnabled }) {
-  return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-[820px]">
       <div className="chat-composer rounded-[22px] border border-[#DEE2E6] bg-white p-2 shadow-[0_8px_28px_rgba(17,19,21,0.08)] focus-within:border-[#111315]/50">
         <div className="flex items-end gap-2">
           {voiceEnabled && (
@@ -396,142 +267,42 @@ function ChatComposer({ value, onChange, onSubmit, busy, inputRef, onVoice, assi
             ref={inputRef}
             rows={1}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => { setDismissedSlash(null); onChange(e.target.value); }}
             onKeyDown={(e) => {
+              if (e.isComposing) return;
+              if (slashMatch) {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setDismissedSlash(value);
+                  return;
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (slashOpen && !catalog.loading && !catalog.error && firstSelectable) selectIntegration(firstSelectable.provider);
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 onSubmit(e);
               }
             }}
             placeholder={`Message ${assistantName}...`}
+            aria-controls={slashOpen ? "chat-integration-slash-menu" : undefined}
+            aria-expanded={slashOpen}
             className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-3 py-3 text-[15px] leading-[1.45] text-[#111315] outline-none placeholder:text-[#ADB5BD]"
           />
           <button
             type="submit"
-            disabled={busy || !value.trim()}
+            disabled={busy || !value.trim() || Boolean(slashMatch)}
             className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111315] text-white transition-colors hover:bg-[#343A40] disabled:bg-[#E9ECEF] disabled:text-[#ADB5BD]"
             aria-label="Send"
           >
             <ArrowUpRight size={16} strokeWidth={1.6} />
           </button>
         </div>
-        <div className="flex items-center px-3 pb-1">
-          <ConnectorPicker compact />
-        </div>
       </div>
     </form>
-  );
-}
-
-function getSpeechRecognition() {
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-}
-
-function VoiceMode({ open, onClose, onTranscript, speaking, assistantName, speakReplies }) {
-  const [supported, setSupported] = useState(true);
-  const [listening, setListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const recognitionRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const SpeechRecognition = getSpeechRecognition();
-    setSupported(Boolean(SpeechRecognition));
-    return () => {
-      recognitionRef.current?.stop?.();
-      recognitionRef.current = null;
-      setListening(false);
-    };
-  }, [open]);
-
-  const start = () => {
-    const SpeechRecognition = getSpeechRecognition();
-    if (!SpeechRecognition) {
-      setSupported(false);
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-ZA";
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognition.onresult = (event) => {
-      let text = "";
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        text += event.results[i][0].transcript;
-      }
-      setTranscript(text);
-      const last = event.results[event.results.length - 1];
-      if (last?.isFinal && text.trim()) {
-        onTranscript(text.trim());
-        setTranscript("");
-      }
-    };
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  const stop = () => recognitionRef.current?.stop?.();
-
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/25 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-[420px] rounded-[28px] border border-white/60 bg-white p-5 shadow-[0_28px_80px_rgba(17,19,21,0.24)]">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-semibold text-[#111315]">Voice mode</p>
-            <p className="text-[12px] text-[#868E96]">Talk to {assistantName} about your business</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F3F5] text-[#5C636A] hover:bg-[#E9ECEF]"
-            aria-label="Close voice mode"
-          >
-            <X size={15} strokeWidth={1.6} />
-          </button>
-        </div>
-
-        <div className="py-8 text-center">
-          <button
-            onClick={listening ? stop : start}
-            disabled={!supported}
-            className={`mx-auto flex h-24 w-24 items-center justify-center rounded-full border shadow-[0_18px_55px_rgba(17,19,21,0.14)] transition-transform active:scale-[0.98] ${
-              listening ? "animate-ring-pulse border-[#111315] bg-[#111315] text-white" : "border-[#E9ECEF] bg-[#F8F9FA] text-[#111315]"
-            }`}
-            aria-label={listening ? "Stop listening" : "Start listening"}
-          >
-            {listening ? <MicOff size={30} strokeWidth={1.5} /> : <Mic size={30} strokeWidth={1.5} />}
-          </button>
-
-          <div className="mt-6 flex items-end justify-center gap-1.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <span
-                key={i}
-                className={`voice-bar h-4 w-1.5 rounded-full ${listening ? "bg-[#111315]" : "bg-[#DEE2E6]"}`}
-                style={{ animationDelay: `${i * 90}ms` }}
-              />
-            ))}
-          </div>
-
-          <p className="mt-5 min-h-10 text-[14px] leading-relaxed text-[#343A40]">
-            {!supported
-              ? `Voice recognition is not available in this browser. You can still type to ${assistantName}.`
-              : transcript || (speaking ? `${assistantName} is speaking...` : listening ? "Listening..." : "Tap the microphone and speak.")}
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-[#F8F9FA] px-4 py-3">
-          <div className="flex items-start gap-2 text-[12px] text-[#5C636A]">
-            <Volume2 size={14} strokeWidth={1.6} className="mt-0.5 shrink-0" />
-            {speakReplies
-              ? `${assistantName} will read the response aloud when your browser supports speech.`
-              : "Read-aloud replies are turned off in Settings."}
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -581,26 +352,40 @@ function useAsync(loader, deps = []) {
 export function OperationsCommand() {
   const [askText, setAskText] = useState("");
   const [thread, setThread] = useState([]);
+  const [overview, setOverview] = useState({ agents: null, loading: true, error: null });
+  const [overviewScan, setOverviewScan] = useState(0);
   const [conversationId, setConversationId] = useState(null);
   const [chatBusy, setChatBusy] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [selectedTool, setSelectedTool] = useState(null);
+  const catalog = useIntegrationCatalog();
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [agentPrefs, setAgentPrefs] = useState(readAgentPrefs);
-  const voiceReplyRef = useRef(null);
   const askRef = useRef(null);
-  const endRef = useRef(null);
+  const chatScrollRef = useRef(null);
+  const followLatestRef = useRef(true);
+  const replyInFlightRef = useRef(false);
+  const isEmpty = thread.length === 0;
 
-  const speak = useCallback((text) => {
-    if (!agentPrefs.speak_replies || !text || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 0.95;
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  }, [agentPrefs.speak_replies]);
+  useEffect(() => {
+    if (!isEmpty) return;
+    let active = true;
+    setOverview((previous) => ({ ...previous, loading: true, error: null }));
+    getAgents()
+      .then((agentData) => {
+        if (active) setOverview({
+          agents: agentData.agents,
+          loading: false,
+          error: null,
+        });
+      })
+      .catch((error) => {
+        if (active) setOverview((previous) => ({
+          ...previous, loading: false, error: error?.message || "Could not load the operations overview.",
+        }));
+      });
+    return () => { active = false; };
+  }, [isEmpty, overviewScan]);
 
   const askHere = useCallback(async (raw, options = {}) => {
     const text = (raw || "").trim();
@@ -608,30 +393,122 @@ export function OperationsCommand() {
       askRef.current?.focus();
       return;
     }
+    if (chatBusy || replyInFlightRef.current) return;
     setAskText("");
     const currentConversationId = conversationId || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     if (!conversationId) setConversationId(currentConversationId);
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    if (options.voice && agentPrefs.speak_replies) voiceReplyRef.current = id;
-    setThread((items) => [...items, { id, input: text, busy: true, result: null }]);
+    const explicitProvider = PROVIDERS.find(({ provider, name }) => {
+      const alias = provider === "teams" ? "(?:microsoft\\s+)?teams"
+        : provider === "custom-api" ? "custom\\s+api"
+          : provider === "olyxee" ? "olyxee(?:\\s+logistics)?"
+            : name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`\\b${alias}\\b`, "i").test(text);
+    });
+    const gmailConnected = catalog.connections.some((entry) => entry.provider === "gmail" && entry.is_active !== false);
+    const selectedProvider = selectedTool && (
+      selectedTool === "gmail"
+        ? gmailConnected
+        : (catalog.demos || []).some((entry) => entry.provider === selectedTool)
+    ) ? PROVIDERS.find((entry) => entry.provider === selectedTool) : null;
+    const contextProvider = explicitProvider || selectedProvider;
+    const latestResult = [...thread].reverse().find((item) => item.result)?.result;
+    const gmailFollowUp = latestResult?.type === "gmail_search" && /\b(?:reply|respond|that|those|them|their|sender|messages?|e-?mails?|inbox)\b/i.test(text);
+    const gmailRequest = options.gmailQuery !== undefined || contextProvider?.provider === "gmail" || /\b(?:gmail|e-?mail)\b/i.test(text) || (!explicitProvider && gmailFollowUp);
+    const sampleProvider = !gmailRequest && contextProvider && (catalog.demos || []).some((entry) => entry.provider === contextProvider.provider) ? contextProvider : null;
+    const commandText = selectedProvider && !explicitProvider && !gmailRequest ? `${text} ${selectedProvider.name}` : text;
+    const activity = gmailRequest
+      ? { kind: "gmail", provider: "gmail", label: "Searching connected Gmail" }
+      : sampleProvider
+        ? { kind: "integration", provider: sampleProvider.provider, sample: true, label: `Reviewing ${sampleProvider.name} sample records` }
+        : { kind: "operations", label: "Checking operational data" };
+    const toolContext = gmailRequest ? { name: "Gmail" } : sampleProvider ? { name: sampleProvider.name, demo: true } : null;
+    followLatestRef.current = true;
+    setThread((items) => [...items, { id, input: text, toolContext, busy: true, result: null, activity }]);
     setChatBusy(true);
     try {
-      const result = await sendCommand(text);
+      let result;
+      if (gmailRequest) {
+        if (!gmailConnected) {
+          result = { ok: false, type: "gmail_unconnected", summary: "Gmail is not connected to this workspace. Connect Gmail to search messages and review replies." };
+        } else {
+          const previous = [...thread].reverse().find((item) => item.result?.type === "gmail_search")?.result;
+          const numberedReply = text.match(/\b(?:reply|respond)\s+to\s+(?:message\s*)?#?(\d+)(?:\s+(?:saying|with|:)\s*(.+))?/i);
+          const addressedReply = text.match(/\b(?:reply|respond)\s+to\s+([\w.+-]+@[\w.-]+\.[a-z]{2,})(?:\s+(?:saying|with|:)\s*(.+))?/i);
+          const target = numberedReply ? previous?.items?.[Number(numberedReply[1]) - 1]
+            : addressedReply ? previous?.items?.filter((item) => [item.reply_to, item.from].some((value) => value?.toLowerCase().includes(addressedReply[1].toLowerCase())))?.[0]
+              : null;
+          if (target) {
+            result = {
+              ok: true, type: "gmail_search", provider: "gmail", query: previous.query,
+              items: [target], draftMessageId: target.id,
+              draftBody: (numberedReply?.[2] || addressedReply?.[2] || "").trim(),
+              summary: `Review a reply to ${target.reply_to || target.from}. Nothing has been sent.`,
+            };
+          } else if (numberedReply || addressedReply) {
+            result = { ok: false, summary: "I couldn't identify that message in the latest Gmail results. Search again, then use Reply on the exact message or refer to its number." };
+          } else {
+            const query = (options.gmailQuery || gmailSearchQuery(text)).trim().slice(0, 300);
+            const response = await searchGmail({ query, max_results: 10 });
+            const messages = Array.isArray(response.results) ? response.results : [];
+            const replyRequested = /\b(?:reply|respond)\b/i.test(text);
+            result = {
+              ok: true, type: "gmail_search", provider: "gmail", query: response.query || query,
+              items: messages,
+              summary: replyRequested
+                ? `Found ${messages.length} recent ${messages.length === 1 ? "message" : "messages"} in connected Gmail. Choose the supplier message you mean, then write and confirm your reply. Nothing has been sent.`
+                : `Found ${messages.length} ${messages.length === 1 ? "message" : "messages"} in connected Gmail. Select Reply on a message to compose a response.`,
+            };
+          }
+        }
+      } else {
+        const startedAt = performance.now();
+        result = await sendCommand(commandText);
+        // Sample previews remain marked as samples. The short dwell makes request activity legible.
+        if (sampleProvider && performance.now() - startedAt < 450) {
+          setThread((items) => items.map((item) => item.id === id ? { ...item, activity: { ...activity, label: "Formatting sample results" } } : item));
+          await new Promise((resolve) => setTimeout(resolve, Math.max(0, 450 - (performance.now() - startedAt))));
+        }
+      }
       setThread((items) => items.map((item) => item.id === id ? { ...item, busy: false, result } : item));
     } catch (e) {
       setThread((items) => items.map((item) => item.id === id
-        ? { ...item, busy: false, result: { ok: false, summary: e?.message || "Aiviate could not answer that yet." } }
+        ? { ...item, busy: false, result: { ok: false, requestFailed: true, summary: e?.message || "Aiviate could not answer that yet." } }
         : item));
     } finally {
       setChatBusy(false);
     }
-  }, [agentPrefs.speak_replies, conversationId]);
+  }, [conversationId, chatBusy, catalog.connections, catalog.demos, selectedTool, thread]);
 
-  const handleTyped = useCallback((turn, result) => {
-    if (voiceReplyRef.current !== turn.id) return;
-    voiceReplyRef.current = null;
-    speak(resultSpeechText(result));
-  }, [speak]);
+  const handleGmailReply = async (message, body) => {
+    if (chatBusy || replyInFlightRef.current) throw new Error("Wait for the current request to finish.");
+    if (!message?.id || !body?.trim()) throw new Error("Select a message and write a reply first.");
+    replyInFlightRef.current = true;
+    const id = `${Date.now()}-reply-${Math.random().toString(36).slice(2, 7)}`;
+    const currentConversationId = conversationId || `chat-${Date.now()}-gmail`;
+    if (!conversationId) setConversationId(currentConversationId);
+    followLatestRef.current = true;
+    setThread((items) => [...items, { id, input: `Reply to ${message.reply_to || message.from} · ${message.subject}`, toolContext: { name: "Gmail" }, busy: true, result: null, activity: { kind: "gmail", provider: "gmail", label: "Sending your confirmed reply through Gmail" } }]);
+    setChatBusy(true);
+    try {
+      const response = await replyGmail(message.id, body.trim());
+      if (response?.ok !== true || !response.id || !response.recipient || !response.subject) {
+        throw new Error("Gmail returned an incomplete send receipt. Check Sent before trying again, to avoid a duplicate.");
+      }
+      setThread((items) => items.map((item) => item.id === id ? { ...item, busy: false, result: {
+        ok: true, type: "gmail_sent", provider: "gmail",
+        recipient: response.recipient, subject: response.subject,
+        summary: `Reply sent to ${response.recipient}.${response.warning ? ` ${response.warning}` : ""}`,
+      } } : item));
+      return response;
+    } catch (err) {
+      setThread((items) => items.map((item) => item.id === id ? { ...item, busy: false, result: { ok: false, requestFailed: true, summary: err?.message || "Gmail could not send this reply." } } : item));
+      throw err;
+    } finally {
+      replyInFlightRef.current = false;
+      setChatBusy(false);
+    }
+  };
 
   useEffect(() => {
     const onHomeAsk = (e) => askHere(e?.detail?.text || "");
@@ -658,8 +535,8 @@ export function OperationsCommand() {
       setConversationId(null);
       setThread([]);
       setAskText("");
-      voiceReplyRef.current = null;
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      setSelectedTool(null);
+      setToolsOpen(false);
     };
     window.addEventListener("aiviate:open-chat", onOpenChat);
     window.addEventListener("aiviate:new-chat", onNewChat);
@@ -694,12 +571,15 @@ export function OperationsCommand() {
   }, []);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const container = chatScrollRef.current;
+    if (container && followLatestRef.current) container.scrollTop = container.scrollHeight;
   }, [thread]);
 
-  useEffect(() => () => {
-    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-  }, []);
+  const addVoiceMessage = (input, summary) => {
+    const id = `voice-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    if (!conversationId) setConversationId(`chat-${Date.now()}-voice`);
+    setThread((items) => [...items, { id, input, busy: false, result: { ok: true, type: "voice", summary } }]);
+  };
 
   const submitAsk = (e) => {
     e?.preventDefault?.();
@@ -707,14 +587,22 @@ export function OperationsCommand() {
   };
 
   return (
-    <div className="chat-shell animate-fade-in -mx-5 -mt-14 flex min-h-[calc(100vh-1rem)] flex-col bg-[#F8F9FA] sm:-mx-8 lg:-mx-12 lg:-mt-8">
-      <div className="flex-1 overflow-y-auto px-5 pt-16 sm:px-8 lg:px-12 lg:pt-10">
+    <div className="chat-shell ops-chat animate-fade-in flex h-[calc(100dvh-69px)] min-h-0 flex-col overflow-hidden bg-[#F8F9FA]">
+      <div
+        ref={chatScrollRef}
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          followLatestRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+        }}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-12"
+      >
         {thread.length === 0 ? (
-          <EmptyChatState
+          <EmptyChatOverview
             onPrompt={askHere}
-            onVoice={() => setVoiceOpen(true)}
-            assistantName={agentPrefs.assistant_name || "Aiviate"}
-            voiceEnabled={agentPrefs.voice_mode}
+            agents={overview.agents}
+            loading={overview.loading}
+            error={overview.error}
+            onRetry={() => setOverviewScan((value) => value + 1)}
           />
         ) : (
           <div className="mx-auto max-w-[820px] space-y-8 pb-8">
@@ -723,15 +611,25 @@ export function OperationsCommand() {
                 key={turn.id}
                 turn={turn}
                 assistantName={agentPrefs.assistant_name || "Aiviate"}
-                onTyped={(result) => handleTyped(turn, result)}
+                onReply={catalog.connections.some((entry) => entry.provider === "gmail" && entry.is_active !== false) ? handleGmailReply : undefined}
+                sending={chatBusy}
               />
             ))}
-            <div ref={endRef} />
           </div>
         )}
       </div>
 
-      <div className="chat-composer-dock z-20 bg-[#F8F9FA]/95 px-5 pb-4 pt-3 backdrop-blur sm:px-8 lg:px-12">
+      <div className="chat-composer-dock z-20 shrink-0 bg-[#F8F9FA]/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:px-8 lg:px-12">
+        <IntegrationTools
+          catalog={catalog}
+          selected={selectedTool}
+          onSelect={setSelectedTool}
+          onGmailSearch={(query) => askHere(`Search Gmail for ${query}`, { gmailQuery: query })}
+          onDemoPrompt={(prompt) => askHere(prompt)}
+          open={toolsOpen}
+          onToggle={() => setToolsOpen((value) => !value)}
+          busy={chatBusy}
+        />
         <ChatComposer
           value={askText}
           onChange={setAskText}
@@ -741,13 +639,15 @@ export function OperationsCommand() {
           onVoice={() => setVoiceOpen(true)}
           assistantName={agentPrefs.assistant_name || "Aiviate"}
           voiceEnabled={agentPrefs.voice_mode}
+          catalog={catalog}
+          onSelectTool={setSelectedTool}
         />
       </div>
       <VoiceMode
         open={voiceOpen && agentPrefs.voice_mode}
         onClose={() => setVoiceOpen(false)}
-        onTranscript={(text) => askHere(text, { voice: true })}
-        speaking={speaking}
+        onBriefing={(summary) => addVoiceMessage("How is the business doing?", summary)}
+        onReply={({ heard, summary }) => addVoiceMessage(heard, summary)}
         assistantName={agentPrefs.assistant_name || "Aiviate"}
         speakReplies={agentPrefs.speak_replies}
       />

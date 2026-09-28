@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   left: { flex: 1, paddingRight: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   title: { color: COLORS.text, fontWeight: '800', letterSpacing: -0.3 },
-  subtitle: { color: COLORS.textDim, fontSize: 12, marginTop: 3, fontWeight: '500', marginLeft: 34 },
+  subtitle: { color: COLORS.textDim, fontSize: 13, marginTop: 3, fontWeight: '500', marginLeft: 34 },
   right: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: {
     borderRadius: 12,

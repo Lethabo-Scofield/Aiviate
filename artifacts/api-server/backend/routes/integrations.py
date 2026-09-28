@@ -1,5 +1,10 @@
+import base64
+import hashlib
+import hmac
 import json
 import os
+import re
+import secrets
 import traceback
 import uuid
 from datetime import datetime, timezone
@@ -7,16 +12,20 @@ from datetime import datetime, timezone
 import requests
 from flask import g, jsonify, request
 
+from config import JWT_SECRET
 from intelligence.audit_logger import log_action
 from integrations.gmail_service import (
+    GMAIL_SEND_SCOPE,
     GmailReauthorizationRequired,
     build_google_oauth_url,
     build_search_query,
     fetch_gmail_messages_with_refresh,
     gmail_api_error_summary,
+    send_gmail_reply_with_refresh,
 )
+from integrations.demo_catalog import DEMO_INTEGRATIONS
 from middleware import require_admin, require_auth
-from models import IntegrationConnection, Company, obfuscate_integration_token, reveal_integration_token
+from models import IntegrationConnection, obfuscate_integration_token, reveal_integration_token
 from routes import integrations_bp
 from utils import get_db_session
 
@@ -50,6 +59,43 @@ def _resolve_google_redirect_uri(requested_redirect_uri=None):
     return redirect_uri
 
 
+def _issue_gmail_oauth_state(company_id):
+    # HMAC binds a short-lived state to its workspace. It is not persisted for
+    # one-time use; the authenticated callback company binding and Google's
+    # single-use authorization code provide the additional checks.
+    payload = {
+        "company_id": str(company_id),
+        "expires_at": int(datetime.now(timezone.utc).timestamp()) + 600,
+        "nonce": secrets.token_urlsafe(24),
+    }
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ).decode("ascii").rstrip("=")
+    signature = hmac.new(JWT_SECRET.encode("utf-8"), encoded.encode("ascii"), hashlib.sha256).digest()
+    return f"{encoded}.{base64.urlsafe_b64encode(signature).decode('ascii').rstrip('=')}"
+
+
+def _validate_gmail_oauth_state(state, authenticated_company_id):
+    if not isinstance(state, str) or state.count(".") != 1:
+        return False
+    encoded, provided_signature = state.split(".", 1)
+    expected_signature = hmac.new(
+        JWT_SECRET.encode("utf-8"), encoded.encode("ascii", errors="ignore"), hashlib.sha256
+    ).digest()
+    expected = base64.urlsafe_b64encode(expected_signature).decode("ascii").rstrip("=")
+    if not hmac.compare_digest(provided_signature, expected):
+        return False
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
+        return (
+            payload.get("company_id") == str(authenticated_company_id)
+            and int(payload.get("expires_at", 0)) >= int(datetime.now(timezone.utc).timestamp())
+            and bool(payload.get("nonce"))
+        )
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return False
+
+
 @integrations_bp.route("/api/integrations", methods=["GET"])
 @require_auth
 @require_admin
@@ -59,11 +105,15 @@ def list_integrations():
         company_id = _current_workspace()
         rows = (
             db.query(IntegrationConnection)
-            .filter(IntegrationConnection.company_id == company_id, IntegrationConnection.is_active.is_(True))
+            .filter(
+                IntegrationConnection.company_id == company_id,
+                IntegrationConnection.provider == "gmail",
+                IntegrationConnection.is_active.is_(True),
+            )
             .order_by(IntegrationConnection.connected_at.desc())
             .all()
         )
-        return jsonify({"connections": [r.to_dict() for r in rows]})
+        return jsonify({"connections": [r.to_dict() for r in rows], "demos": DEMO_INTEGRATIONS})
     finally:
         db.close()
 
@@ -74,7 +124,7 @@ def list_integrations():
 def gmail_auth_url():
     payload = request.get_json(silent=True) or {}
     company_id = _current_workspace()
-    state = payload.get("state") or f"company:{company_id}:{uuid.uuid4().hex}"
+    state = _issue_gmail_oauth_state(company_id)
     try:
         redirect_uri = _resolve_google_redirect_uri(payload.get("redirect_uri"))
         url = build_google_oauth_url(company_id, redirect_uri, state=state)
@@ -92,6 +142,9 @@ def gmail_callback():
     state = body.get("state")
     if not code:
         return jsonify({"error": "code is required"}), 400
+    company_id = _current_workspace()
+    if not _validate_gmail_oauth_state(state, company_id):
+        return jsonify({"error": "Invalid or expired Gmail OAuth state; start the connection flow again"}), 400
 
     try:
         redirect_uri = _resolve_google_redirect_uri(body.get("redirect_uri"))
@@ -130,7 +183,6 @@ def gmail_callback():
 
     db = get_db_session()
     try:
-        company_id = _current_workspace(state.split(":", 2)[1] if state and state.startswith("company:") else None)
         existing = (
             db.query(IntegrationConnection)
             .filter(
@@ -240,6 +292,118 @@ def gmail_search():
         db.rollback()
         traceback.print_exc()
         return jsonify({"error": "Failed to access Gmail"}), 500
+    finally:
+        db.close()
+
+
+@integrations_bp.route("/api/integrations/gmail/reply", methods=["POST"])
+@require_auth
+@require_admin
+def gmail_reply():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "JSON object with message_id and body is required"}), 400
+    message_id = payload.get("message_id")
+    reply_body = payload.get("body")
+    if not isinstance(message_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", message_id):
+        return jsonify({"error": "message_id must be a valid Gmail message ID"}), 400
+    if (
+        not isinstance(reply_body, str)
+        or not reply_body.strip()
+        or len(reply_body) > 10000
+        or any(ord(char) < 32 and char not in "\t\n\r" for char in reply_body)
+    ):
+        return jsonify({"error": "body must be non-empty plain text of at most 10000 characters"}), 400
+
+    company_id = _current_workspace()
+    db = get_db_session()
+    try:
+        conn = (
+            db.query(IntegrationConnection)
+            .filter(
+                IntegrationConnection.company_id == company_id,
+                IntegrationConnection.provider == "gmail",
+                IntegrationConnection.is_active.is_(True),
+            )
+            .first()
+        )
+        if not conn:
+            return jsonify({"error": "No Gmail connection is active for this workspace"}), 404
+
+        scopes = conn.scopes or []
+        if isinstance(scopes, str):
+            scopes = scopes.split()
+        if GMAIL_SEND_SCOPE not in scopes:
+            return jsonify({
+                "error": (
+                    "This Gmail connection is read-only and cannot send replies. "
+                    "Disconnect and reconnect Gmail, then approve the gmail.send permission."
+                )
+            }), 403
+
+        token = reveal_integration_token(conn.access_token)
+        refresh_token = reveal_integration_token(conn.refresh_token)
+        result, refreshed_token = send_gmail_reply_with_refresh(
+            token,
+            refresh_token,
+            message_id,
+            reply_body,
+            conn.provider_user_email,
+        )
+        if refreshed_token != token:
+            conn.access_token = obfuscate_integration_token(refreshed_token)
+        warning = None
+        try:
+            log_action(
+                db,
+                company_id=company_id,
+                action_type="integration_email_reply",
+                summary=f"Sent Gmail reply to {result['recipient']}",
+                actor=getattr(g, "user_email", "admin"),
+                confidence=1.0,
+                requires_approval=False,
+                related_id=conn.id,
+                details={
+                    "provider": "gmail",
+                    "message_id": message_id,
+                    "recipient": result["recipient"],
+                    "subject": result["subject"],
+                },
+            )
+        except Exception:
+            db.rollback()
+            traceback.print_exc()
+            warning = "Gmail sent the reply, but its activity log could not be saved."
+        return jsonify({
+            "ok": True,
+            "id": result["id"],
+            "thread_id": result["thread_id"],
+            "recipient": result["recipient"],
+            "subject": result["subject"],
+            "warning": warning,
+        })
+    except GmailReauthorizationRequired as exc:
+        db.rollback()
+        return jsonify({"error": str(exc)}), 401
+    except ValueError as exc:
+        db.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except requests.HTTPError as exc:
+        db.rollback()
+        traceback.print_exc()
+        if exc.response is not None and exc.response.status_code == 403:
+            return jsonify({"error": gmail_api_error_summary(exc)}), 403
+        if exc.response is not None and exc.response.status_code == 404:
+            return jsonify({"error": "The source Gmail message could not be found"}), 404
+        return jsonify({"error": "Gmail did not confirm the reply. Check Sent before trying again, to avoid a duplicate."}), 502
+    except requests.RequestException:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "Gmail did not confirm the reply. Check Sent before trying again, to avoid a duplicate."}), 502
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"error": "The reply status is uncertain. Check Gmail Sent before trying again."}), 500
     finally:
         db.close()
 

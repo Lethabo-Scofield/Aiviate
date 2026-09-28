@@ -39,6 +39,7 @@ from intelligence.llm_chat import (
     local_fallback_answer,
 )
 from intelligence.driver_notifier import notify_driver
+from integrations.demo_catalog import demo_command_for
 from agents import Orchestrator
 from agents.context import build_context as _agents_ctx
 
@@ -1138,6 +1139,10 @@ def run_command():
             return jsonify(_gmail_confirmation_answer(db, g.company_id, text)), 200
         finally:
             db.close()
+
+    demo_result = demo_command_for(text)
+    if demo_result is not None:
+        return jsonify(demo_result), 200
 
     # Translate natural phrasing → underlying command grammar (deterministic).
     normalized = natural_parser.normalize(text)

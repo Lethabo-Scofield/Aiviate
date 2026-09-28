@@ -62,6 +62,25 @@ export async function getOperationsSnapshot() {
   return handleResponse(res);
 }
 
+export async function getVoiceBriefing() {
+  const res = await fetch(`${API_BASE}/operations/voice-briefing`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function sendVoiceTurn(recording) {
+  const body = new FormData();
+  body.append("audio", recording, "voice-message.webm");
+  const res = await fetch(`${API_BASE}/operations/voice-turn`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body,
+  });
+  return handleResponse(res);
+}
+
 export async function runNewOrderWorkflow() {
   const res = await fetch(`${API_BASE}/operations/run-new-order-workflow`, {
     method: "POST",
@@ -212,6 +231,15 @@ export async function searchGmail(payload = {}) {
     method: "POST",
     headers: getAuthHeaders("application/json"),
     body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+export async function replyGmail(messageId, body) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/reply`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ message_id: messageId, body }),
   });
   return handleResponse(res);
 }
@@ -383,6 +411,28 @@ export async function getStats() {
 export async function getLiveOperations() {
   const res = await fetch(`${API_BASE}/live-ops`, { headers: getAuthHeaders() });
   return handleResponse(res);
+}
+
+export async function getRoadRoute(waypoints, { signal } = {}) {
+  if (!Array.isArray(waypoints) || waypoints.length !== 2 || !waypoints.every(
+    (point) => Array.isArray(point) && point.length === 2 &&
+      point.every((value) => typeof value === "number" && Number.isFinite(value)) &&
+      Math.abs(point[0]) <= 90 && Math.abs(point[1]) <= 180 &&
+      !(point[0] === 0 && point[1] === 0)
+  )) throw new Error("Valid reported location and destination coordinates are required.");
+  const res = await fetch(`${API_BASE}/route`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ waypoints }),
+    signal,
+  });
+  const data = await handleResponse(res);
+  if (data.success !== true || typeof data.geometry !== "string" || !data.geometry ||
+      !Number.isFinite(Number(data.distance)) || Number(data.distance) < 0 ||
+      !Number.isFinite(Number(data.duration)) || Number(data.duration) < 0) {
+    throw new Error(data.error || "Road routing returned no usable route.");
+  }
+  return data;
 }
 
 export async function getSafetyOverview() {

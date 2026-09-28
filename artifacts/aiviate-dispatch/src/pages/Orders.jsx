@@ -5,6 +5,7 @@ import {
   ChevronDown, Phone, Mail, Package, CreditCard, Clock,
 } from "lucide-react";
 import { Spinner } from "../components/Loader";
+import OrdersFlowChart from "../components/OrdersFlowChart";
 import { getStoreOrders, importStoreOrders } from "../services/api";
 
 const FILTERS = [
@@ -71,87 +72,6 @@ function statusExplainer(order) {
   if (order.imported) return "This order is already in your dispatch queue as a delivery stop.";
   if (!order.importable) return "This order can't be dispatched until it has a shipping address.";
   return "Ready to import — it will become a delivery stop you can assign to a driver.";
-}
-
-function pct(value, total) {
-  if (!total) return 0;
-  return Math.round((Number(value || 0) / total) * 100);
-}
-
-function OrdersFlow({ counts, loading }) {
-  const total = counts.total || 0;
-  const segments = [
-    { key: "fresh", label: "New", value: counts.fresh, className: "bg-[#111315]" },
-    { key: "imported", label: "Imported", value: counts.imported, className: "bg-[#5C636A]" },
-    { key: "noAddress", label: "Missing address", value: counts.noAddress, className: "bg-[#ADB5BD]" },
-  ];
-  const maxValue = Math.max(...segments.map((s) => s.value), 1);
-
-  return (
-    <div className="apple-card mb-6 overflow-hidden">
-      <div className="grid gap-0 lg:grid-cols-[0.8fr_1.2fr]">
-        <div className="border-b border-black/[0.06] p-5 lg:border-b-0 lg:border-r">
-          <p className="text-[11px] uppercase tracking-wider text-[#ADB5BD] font-semibold">Order flow</p>
-          <div className="mt-4 flex items-end gap-3">
-            <p className="text-[44px] font-semibold leading-none tracking-tight text-[#111315] tabular-nums">
-              {loading ? "–" : total}
-            </p>
-            <p className="pb-1.5 text-[13px] text-[#868E96]">live store orders</p>
-          </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-[#5C636A]">
-            See what is ready for dispatch, what already moved into route planning, and what still needs clean delivery information.
-          </p>
-        </div>
-
-        <div className="p-5">
-          <div className="mb-5 flex h-3 overflow-hidden rounded-full bg-[#F1F3F5]">
-            {segments.map((segment) => {
-              const width = total ? Math.max(pct(segment.value, total), segment.value ? 4 : 0) : 0;
-              return (
-                <div
-                  key={segment.key}
-                  className={`${segment.className} transition-all duration-500`}
-                  style={{ width: `${width}%` }}
-                  title={`${segment.label}: ${segment.value}`}
-                />
-              );
-            })}
-          </div>
-
-          <div className="grid gap-3">
-            {segments.map((segment) => {
-              const percentage = pct(segment.value, total);
-              return (
-                <button
-                  key={segment.key}
-                  onClick={() => {
-                    if (segment.key === "fresh") document.querySelector("[data-filter='new']")?.click();
-                    if (segment.key === "imported") document.querySelector("[data-filter='imported']")?.click();
-                    if (segment.key === "noAddress") document.querySelector("[data-filter='attention']")?.click();
-                  }}
-                  className="group grid grid-cols-[88px_1fr_54px] items-center gap-3 rounded-xl border border-transparent px-2 py-1.5 text-left transition-colors hover:border-[#E9ECEF] hover:bg-[#F8F9FA]"
-                >
-                  <div>
-                    <p className="text-[13px] font-medium text-[#111315]">{loading ? "–" : segment.value}</p>
-                    <p className="text-[11px] text-[#868E96]">{segment.label}</p>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-[#F1F3F5]">
-                    <div
-                      className={`h-full rounded-full ${segment.className} transition-all duration-500`}
-                      style={{ width: `${loading ? 0 : Math.max((segment.value / maxValue) * 100, segment.value ? 6 : 0)}%` }}
-                    />
-                  </div>
-                  <p className="text-right text-[12px] font-medium tabular-nums text-[#5C636A]">
-                    {loading ? "–" : `${percentage}%`}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function Orders() {
@@ -280,7 +200,7 @@ export default function Orders() {
       )}
 
       <>
-          <OrdersFlow counts={counts} loading={loading} />
+          <OrdersFlowChart counts={counts} loading={loading} onSelectStatus={setFilter} />
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
             <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#F1F3F5] self-start">

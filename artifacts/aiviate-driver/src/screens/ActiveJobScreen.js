@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   progressCard: { backgroundColor: COLORS.surface, margin: 16, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border },
   progressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   progressLabel: { fontSize: 14, fontWeight: '700', color: COLORS.text },
-  progressText: { fontSize: 11, color: COLORS.textDim, marginTop: 8 },
+  progressText: { fontSize: 12, color: COLORS.textDim, marginTop: 8 },
 
   locWarn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   pillPickup: { backgroundColor: COLORS.fill },
   pillDropoff: { backgroundColor: COLORS.fill },
   pillText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: COLORS.text },
-  currentNumber: { fontSize: 12, color: COLORS.textDim, fontWeight: '600' },
+  currentNumber: { fontSize: 13, color: COLORS.textDim, fontWeight: '600' },
   currentAddress: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   navBtn: {
     alignSelf: 'flex-start',
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
     marginTop: 6,
   },
-  navBtnText: { color: COLORS.teal, fontWeight: '700', fontSize: 12 },
+  navBtnText: { color: COLORS.teal, fontWeight: '700', fontSize: 13 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   detailValue: { flex: 1, fontSize: 13, color: COLORS.text },
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   },
   gateBoxWait: { backgroundColor: COLORS.fillTertiary, borderColor: COLORS.border },
   gateBoxOk: { backgroundColor: 'rgba(52,199,89,0.10)', borderColor: 'rgba(52,199,89,0.40)' },
-  gateText: { flex: 1, fontSize: 12, color: COLORS.textDim, lineHeight: 17 },
+  gateText: { flex: 1, fontSize: 13, color: COLORS.textDim, lineHeight: 18 },
 
   simBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   stopDotText: { color: COLORS.text, fontSize: 11, fontWeight: '700' },
   stopAddress: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
   stopAddressDone: { textDecorationLine: 'line-through', color: COLORS.textDim },
-  stopMeta: { fontSize: 11, color: COLORS.textDim, marginTop: 1 },
+  stopMeta: { fontSize: 12, color: COLORS.textDim, marginTop: 1 },
 
   footer: { padding: 16, paddingBottom: 20, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: COLORS.teal, paddingVertical: 16, borderRadius: 14 },

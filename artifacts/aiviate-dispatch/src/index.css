@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..600&display=swap');
 @import "tailwindcss" source(none);
 @import "./Silk.css";
 @source "../index.html";
 @source "./**/*.{js,jsx}";
 
 /* ═══════════════════════════════════════════════════════════════
-   Aiviate — dark operations theme, now with a light counterpart
+   Aiviate — light by default, with an optional dark operations theme
    Toggle by setting data-theme="light" or data-theme="dark" on
-   <html> (defaults to dark if the attribute is absent).
+   <html> (the entrypoint sets light before the app loads).
    Page files are untouched: the compatibility layer near the
    bottom remaps hardcoded light utilities onto dark surfaces,
    and only runs while the app is in dark mode.
@@ -16,8 +15,8 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
-  --font-serif:
-    "Newsreader", Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: var(--font-display);
   --font-mono:
     "Geist Mono", "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
     Menlo, monospace;
@@ -250,11 +249,14 @@ p, span, label, button, input, textarea, select, a, li, td, th {
 
 h1, h2, h3, h4, h5, h6 {
   text-wrap: balance;
-  line-height: 1.16;
+  line-height: 1.2;
   color: var(--color-text-primary);
-  font-weight: 500;
-  font-size: 50px;
+  font-weight: 600;
 }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4, h5, h6 { font-size: 1rem; }
 
 p, li { line-height: 1.62; }
 
@@ -267,33 +269,28 @@ button, input, textarea, select { font: inherit; }
   letter-spacing: 0 !important;
 }
 
-/* ── Display type ─────────────────────────────────────────────
-   Large headings move to Newsreader — the serif, editorial voice
-   behind "Orders Dashboard" / "4 Live Orders" in the reference.
-   The global letter-spacing:0 rule above needs this exemption. */
+/* A consistent sans-serif hierarchy across headings, metrics, and body text. */
 .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
-h1, h2 {
-  font-family: var(--font-serif);
-  font-optical-sizing: auto;
-  font-weight: 400;
-  letter-spacing: -0.01em !important;
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em !important;
 }
-.text-4xl, .text-5xl, .text-6xl { letter-spacing: -0.015em !important; }
+.text-4xl, .text-5xl, .text-6xl { letter-spacing: -0.035em !important; }
 
-/* Opt back into weight where a heading must carry emphasis.
-   Newsreader supports up to 600, so this still renders serif. */
-.font-semibold, .font-bold, .font-medium { font-weight: 600 !important; }
-
-/* Big metric numerals, as on the hero cards — same serif family,
-   so "4 Live Orders" and "8 Active Drivers" match the mockup. */
+/* Keep utility weights meaningful: medium, semibold and bold are distinct. */
 .metric {
-  font-family: var(--font-serif);
-  font-optical-sizing: auto;
-  font-weight: 350;
+  font-family: var(--font-display);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   color: var(--color-text-primary);
-  line-height: 1;
+  line-height: 1.08;
+}
+
+/* Compact secondary labels should still be readable on phones and laptops. */
+.text-\[10px\], .text-\[10\.5px\], .text-\[11px\], .text-\[11\.5px\] {
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .dark-ui .bg-\[\#f8f9fa\],
@@ -655,6 +652,12 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   border-color: rgba(17, 19, 21, 0.2);
 }
 :root[data-theme="light"] .apple-btn-primary:active { background: #f1f3f5; }
+:root[data-theme="light"] .auth-submit,
+:root[data-theme="light"] .auth-submit:hover {
+  background: #111315;
+  color: #ffffff;
+  border-color: #111315;
+}
 
 /* Accent = the rare high-commitment action: solid light on dark
    (inverts to solid dark on light for the same visual weight). */
@@ -1150,6 +1153,16 @@ html:not([data-theme="light"]) .chat-tool-item:hover, html:not([data-theme="ligh
   background: #23272C !important;
 }
 html:not([data-theme="light"]) .chat-tool-icon { background: #23272C !important; }
+
+/* The tools tray is part of the conversation, not a floating menu. */
+.ops-tools { color: #242b31; font-family: var(--font-sans); }
+.ops-tools button:focus-visible, .ops-tools a:focus-visible,
+.ops-chat button:focus-visible { outline: 2px solid #315f70; outline-offset: 2px; }
+.ops-tools-panel { max-height: min(48dvh, 440px); overflow-y: auto; overscroll-behavior: contain; }
+.ops-tool-logo { flex: 0 0 auto; width: 22px; height: 22px; object-fit: contain; }
+.ops-progress-active { animation: ops-breathe 1.25s ease-in-out infinite alternate; }
+@keyframes ops-breathe { from { opacity: .45; transform: scale(.84); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .ops-progress-active { animation: none; } }
 
 /* ── Escape hatch ───────────────────────────────────────────────
    Anything that must stay on a light background — print views,

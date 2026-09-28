@@ -1,5 +1,8 @@
 import { AlertCircle, CheckCircle2, MapPin, Send } from "lucide-react";
+import { Link } from "react-router-dom";
 import MiniRouteMap from "./MiniRouteMap";
+import ChatMetricsChart from "./ChatMetricsChart";
+import { GmailResults, SampleResult } from "./IntegrationResultViews";
 
 function ActionReceipt({ action }) {
   const details = action.details || {};
@@ -89,18 +92,21 @@ function ActionReceipt({ action }) {
  * Renders a single backend command result inside the Home chat surface
  * (or anywhere else). Pure presentation; no side effects.
  */
-export default function ResultBlock({ result }) {
+export default function ResultBlock({ result, onReply, sending }) {
   if (!result) return null;
+  if (result.type === "gmail_unconnected") return <Link to="/integrations" className="text-[12px] font-semibold text-[#343A40] underline underline-offset-4">Connect Gmail in Integrations</Link>;
   if (!result.ok) {
     return (
       <div className="flex items-start gap-2 text-[13px] text-[#343A40]">
         <AlertCircle size={14} className="mt-0.5 shrink-0" />
-        <span>{result.summary}</span>
+        <span>{result.demo ? "Sample data · no live actions. " : ""}{result.summary}</span>
       </div>
     );
   }
   const t = result.type;
 
+  if (t === "gmail_search") return <GmailResults result={result} onReply={onReply} sending={sending} />;
+  if (t === "gmail_sent") return <p className="text-[12px] text-[#5C636A]">To {result.recipient} · {result.subject}</p>;
   if (t === "help") {
     return (
       <div className="space-y-1.5">
@@ -128,6 +134,7 @@ export default function ResultBlock({ result }) {
       </div>
     );
   }
+  if (t === "demo_integration") return <SampleResult result={result} />;
   if (t === "autopilot" || t === "autopilot_run") {
     const settings = result.settings || {};
     const pending = result.pending_approvals || [];
@@ -174,16 +181,7 @@ export default function ResultBlock({ result }) {
     );
   }
   if (t === "stats") {
-    return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {result.items?.map((s) => (
-          <div key={s.label} className="rounded-lg bg-[#F1F3F5] px-3 py-2">
-            <p className="text-[18px] font-semibold text-[#111315] leading-none">{s.value}</p>
-            <p className="text-[11px] text-[#868E96] mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
-    );
+    return <ChatMetricsChart items={result.items} />;
   }
   if (t === "drivers") {
     return (

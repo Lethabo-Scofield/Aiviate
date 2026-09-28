@@ -54,10 +54,10 @@ export const FONTS = {
 };
 
 export const TYPE = {
-  h1: { fontFamily: FONTS.extrabold, fontSize: 22, letterSpacing: -0.3, color: COLORS.text },
-  h2: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.text },
-  body: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.text },
-  caption: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textDim },
+  h1: { fontFamily: FONTS.bold, fontSize: 24, letterSpacing: -0.5, color: COLORS.text },
+  h2: { fontFamily: FONTS.semibold, fontSize: 19, color: COLORS.text },
+  body: { fontFamily: FONTS.regular, fontSize: 15, color: COLORS.text },
+  caption: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textDim },
   eyebrow: {
     fontFamily: FONTS.semibold,
     fontSize: 13,

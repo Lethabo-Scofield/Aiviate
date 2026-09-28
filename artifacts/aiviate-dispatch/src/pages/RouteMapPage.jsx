@@ -33,7 +33,7 @@ function createNumberedIcon(number, color) {
       font-weight: 700;
       border: 2.5px solid white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     ">${number}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
@@ -62,7 +62,7 @@ const depotIcon = L.divIcon({
     font-weight: 800;
     border: 2.5px solid white;
     box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.5px;
   ">HQ</div>`,
   iconSize: [32, 32],
@@ -332,7 +332,7 @@ export default function RouteMapPage() {
 
             <Marker position={[DEPOT.lat, DEPOT.lng]} icon={depotIcon}>
               <Popup>
-                <div style={{ fontFamily: "-apple-system, sans-serif", fontSize: "13px" }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "13px" }}>
                   <strong>Depot / HQ</strong>
                   <br />
                   Johannesburg Central
@@ -376,7 +376,7 @@ export default function RouteMapPage() {
                       icon={createNumberedIcon(stop.stop_number || 0, color)}
                     >
                       <Popup>
-                        <div style={{ fontFamily: "-apple-system, sans-serif", fontSize: "13px", minWidth: "160px" }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "13px", minWidth: "160px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                             <span style={{
                               background: color, color: "white", borderRadius: "6px",

@@ -33,7 +33,10 @@ def live_ops():
         result = []
         for d in drivers:
             d_jobs = jobs_by_driver.get(d.id, [])
-            active_job = next((j for j in d_jobs if j.status == "assigned"), None)
+            active_job = next(
+                (j for status in ("in_progress", "started", "assigned") for j in d_jobs if j.status == status),
+                None,
+            )
             stops = []
             if active_job:
                 stops = sorted(
@@ -45,11 +48,13 @@ def live_ops():
             remaining = [s for s in stops if not s.completed]
             progress_pct = int(len(completed_stops) / len(stops) * 100) if stops else 0
 
-            # Simulated live position — gentle wobble around current target stop or job center
+            # Only driver-reported coordinates represent a real location.
+            # The existing map preview retains simulated positions for drivers
+            # without GPS; consumers must label those positions accordingly.
             target_stop = remaining[0] if remaining else (stops[-1] if stops else None)
-            if target_stop and target_stop.lat:
+            if target_stop and target_stop.lat is not None and target_stop.lng is not None:
                 base_lat, base_lng = target_stop.lat, target_stop.lng
-            elif active_job and active_job.center_lat:
+            elif active_job and active_job.center_lat is not None and active_job.center_lng is not None:
                 base_lat, base_lng = active_job.center_lat, active_job.center_lng
             else:
                 # Default Johannesburg CBD with deterministic offset per driver
@@ -57,10 +62,17 @@ def live_ops():
                 base_lng = 28.0473 + _seed_offset(d.id + "x", 0.25) - 0.125
 
             phase = (now / 30.0) + _seed_offset(d.id, 6.28)
-            wobble_lat = math.sin(phase) * 0.004
-            wobble_lng = math.cos(phase) * 0.004
-            lat = base_lat + wobble_lat
-            lng = base_lng + wobble_lng
+            has_reported_location = (
+                d.current_lat is not None and d.current_lng is not None
+                and math.isfinite(d.current_lat) and math.isfinite(d.current_lng)
+                and -90 <= d.current_lat <= 90 and -180 <= d.current_lng <= 180
+                and (d.current_lat != 0 or d.current_lng != 0)
+            )
+            if has_reported_location:
+                lat, lng = d.current_lat, d.current_lng
+            else:
+                lat = base_lat + math.sin(phase) * 0.004
+                lng = base_lng + math.cos(phase) * 0.004
 
             speed_kmh = 0
             status = "idle"
@@ -79,6 +91,10 @@ def live_ops():
                 "blocked": bool(d.blocked),
                 "lat": lat,
                 "lng": lng,
+                "position_source": "reported" if has_reported_location else "simulated",
+                "location_updated_at": (
+                    d.location_updated_at.isoformat() if has_reported_location and d.location_updated_at else None
+                ),
                 "speed_kmh": speed_kmh,
                 "progress_pct": progress_pct,
                 "active_job_id": active_job.id if active_job else None,
