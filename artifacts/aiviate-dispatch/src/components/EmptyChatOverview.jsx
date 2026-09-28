@@ -1,8 +1,23 @@
 import { useEffect, useState } from "react";
-import { Download, FileText } from "lucide-react";
+import { Bot, Download, FileCheck2, Search } from "lucide-react";
 import { SAMPLE_DOCUMENTS, createReportPdf, createSamplePdf } from "../lib/simulatedDocuments";
+import PdfIcon from "./PdfIcon";
 
 const PROMPTS = ["show jobs", "show drivers", "show alerts"];
+const AGENT_ICONS = {
+  "Operations Agent": Bot,
+  "Document Research Agent": Search,
+  "Report Agent": FileCheck2,
+};
+
+function AgentAvatar({ name }) {
+  const Icon = AGENT_ICONS[name] || Bot;
+  return (
+    <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9ECEF] text-[#343A40]">
+      <Icon size={17} strokeWidth={1.8} />
+    </span>
+  );
+}
 
 export default function EmptyChatOverview({ onPrompt, onProgress }) {
   const [messages, setMessages] = useState([]);
@@ -113,9 +128,7 @@ export default function EmptyChatOverview({ onPrompt, onProgress }) {
       <div className="space-y-6" aria-label="Simulated agent conversation">
         {messages.map((message) => (
           <div key={message.id} className="flex items-start gap-3" data-testid={`agent-message-${message.id}`}>
-            <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9ECEF] text-[11px] font-semibold text-[#343A40]">
-              {message.name.slice(0, 1)}
-            </span>
+            <AgentAvatar name={message.name} />
             <div className="min-w-0 flex-1 pt-0.5">
               <p className="text-[12px] font-semibold text-[#343A40]">{message.name}</p>
               {message.working ? (
@@ -139,7 +152,7 @@ export default function EmptyChatOverview({ onPrompt, onProgress }) {
                           className="flex min-h-12 items-center gap-2.5 py-2 text-[12px] text-[#343A40] hover:text-[#111315] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#343A40]"
                           data-testid={`download-sample-${file.id}`}
                         >
-                          <FileText size={16} className="shrink-0 text-[#697177]" aria-hidden="true" />
+                          <PdfIcon size={21} className="shrink-0" />
                           <span className="min-w-0 flex-1 truncate">{file.name}</span>
                           <Download size={14} className="shrink-0" aria-hidden="true" />
                           <span className="sr-only">Download sample PDF</span>
@@ -154,7 +167,7 @@ export default function EmptyChatOverview({ onPrompt, onProgress }) {
                       className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[12px] font-semibold text-[#343A40] hover:bg-[#F1F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#343A40]"
                       data-testid="download-simulated-report"
                     >
-                      <FileText size={16} aria-hidden="true" />
+                      <PdfIcon size={21} />
                       Download sample report.pdf
                       <Download size={14} aria-hidden="true" />
                     </a>
