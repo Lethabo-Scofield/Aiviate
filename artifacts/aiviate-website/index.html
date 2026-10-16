@@ -1,0 +1,253 @@
+!DOCTYPE html>
+<html lang="en">
+ 
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Aiviate: the AI operations brain for your fleet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Schibsted+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+ 
+<body>
+  <!-- ============ NAVBAR: fixed to the top, stays visible while scrolling ============ -->
+  <nav>
+    <a class="logo" href="#">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 30 30H20L16 21l-4 9H2z" fill="#2bc4b6" /></svg>
+      Aiviate
+    </a>
+    <a class="n" href="#problem">Problem</a>
+    <a class="n" href="#admin">Admin</a>
+    <a class="n" href="#driver">Driver app</a>
+    <a class="n" href="#safety">Safety</a>
+    <a class="n" href="#how">How it works</a>
+    <a class="btn" href="#contact">Request a demo</a>
+  </nav>
+  <!-- ============ HERO: animated route background, headline, chat screenshot ============ -->
+  <header class="hero" style="--a:#2bc4b6">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <svg class="bg" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g stroke="rgba(255,255,255,.05)" fill="none">
+        <path
+          d="M0 100H1440M0 250H1440M0 400H1440M0 550H1440M0 700H1440M150 0V800M350 0V800M550 0V800M750 0V800M950 0V800M1150 0V800M1350 0V800" />
+      </g>
+      <path class="ln" pathLength="1"
+        d="M-20 620L200 520L360 380L560 440L760 250L980 320L1200 140L1460 200" />
+      <path class="ln" style="animation-delay:-2s" pathLength="1"
+        d="M-20 200L240 280L420 160L640 260L860 560L1100 480L1300 640L1460 600" />
+      <path class="ln" style="animation-delay:-4s" pathLength="1"
+        d="M300 820L420 640L700 600L900 700L1160 760" />
+      <path class="ln" style="animation-delay:-6s" pathLength="1"
+        d="M1460 420L1240 380L1080 220L860 120L600 60L380 90" />
+      <g fill="#071314" stroke="#2bc4b6" stroke-width="2.5">
+        <circle cx="360" cy="380" r="7" />
+        <circle cx="760" cy="250" r="7" />
+        <circle cx="1200" cy="140" r="7" />
+        <circle cx="420" cy="160" r="7" />
+        <circle cx="860" cy="560" r="7" />
+        <circle cx="1300" cy="640" r="7" />
+        <circle cx="700" cy="600" r="7" />
+        <circle cx="1080" cy="220" r="7" />
+        <circle cx="600" cy="60" r="7" />
+      </g>
+      <circle class="dt" r="6">
+        <animateMotion dur="16s" repeatCount="indefinite"
+          path="M-20 620L200 520L360 380L560 440L760 250L980 320L1200 140L1460 200" />
+      </circle>
+      <circle class="dt" r="6">
+        <animateMotion dur="20s" repeatCount="indefinite"
+          path="M-20 200L240 280L420 160L640 260L860 560L1100 480L1300 640L1460 600" />
+      </circle>
+      <circle class="dt" r="6">
+        <animateMotion dur="13s" repeatCount="indefinite"
+          path="M300 820L420 640L700 600L900 700L1160 760" />
+      </circle>
+      <circle class="dt" r="6">
+        <animateMotion dur="18s" repeatCount="indefinite"
+          path="M1460 420L1240 380L1080 220L860 120L600 60L380 90" />
+      </circle>
+    </svg>
+    <div class="z">
+      
+      <div class="t">
+        <h1>Deliver smarter every time.</h1>
+        <p>Aiviate reads your delivery list, finds the shortest order for every vehicle, and puts
+          the route on each driver's phone.</p>
+        <div><a class="btn" href="#contact">Request a demo</a><a class="btn g" href="#admin">See the
+            product</a></div>
+      </div>
+      <div class="shot rv"><img src="images/chat.webp" alt="Aiviate chat screen"></div>
+    </div>
+  </header>
+ 
+  <!-- ============ PROBLEM: black section ============ -->
+  <section id="problem" class="sec" style="--b:#050b0b;--a:#2bc4b6">
+    <div class="in">
+      <h2>Drivers pick their own order.<br>The fuel bill shows it.</h2>
+      <p class="lead">Manual routing sends drivers back across the city for stops they passed an
+        hour ago, and dispatchers can't see or help.</p>
+      <div class="pair">
+        <div class="bad">
+          <h3>Without Aiviate</h3>
+          <ul class="ck" style="--a:#6f8381">
+            <li>More fuel burned per delivery</li>
+            <li>Fewer deliveries per shift</li>
+            <li>Overtime and tired drivers</li>
+            <li>Higher maintenance costs</li>
+            <li>Customers wait too long</li>
+          </ul>
+        </div>
+        <div class="good">
+          <h3>With Aiviate</h3>
+          <ul class="ck">
+            <li>The computer finds the shortest path</li>
+            <li>Drivers finish faster</li>
+            <li>Less fuel burned</li>
+            <li>More deliveries per shift</li>
+            <li>Dispatchers see everything</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- ============ WEB ADMIN: teal section ============ -->
+  <section id="admin" class="sec tl" style="--b:#09706a;--a:#fff">
+    <div class="in">
+      <h2>Web admin</h2>
+      <p class="lead">Where dispatchers plan the day.</p>
+      <div class="split">
+        <div class="shot rv"><img src="images/orders.webp"
+            alt="Orders page with 8 live store orders"></div>
+        <div class="txt rv">
+          <ul class="ck">
+            <li><b>Upload Excel</b> or sync live orders from your store</li>
+            <li>See what's ready, in route planning, or needs a clean address</li>
+            <li>Optimization results for every vehicle</li>
+            <li><b>Aiviate Chat:</b> ask about orders, drivers and what to do next</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- ============ DRIVER APP: white section ============ -->
+  <section id="driver" class="sec lt" style="--b:#fff;--a:#0b8a80">
+    <div class="in">
+      <h2>Driver app</h2>
+      <p class="lead">Today's route, in the best order, even with no signal.</p>
+      <div class="split rev">
+        <pre class="rv"><span class="k">GET</span> /api/driver/route/today?driver_id=…
+{
+  "total_stops": 15,
+  "total_distance_km": 87.4,
+  "estimated_duration_minutes": 345,
+  "stops": [{
+    "stop_number": 1,
+    "customer_name": "Sipho Supermarket",
+    "time_window": "09:00 to 13:00",
+    "service_time_minutes": 20,
+    "notes": "Call before arrival",
+    "estimated_arrival": "09:25"
+  }]
+}</pre>
+        <div class="txt rv">
+          <ul class="ck">
+            <li>Stop order, map and arrival estimates</li>
+            <li>Customer phone number and notes on every stop</li>
+            <li>One tap to navigate to the next stop</li>
+            <li>Works offline, updates when stops change</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- ============ FLEET: black section ============ -->
+  <section id="fleet" class="sec" style="--b:#050b0b;--a:#2bc4b6">
+    <div class="in">
+      <h2>Fleet</h2>
+      <p class="lead">Drivers, devices and safety in one place.</p>
+      <div class="split">
+        <div class="shot rv"><img src="images/fleet.webp" alt="Fleet page listing drivers"></div>
+        <div class="txt rv">
+          <ul class="ck">
+            <li>Add drivers and see who has jobs</li>
+            <li>Van, bike and truck drivers in one list</li>
+            <li>Drivers link to the app with their own login</li>
+            <li>Pair safety devices to the right person</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- ============ SAFETY: earpiece + dashcam, teal section ============ -->
+  <section id="safety" class="sec tl" style="--b:#09706a;--a:#fff">
+    <div class="in">
+      <h2>Safety on the road</h2>
+      <p class="lead">Hardware that looks after the driver while they drive.</p>
+      <div class="split rev">
+        <div class="shot rv"><img src="images/devices.webp"
+            alt="Devices page with an anti-sleep alarm and a planned Dashcam ML"></div>
+        <div class="txt rv">
+          <h3>Anti-sleep earpiece</h3>
+          <ul class="ck">
+            <li>Alerts a driver who is getting drowsy</li>
+            <li>Online, battery and readiness at a glance</li>
+            <li>Paired to one driver from the Devices page</li>
+          </ul>
+          <h3 style="margin-top:32px">Dashcam ML<span class="soon">planned</span></h3>
+          <ul class="ck">
+            <li>Machine learning to spot unsafe driving</li>
+            <li>Will pair from the same page</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- ============ HOW IT WORKS: white section ============ -->
+  <section id="how" class="sec lt" style="--b:#fff;--a:#0b8a80">
+    <div class="in">
+      <h2>From a spreadsheet to a driver's phone</h2>
+      <ol class="flow">
+        <li class="rv"><b>Upload</b><span>Excel with addresses, demand, time windows and service
+            time</span></li>
+        <li class="rv"><b>Optimize</b><span>Capacity and delivery windows respected</span></li>
+        <li class="rv"><b>Send</b><span>Each driver gets their own route</span></li>
+        <li class="rv"><b>Adjust</b><span>Stops change, routes update in real time</span></li>
+      </ol>
+    </div>
+  </section>
+ 
+  <!-- ============ INTEGRATIONS: black section ============ -->
+  <section class="sec" style="--b:#050b0b;--a:#2bc4b6">
+    <div class="in">
+      <h2>Plugs into what you already use</h2>
+      <p class="lead">Gmail, WhatsApp, Teams, QuickBooks, Xero, Sage, Zoho and Olyxee Logistics.</p>
+      <div class="shot rv" style="max-width:380px;margin:48px auto 0"><img src="images/tools.webp"
+          alt="Tools menu with connected business systems"></div>
+    </div>
+  </section>
+ 
+  <!-- ============ CONTACT: teal section ============ -->
+  <section id="contact" class="sec tl" style="--b:#09706a;--a:#fff;padding:120px 24px">
+    <div class="in">
+      <h2>Bring a delivery list.<br>We'll show you the route.</h2>
+      <p class="lead" style="margin-bottom:32px">A short walkthrough with the Aiviate team, using
+        your own addresses.</p>
+      <a class="btn" href="mailto:hello@aiviate.io?subject=Aiviate%20demo">Request a demo</a>
+    </div>
+  </section>
+  <!-- ============ FOOTER ============ -->
+  <footer>Aiviate, the AI operations brain for your fleet.</footer>
+  <script src="script.js"></script>
+</body>
+ 
+</html>
