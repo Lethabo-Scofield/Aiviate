@@ -8,7 +8,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Mail,
-  Map,
+  Map as MapIcon,
   Mic,
   Package,
   RefreshCw,
@@ -60,7 +60,7 @@ const ICONS = {
   customers: Users,
   communications: Mail,
   activity: Activity,
-  intelligence: Map,
+  intelligence: MapIcon,
   policies: ShieldCheck,
 };
 
