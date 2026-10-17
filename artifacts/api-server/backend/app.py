@@ -12,7 +12,7 @@ from routes import (
     auth_bp, jobs_bp, drivers_bp, stops_bp, optimization_bp, stats_bp,
     safety_bp, devices_bp, alerts_bp, liveops_bp, intelligence_bp, agents_bp,
     autopilot_bp, engine_bp, orders_bp, support_bp, operations_bp,
-    integrations_bp,
+    integrations_bp, community_bp, wellness_bp,
 )
 from routes.public_tracking import public_bp
 from routes.driver_live import driver_live_bp
@@ -59,6 +59,8 @@ def create_app():
     app.register_blueprint(public_bp)
     app.register_blueprint(operations_bp)
     app.register_blueprint(integrations_bp)
+    app.register_blueprint(community_bp)
+    app.register_blueprint(wellness_bp)
     app.register_blueprint(driver_live_bp)
 
     @app.route("/")

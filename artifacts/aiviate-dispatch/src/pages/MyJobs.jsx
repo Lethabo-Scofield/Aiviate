@@ -3,6 +3,7 @@ import { Package, MapPin, CheckCircle2, Circle, Clock, Navigation, Truck, Phone,
 import { Spinner, SkeletonList } from "../components/Loader";
 import { getMyJobs, completeMyStop } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import FatigueCheckin from "../components/FatigueCheckin";
 
 export default function MyJobs() {
   const { user } = useAuth();
@@ -70,6 +71,9 @@ export default function MyJobs() {
         </div>
       </div>
 
+      <FatigueCheckin />
+
+      <div data-tour="driver-jobs">
       {error ? (
         <div className="apple-card p-10 text-center">
           <p className="text-[14px] text-[#343A40] mb-4">{error}</p>
@@ -199,6 +203,7 @@ export default function MyJobs() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

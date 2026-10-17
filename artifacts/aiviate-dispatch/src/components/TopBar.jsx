@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Cable, ChevronDown, Coins, Moon, Settings2, Sparkles, Sun, UserCircle } from "lucide-react";
+import { ArrowUpRight, BookOpen, Cable, ChevronDown, Coins, Moon, PlayCircle, Settings2, Sparkles, Sun, UserCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { replayTour } from "../lib/tour";
 import DemoCreditsDialog from "./DemoCreditsDialog";
 
 const INITIAL_CENTS = 2392;
@@ -28,6 +30,7 @@ export default function TopBar({
   onOpenSettings,
   onOpenProfile,
 }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -185,6 +188,8 @@ export default function TopBar({
                       { label: "Profile", icon: UserCircle, action: onOpenProfile, testId: "button-menu-profile" },
                       { label: "Integrations", icon: Cable, action: onOpenIntegrations, testId: "button-menu-integrations" },
                       { label: "Settings", icon: Settings2, action: onOpenSettings, testId: "button-menu-settings" },
+                      { label: "Learn", icon: BookOpen, action: () => navigate("/learn"), testId: "button-menu-learn" },
+                      { label: "Take the tour", icon: PlayCircle, action: replayTour, testId: "button-menu-tour" },
                     ].map(({ label, icon: Icon, action, testId }) => (
                       <button key={label} type="button" role="menuitem" onClick={() => openMenuAction(action)} data-testid={testId} className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] text-[#343A40] hover:bg-[#F1F3F5] hover:text-[#111315]">
                         <Icon size={15} strokeWidth={1.6} /> {label}

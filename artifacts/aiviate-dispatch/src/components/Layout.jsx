@@ -9,6 +9,8 @@ import { useAuth } from "../contexts/AuthContext";
 import Integrations from "../pages/Integrations";
 import Settings from "../pages/Settings";
 import Silk from "./Silk";
+import Walkthrough from "./Walkthrough";
+import { DISPATCHER_TOUR, tourStorageKey } from "../lib/tour";
 
 function ProfilePanelModal({ panel, onClose, onTryDemo }) {
   const title = panel === "integrations" ? "Integrations" : "Settings";
@@ -199,6 +201,8 @@ export default function Layout() {
           </div>
         </div>
       </main>
+
+      <Walkthrough steps={DISPATCHER_TOUR} storageKey={tourStorageKey(user)} />
 
       {/* Mobile floating Ask button — takes you straight to the Home chat. */}
        {!isHome && <motion.button

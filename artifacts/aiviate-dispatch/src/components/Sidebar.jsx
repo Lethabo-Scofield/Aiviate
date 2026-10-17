@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  Boxes, Clock3, Menu, PanelLeftClose, PenLine, UserCircle, X,
+  BookOpen, Boxes, Clock3, Menu, MessagesSquare, PanelLeftClose, PenLine, UserCircle, X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -8,8 +8,10 @@ import { queueChatOpen, readChatHistory } from "../lib/chatHistory";
 
 const NAV = [
   { to: "/", icon: PenLine, label: "New Chat", end: true },
-  { to: "/orders", icon: Boxes, label: "Orders" },
-  { to: "/drivers", icon: UserCircle, label: "Drivers" },
+  { to: "/orders", icon: Boxes, label: "Orders", tour: "nav-orders" },
+  { to: "/drivers", icon: UserCircle, label: "Drivers", tour: "nav-drivers" },
+  { to: "/community", icon: MessagesSquare, label: "Community", tour: "nav-community" },
+  { to: "/learn", icon: BookOpen, label: "Learn", tour: "nav-learn" },
 ];
 
 function isPathActive(pathname, to, end) {
@@ -17,13 +19,14 @@ function isPathActive(pathname, to, end) {
   return pathname === to || pathname.startsWith(to + "/");
 }
 
-function NavItem({ to, icon: Icon, label, end, active, onClick, primary = false, number }) {
+function NavItem({ to, icon: Icon, label, end, active, onClick, primary = false, number, tour }) {
   const reduceMotion = useReducedMotion();
   return (
     <NavLink
       to={to}
       end={end}
       onClick={onClick}
+      data-tour={tour}
       className={`group relative flex min-h-11 items-center gap-2.5 overflow-hidden rounded-xl px-2.5 py-2.5 text-[13px] leading-[1.35] outline-none transition-[background-color,color,transform] duration-200 ease-out hover:translate-x-1 focus-visible:ring-2 focus-visible:ring-[#111315] active:scale-[0.985] motion-reduce:transition-none motion-reduce:hover:translate-x-0 ${
         active ? "font-semibold text-[#111315]" : "text-[#5C636A] hover:bg-black/[0.03] hover:text-[#111315]"
       } ${

@@ -510,6 +510,59 @@ class PublicTrackingToken(Base):
         }
 
 
+class CommunityPost(Base):
+    """Company-scoped driver community: posts, road notices and replies."""
+    __tablename__ = "community_posts"
+
+    id = Column(String, primary_key=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    parent_id = Column(String, ForeignKey("community_posts.id"), nullable=True)
+    author_user_id = Column(String, nullable=False)
+    author_name = Column(String, nullable=False)
+    author_role = Column(String, default="driver")
+    category = Column(String, default="general")  # general / road / safety / notice
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "parent_id": self.parent_id,
+            "author_user_id": self.author_user_id,
+            "author_name": self.author_name,
+            "author_role": self.author_role,
+            "category": self.category,
+            "body": self.body,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WellnessCheckin(Base):
+    """A driver's pre-drive fitness check-in. Risk is scored server-side."""
+    __tablename__ = "wellness_checkins"
+
+    id = Column(String, primary_key=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    user_id = Column(String, nullable=False)
+    driver_id = Column(String, ForeignKey("drivers.id"), nullable=True)
+    driver_name = Column(String, nullable=True)
+    answers = Column(JSON, default=dict)
+    risk_level = Column(String, default="low")  # low / medium / high
+    reasons = Column(JSON, default=list)
+    created_at = Column(DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "driver_id": self.driver_id,
+            "driver_name": self.driver_name,
+            "answers": self.answers or {},
+            "risk_level": self.risk_level,
+            "reasons": self.reasons or [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 def init_db():
     Base.metadata.create_all(engine)
 

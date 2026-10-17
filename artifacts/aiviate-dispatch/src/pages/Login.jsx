@@ -137,6 +137,23 @@ export default function Login() {
             Create one
           </Link>
         </p>
+
+        <details className="mt-6 rounded-2xl border border-[var(--line)] px-4 py-3 text-left" data-testid="login-help">
+          <summary className="cursor-pointer text-[13px] font-semibold text-[var(--color-text-primary)]">
+            First time signing in?
+          </summary>
+          <div className="mt-3 space-y-3 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+            <p>
+              <span className="font-semibold text-[var(--color-text-primary)]">Drivers:</span>{" "}
+              your company would have given you a login email and a temporary password, or sent you an activation link by email. Enter them above.
+              No details yet? Ask your dispatcher. They create your account on their Drivers page.
+            </p>
+            <p>
+              <span className="font-semibold text-[var(--color-text-primary)]">Dispatchers:</span>{" "}
+              create a company account, or press Try the demo to explore with sample data. A short tour starts after you sign in.
+            </p>
+          </div>
+        </details>
       </div>
     </div>
   );

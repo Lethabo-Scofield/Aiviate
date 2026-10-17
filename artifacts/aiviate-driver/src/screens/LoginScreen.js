@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons';
 import LogoMark from '../components/LogoMark';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -17,6 +18,7 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState(DEFAULT_DRIVER_EMAIL);
   const [password, setPassword] = useState(DEFAULT_DRIVER_PASSWORD);
   const [busy, setBusy] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const canSubmit = email.trim().length > 3 && password.length > 0 && !busy;
 
@@ -46,6 +48,13 @@ export default function LoginScreen({ navigation }) {
           <LogoMark size={64} />
           <Text style={styles.title}>Aiviate Driver</Text>
           <Text style={styles.subtitle}>Sign in to see today's route.</Text>
+        </View>
+
+        <View style={styles.hint}>
+          <Ionicons name="information-circle-outline" size={18} color={COLORS.teal} />
+          <Text style={styles.hintText}>
+            Your company would have given you a login email and a temporary password to sign in.
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -90,10 +99,35 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            New here? Open the activation link from your onboarding email to set up your account.
-          </Text>
+        <View style={styles.help}>
+          <TouchableOpacity
+            style={styles.helpHead}
+            onPress={() => setHelpOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: helpOpen }}
+          >
+            <Text style={styles.helpTitle}>First time signing in?</Text>
+            <Ionicons name={helpOpen ? 'chevron-up' : 'chevron-down'} size={18} color={COLORS.textDim} />
+          </TouchableOpacity>
+          {helpOpen && (
+            <View style={{ gap: 10, marginTop: 10 }}>
+              <Text style={styles.helpText}>
+                <Text style={styles.helpStrong}>Got an email and temporary password? </Text>
+                Enter them above. Your dispatcher created your account and shared them with you.
+              </Text>
+              <Text style={styles.helpText}>
+                <Text style={styles.helpStrong}>Got an activation email? </Text>
+                Open the link on this phone to choose your own password.
+              </Text>
+              <Text style={styles.helpText}>
+                <Text style={styles.helpStrong}>Got nothing yet? </Text>
+                Ask your dispatcher to add you as a driver in Aiviate Dispatch.
+              </Text>
+              <Text style={styles.helpText}>
+                After you sign in, a short tour shows you around the app.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -121,6 +155,14 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   linkBtn: { alignSelf: 'center', marginTop: 16, padding: 8 },
   linkText: { color: COLORS.teal, fontWeight: '600', fontSize: 14 },
-  footer: { marginTop: 28, paddingHorizontal: 12 },
-  footerText: { fontSize: 12, color: COLORS.textDim, textAlign: 'center', lineHeight: 18 },
+  hint: {
+    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+    backgroundColor: 'rgba(0,128,128,0.08)', borderRadius: 14, padding: 14, marginBottom: 16,
+  },
+  hintText: { flex: 1, fontSize: 14, lineHeight: 20, color: COLORS.text },
+  help: { marginTop: 20, backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border },
+  helpHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
+  helpTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  helpText: { fontSize: 13, lineHeight: 19, color: COLORS.textDim },
+  helpStrong: { fontWeight: '700', color: COLORS.text },
 });
