@@ -96,6 +96,38 @@ export async function getAlerts() {
   return Array.isArray(res) ? res : res?.alerts || [];
 }
 
+// ───── Community & pre-drive check-in ─────────────────────────────────────
+// Newer endpoints: an environment that hasn't deployed them answers 404, which
+// the screens report as "not available yet" rather than an error.
+
+export async function getCommunityPosts(limit = 50) {
+  const res = await http.get(`/community/posts?limit=${limit}`);
+  return res?.posts || [];
+}
+
+export async function createCommunityPost({ body, category = 'general', parentId = null }) {
+  return http.post('/community/posts', { body, category, parent_id: parentId });
+}
+
+export async function deleteCommunityPost(postId) {
+  return http.del(`/community/posts/${encodeURIComponent(postId)}`);
+}
+
+export async function getWellnessQuestions() {
+  const res = await http.get('/wellness/questions');
+  return res?.questions || [];
+}
+
+export async function getLatestCheckin() {
+  // { checkin, advice }
+  return http.get('/wellness/checkins/latest');
+}
+
+export async function submitCheckin(answers) {
+  // { checkin, risk_level, advice, dispatcher_notified }
+  return http.post('/wellness/checkins', { answers });
+}
+
 export default {
   login,
   fetchMe,
@@ -106,6 +138,12 @@ export default {
   submitStopCompletion,
   updateLocation,
   getAlerts,
+  getCommunityPosts,
+  createCommunityPost,
+  deleteCommunityPost,
+  getWellnessQuestions,
+  getLatestCheckin,
+  submitCheckin,
   adaptJob,
   adaptStop,
 };

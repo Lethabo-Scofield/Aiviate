@@ -21,6 +21,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
 import AnimatedProgress from '../components/AnimatedProgress';
 import { SkeletonCard } from '../components/Skeleton';
+import CheckinCard from '../components/CheckinCard';
 import { haptic } from '../utils/haptics';
 import { COLORS } from '../theme';
 
@@ -108,6 +109,7 @@ export default function JobsScreen({ navigation }) {
           />
         }
       >
+        <CheckinCard />
         <Text style={styles.sectionTitle}>From dispatch</Text>
         {newRoutes.length === 0 ? (
           <FadeIn>

@@ -515,3 +515,49 @@ export async function deleteAlert(alertId) {
   });
   return handleResponse(res);
 }
+
+export async function getCommunityPosts(limit = 50) {
+  const res = await fetch(`${API_BASE}/community/posts?limit=${limit}`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function createCommunityPost({ body, category = "general", parentId = null }) {
+  const res = await fetch(`${API_BASE}/community/posts`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ body, category, parent_id: parentId }),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteCommunityPost(postId) {
+  const res = await fetch(`${API_BASE}/community/posts/${encodeURIComponent(postId)}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function getWellnessQuestions() {
+  const res = await fetch(`${API_BASE}/wellness/questions`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function getLatestWellnessCheckin() {
+  const res = await fetch(`${API_BASE}/wellness/checkins/latest`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}
+
+export async function submitWellnessCheckin(answers) {
+  const res = await fetch(`${API_BASE}/wellness/checkins`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ answers }),
+  });
+  return handleResponse(res);
+}
+
+export async function getWellnessCheckins(limit = 50) {
+  const res = await fetch(`${API_BASE}/wellness/checkins?limit=${limit}`, { headers: getAuthHeaders() });
+  return handleResponse(res);
+}

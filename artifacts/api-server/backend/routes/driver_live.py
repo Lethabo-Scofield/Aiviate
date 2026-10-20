@@ -22,6 +22,10 @@ ALLOWED = (
     (re.compile(rf"my-jobs/{SEGMENT}/complete/{SEGMENT}"), {"POST"}),
     (re.compile(rf"drivers/{SEGMENT}/location"), {"POST"}),
     (re.compile(r"alerts"), {"GET"}),
+    (re.compile(r"community/posts"), {"GET", "POST"}),
+    (re.compile(rf"community/posts/{SEGMENT}"), {"DELETE"}),
+    (re.compile(r"wellness/questions|wellness/checkins/latest"), {"GET"}),
+    (re.compile(r"wellness/checkins"), {"POST"}),
 )
 
 
@@ -30,7 +34,7 @@ class NoRedirects(HTTPRedirectHandler):
         return None
 
 
-@driver_live_bp.route("/api/live-driver/<path:operation>", methods=["GET", "POST"])
+@driver_live_bp.route("/api/live-driver/<path:operation>", methods=["GET", "POST", "DELETE"])
 def relay_driver_request(operation):
     # Never turn the published API into an unauthenticated relay.
     from os import environ

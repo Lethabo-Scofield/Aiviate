@@ -15,6 +15,10 @@ import LoginScreen from '../screens/LoginScreen';
 import ActivateScreen from '../screens/ActivateScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import SuspendedScreen from '../screens/SuspendedScreen';
+import CommunityScreen from '../screens/CommunityScreen';
+import LearnScreen from '../screens/LearnScreen';
+import CheckinScreen from '../screens/CheckinScreen';
+import TourOverlay from '../components/TourOverlay';
 import LogoMark from '../components/LogoMark';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_SCHEME } from '../config';
@@ -37,9 +41,10 @@ const linking = {
       Activate: 'activate',
       ForgotPassword: 'forgot-password',
       Tabs: {
-        screens: { Jobs: 'jobs', Active: 'active', Earnings: 'earnings' },
+        screens: { Jobs: 'jobs', Active: 'active', Earnings: 'earnings', Community: 'community', Learn: 'learn' },
       },
       Notifications: 'notifications',
+      Checkin: 'checkin',
       Profile: 'profile',
     },
   },
@@ -47,11 +52,16 @@ const linking = {
 
 function MainTabs() {
   return (
-    <Tab.Navigator tabBar={(props) => <AppTabBar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Jobs" component={JobsScreen} />
-      <Tab.Screen name="Active" component={ActiveJobScreen} />
-      <Tab.Screen name="Earnings" component={EarningsScreen} />
-    </Tab.Navigator>
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator tabBar={(props) => <AppTabBar {...props} />} screenOptions={{ headerShown: false }}>
+        <Tab.Screen name="Jobs" component={JobsScreen} />
+        <Tab.Screen name="Active" component={ActiveJobScreen} />
+        <Tab.Screen name="Earnings" component={EarningsScreen} />
+        <Tab.Screen name="Community" component={CommunityScreen} />
+        <Tab.Screen name="Learn" component={LearnScreen} />
+      </Tab.Navigator>
+      <TourOverlay />
+    </View>
   );
 }
 
@@ -72,6 +82,7 @@ function SignedInStack() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="Checkin" component={CheckinScreen} options={{ presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }

@@ -19,5 +19,7 @@ support_bp = Blueprint("support", __name__)
 public_bp = Blueprint("public", __name__)
 operations_bp = Blueprint("operations", __name__)
 integrations_bp = Blueprint("integrations", __name__)
+community_bp = Blueprint("community", __name__)
+wellness_bp = Blueprint("wellness", __name__)
 
-from . import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, demo, intelligence, agents, autopilot, engine, orders, support, public_tracking, operations, integrations
+from . import auth, jobs, drivers, stops, optimization, stats, safety, devices, alerts, liveops, demo, intelligence, agents, autopilot, engine, orders, support, public_tracking, operations, integrations, community, wellness

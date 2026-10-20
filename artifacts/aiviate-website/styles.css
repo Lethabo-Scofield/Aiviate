@@ -408,6 +408,57 @@ nav a.n {
   margin: 64px auto 0
 }
 
+/* hero wordplay: dictionary-style definition above the headline */
+.hero .t p.def {
+  font-size: .95rem;
+  margin: 0 auto 18px;
+  color: var(--mu);
+  letter-spacing: .02em
+}
+.def b {
+  font: 600 1.15rem Newsreader, serif;
+  color: #8ff3e8;
+  margin-right: 4px
+}
+.hero h1 em {
+  font-style: italic;
+  color: #8ff3e8
+}
+
+/* get started: numbered tutorial steps */
+.steps {
+  list-style: none;
+  counter-reset: st;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 18px
+}
+.steps li {
+  counter-increment: st;
+  position: relative;
+  padding-left: 46px;
+  color: var(--mu);
+  font-size: 1rem
+}
+.steps li b {
+  color: var(--tx);
+  font-weight: 600
+}
+.steps li:before {
+  content: counter(st);
+  position: absolute;
+  left: 0;
+  top: .05em;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--a);
+  color: #071314;
+  font: 600 1rem Newsreader, serif
+}
 /* ===== SCROLL REVEAL (class added by script.js) ===== */
 .rv {
   opacity: 0;

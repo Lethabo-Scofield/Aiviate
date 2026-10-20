@@ -18,6 +18,8 @@ import DataSourcesSettingsPage from "./pages/DataSourcesSettingsPage";
 import Orders from "./pages/Orders";
 import Integrations from "./pages/Integrations";
 import PublicTracking from "./pages/PublicTracking";
+import Community from "./pages/Community";
+import Learn from "./pages/Learn";
 import {
   AiviateActivity,
   Approvals,
@@ -44,6 +46,8 @@ function AppRoutes() {
         {isDriver ? (
           <>
             <Route path="/" element={<MyJobs />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/learn" element={<Learn />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
@@ -62,6 +66,8 @@ function AppRoutes() {
             <Route path="/activity" element={<AiviateActivity />} />
             <Route path="/policies" element={<PoliciesAutonomy />} />
             <Route path="/integrations" element={<Integrations />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/learn" element={<Learn />} />
             <Route path="/jobs" element={<RoutesJobsPage />} />
             <Route path="/fleet" element={<Fleet />} />
             <Route path="/settings" element={<Settings />} />

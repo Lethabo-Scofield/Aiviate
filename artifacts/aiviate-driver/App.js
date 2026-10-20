@@ -16,6 +16,7 @@ import { DriverProvider } from './src/contexts/DriverContext';
 import { NotificationsProvider } from './src/contexts/NotificationsContext';
 import { JobsProvider } from './src/contexts/JobsContext';
 import { ToastProvider } from './src/contexts/ToastContext';
+import { TourProvider } from './src/contexts/TourContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import LogoMark from './src/components/LogoMark';
 import { applyFontPatch } from './src/utils/fontPatch';
@@ -67,7 +68,9 @@ export default function App() {
           <DriverProvider>
             <NotificationsProvider>
               <JobsProvider>
-                <RootNavigator />
+                <TourProvider>
+                  <RootNavigator />
+                </TourProvider>
               </JobsProvider>
             </NotificationsProvider>
           </DriverProvider>

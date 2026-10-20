@@ -13,6 +13,7 @@ import ModalHeader from '../components/ModalHeader';
 import Avatar from '../components/Avatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useDriver } from '../contexts/DriverContext';
+import { useTour } from '../contexts/TourContext';
 import { COLORS } from '../theme';
 
 const Row = ({ icon, label, value }) => (
@@ -30,6 +31,7 @@ const Row = ({ icon, label, value }) => (
 export default function ProfileScreen({ navigation }) {
   const { driver } = useDriver();
   const { signOut } = useAuth();
+  const { replay } = useTour();
 
   if (!driver) {
     return <SafeAreaView style={styles.container} />;
@@ -94,6 +96,36 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.card}>
           <Row icon="calendar-outline" label="Joined" value={driver.joined} />
+        </View>
+
+        <Text style={styles.sectionTitle}>Help</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            testID="profile-replay-tour"
+            onPress={() => { navigation.goBack(); replay(); }}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="play-circle-outline" size={18} color={COLORS.textDim} />
+            </View>
+            <Text style={[styles.rowValue, { flex: 1, marginTop: 0 }]}>Replay app tour</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('Tabs', { screen: 'Learn' })}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="book-outline" size={18} color={COLORS.textDim} />
+            </View>
+            <Text style={[styles.rowValue, { flex: 1, marginTop: 0 }]}>Guides and safety tips</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity

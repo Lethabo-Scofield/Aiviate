@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../theme';
 import { haptic } from '../utils/haptics';
+import { useTour } from '../contexts/TourContext';
 
 const USE_NATIVE = Platform.OS !== 'web';
 
@@ -19,10 +20,12 @@ const ICONS = {
   Jobs: ['map', 'map-outline'],
   Active: ['navigate', 'navigate-outline'],
   Earnings: ['time', 'time-outline'],
+  Community: ['chatbubbles', 'chatbubbles-outline'],
+  Learn: ['book', 'book-outline'],
 };
-const LABELS = { Jobs: 'Routes', Active: 'Active', Earnings: 'History' };
+const LABELS = { Jobs: 'Routes', Active: 'Active', Earnings: 'History', Community: 'Community', Learn: 'Learn' };
 
-function TabButton({ route, isFocused, onPress, iconSize, labelSize }) {
+function TabButton({ route, isFocused, onPress, iconSize, labelSize, spotlight }) {
   const [active, inactive] = ICONS[route.name] || ['ellipse', 'ellipse-outline'];
   const label = LABELS[route.name] || route.name;
 
@@ -49,7 +52,7 @@ function TabButton({ route, isFocused, onPress, iconSize, labelSize }) {
       onPressIn={() => animateTo(0.92)}
       onPressOut={() => animateTo(1)}
       onPress={onPress}
-      style={styles.tab}
+      style={[styles.tab, spotlight && styles.tabSpotlight]}
       hitSlop={6}
     >
       <Animated.View style={{ transform: [{ scale: pressScale }] }}>
@@ -82,6 +85,7 @@ export default function AppTabBar({ state, navigation }) {
   const isCompact = width < 360;
   const labelSize = isCompact ? 11 : 12;
   const iconSize = isCompact ? 20 : 22;
+  const { step } = useTour();
 
   return (
     <View
@@ -110,6 +114,7 @@ export default function AppTabBar({ state, navigation }) {
             onPress={onPress}
             iconSize={iconSize}
             labelSize={labelSize}
+            spotlight={step?.tab === route.name}
           />
         );
       })}
@@ -131,7 +136,9 @@ const styles = StyleSheet.create({
       web: { boxShadow: '0 -2px 8px rgba(0,0,0,0.06)' },
     }),
   },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, minHeight: 48 },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, minHeight: 48, borderRadius: 14 },
+  // Walkthrough: the tab being described gets a tinted pill.
+  tabSpotlight: { backgroundColor: 'rgba(0,128,128,0.12)' },
   iconWrap: { width: 44, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 2, alignSelf: 'center' },
   // iOS tab bars don't put a fill behind the active icon — selection is
   // communicated by tint color alone.
