@@ -326,7 +326,7 @@ export default function ActiveJobScreen({ navigation }) {
         <View style={styles.connectionBadgeContainer}>
           <View style={[styles.connectionDot, isPythonConnected ? styles.dotGreen : styles.dotRed]} />
           <Text style={styles.connectionText}>
-            {isPythonConnected ? 'Python Backend Connected' : 'Waiting for Python Connection...'}
+            {isPythonConnected ? 'Device Connected' : 'Waiting for Device Connection...'}
           </Text>
         </View>
 
