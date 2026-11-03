@@ -10,13 +10,23 @@ function safeParse(value, fallback) {
   }
 }
 
+export const PINNED_PROMPT = {
+  id: "pinned-supplier-order-check",
+  pinned: true,
+  title: "Check supplier email: AIV-1042",
+  prompt: "Check gmail for latest supplier email about order AIV-1042. Tell me whether it is confirmed, who sent it, then deploy it",
+  thread: [],
+  updated_at: "9999-12-31T00:00:00.000Z",
+};
+
 export function readChatHistory() {
-  return safeParse(localStorage.getItem(HISTORY_KEY), []);
+  const saved = safeParse(localStorage.getItem(HISTORY_KEY), []);
+  return [PINNED_PROMPT, ...saved.filter((item) => item.id !== PINNED_PROMPT.id)];
 }
 
 export function writeChatHistory(items) {
   const normalized = [...items]
-    .filter((item) => item?.id && Array.isArray(item.thread) && item.thread.length)
+    .filter((item) => item?.id && !item.pinned &&  Array.isArray(item.thread) && item.thread.length)
     .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
     .slice(0, MAX_HISTORY);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(normalized));

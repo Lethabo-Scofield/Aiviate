@@ -527,6 +527,12 @@ export function OperationsCommand() {
     const openConversation = (id) => {
       const saved = getChatHistoryItem(id);
       if (!saved) return;
+      if (saved.pinned) {
+        setConversationId(null);
+        setThread([]);
+        askHere(saved.prompt);
+        return;
+      }
       setConversationId(saved.id);
       setThread(saved.thread || []);
     };
@@ -546,7 +552,7 @@ export function OperationsCommand() {
       window.removeEventListener("aiviate:open-chat", onOpenChat);
       window.removeEventListener("aiviate:new-chat", onNewChat);
     };
-  }, []);
+  }, [askHere]);
 
   useEffect(() => {
     const completedThread = thread.filter((turn) => turn.input && !turn.busy && turn.result);
