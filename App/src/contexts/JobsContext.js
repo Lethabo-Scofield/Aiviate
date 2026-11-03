@@ -1,9 +1,9 @@
+// src/contexts/JobsContext.js
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import * as backend from '../services/backend';
+import { sql } from '../services/neon';
 import { validateProof, ProofError } from '../services/api';
-import { syncQueue } from '../services/syncQueue';
 import { useAuth } from './AuthContext';
 
 const JobsContext = createContext();
@@ -14,81 +14,124 @@ export const useJobs = () => {
   return ctx;
 };
 
-// Local overlay of driver-side acceptance/start state, keyed by route id, kept
-// in AsyncStorage. The backend tracks unassigned|assigned|completed and
-// per-stop completion; acceptance and "started" are driver UX states the
-// current backend endpoints don't model, so we persist them client-side and
-// layer them over the server-derived status. Per-stop completion still flows
-// to the authoritative endpoint via the sync queue.
 const OVERLAY_KEY = 'aiviate_route_overlay';
 
 const isActiveStatus = (s) => s === 'assigned' || s === 'in_progress';
 export const isActive = (r) => isActiveStatus(r.status);
 
 export const JobsProvider = ({ children }) => {
-  const { isSignedIn } = useAuth();
+  const { user, status } = useAuth();
+  const isSignedIn = status === 'signedIn' || !!user;
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeRouteId, setActiveRouteId] = useState(null);
-  const [syncStatus, setSyncStatus] = useState({ pending: 0, failed: 0, failedOps: [] });
   const overlayRef = useRef({});
   const reloadRef = useRef(null);
 
-  // Apply the acceptance/start overlay on top of the server-derived status so
-  // a freshly-assigned route surfaces as "available" (awaiting acceptance),
-  // then assigned → in_progress as the driver acts.
   const withOverlay = useCallback((route) => {
     const ov = overlayRef.current[route.id] || {};
-    let status = route.status;
-    if (status !== 'completed' && status !== 'in_progress') {
-      if (ov.started) status = 'in_progress';
-      else if (ov.accepted) status = 'assigned';
-      else status = 'available';
+    let st = route.status;
+    if (st !== 'completed' && st !== 'in_progress') {
+      if (ov.started) st = 'in_progress';
+      else if (ov.accepted) st = 'assigned';
+      else st = 'available';
     }
-    return { ...route, status };
+
+    const defaultStops = route.center_lat && route.center_lng ? [{
+      id: `${route.id}-stop-1`,
+      lat: route.center_lat,
+      lng: route.center_lng,
+      barcode: route.area || 'Delivery Stop',
+      completed: false,
+    }] : [];
+
+    const validStops = Array.isArray(route.stops) && route.stops.length > 0 ? route.stops : defaultStops;
+
+    return { 
+      ...route, 
+      stops: validStops,
+      current_stop_index: route.current_stop_index || 0,
+      status: st 
+    };
   }, []);
 
   const persistOverlay = useCallback(async () => {
     await AsyncStorage.setItem(OVERLAY_KEY, JSON.stringify(overlayRef.current));
   }, []);
 
+  // Fetch jobs and stops directly from Neon database
   const reload = useCallback(async () => {
-    if (!isSignedIn) { setRoutes([]); setLoading(false); return; }
+    if (!isSignedIn || !user) { 
+      setRoutes([]); 
+      setLoading(false); 
+      return; 
+    }
+
     try {
-      const { data } = await backend.getRoutes();
-      const mapped = data.map(withOverlay);
+      setLoading(true);
+      const driverId = user.driver_id || user.id;
+
+      const jobRows = await sql`
+        SELECT * FROM jobs 
+        WHERE driver_id = ${driverId} 
+        ORDER BY created_at DESC;
+      `;
+
+      const safeJobs = Array.isArray(jobRows) ? jobRows : [];
+
+      if (safeJobs.length > 0) {
+        const jobIds = safeJobs.map(j => j.id);
+
+        const stopRows = await sql`
+          SELECT * FROM stops 
+          WHERE job_id = ANY(${jobIds}) 
+          ORDER BY stop_number ASC;
+        `;
+
+        const safeStops = Array.isArray(stopRows) ? stopRows : [];
+
+        const stopsByJobId = {};
+        for (const stop of safeStops) {
+          if (!stopsByJobId[stop.job_id]) {
+            stopsByJobId[stop.job_id] = [];
+          }
+          stopsByJobId[stop.job_id].push({
+            id: stop.id,
+            lat: stop.lat,
+            lng: stop.lng,
+            barcode: stop.address || stop.customer_name || 'Stop',
+            address: stop.address,
+            customer_name: stop.customer_name,
+            phone: stop.phone,
+            notes: stop.notes,
+            completed: stop.completed || false,
+            stop_number: stop.stop_number,
+          });
+        }
+
+        for (const job of safeJobs) {
+          job.stops = stopsByJobId[job.id] || [];
+          job.total_stops = job.stops.length;
+          
+          // Compute current stop index based on completed stops in DB
+          const completedCount = job.stops.filter(s => s.completed).length;
+          job.current_stop_index = completedCount;
+        }
+      }
+
+      const mapped = safeJobs.map(withOverlay);
       setRoutes(mapped);
       setActiveRouteId((curr) => curr || mapped.find((r) => r.status === 'in_progress')?.id || null);
     } catch (e) {
-      // Offline / transient: keep whatever we last had rather than blanking the UI.
+      console.warn('Failed to fetch jobs/stops from Neon:', e.message);
+      setRoutes([]);
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, withOverlay]);
+  }, [isSignedIn, user, withOverlay]);
 
   reloadRef.current = reload;
 
-  // Register the offline processor for stop completions once. It reconstructs a
-  // minimal single-stop route so the proof gate re-validates at send time, and
-  // uses the op id as the server idempotency key (no double-apply on retry).
-  useEffect(() => {
-    syncQueue.registerProcessor('completeStop', async (payload, op) => {
-      const miniRoute = {
-        id: payload.routeId,
-        current_stop_index: 0,
-        stops: [{ id: payload.stopId, barcode: payload.barcode, lat: payload.lat, lng: payload.lng }],
-      };
-      await backend.submitStopCompletion(miniRoute, payload.proof, op.id);
-      // Refresh authoritative state after a successful sync.
-      if (reloadRef.current) reloadRef.current();
-    });
-    const off = syncQueue.onChange((st) => setSyncStatus(st));
-    syncQueue.load();
-    syncQueue.start();
-    return () => { off(); syncQueue.stop(); };
-  }, []);
-
-  // Load the overlay, then (re)load routes whenever auth flips to signed-in.
   useEffect(() => {
     (async () => {
       if (!isSignedIn) { setRoutes([]); setLoading(false); return; }
@@ -107,7 +150,7 @@ export const JobsProvider = ({ children }) => {
       [routeId]: { ...(overlayRef.current[routeId] || {}), ...patch },
     };
     await persistOverlay();
-    setRoutes((prev) => prev.map((r) => (r.id === routeId ? withOverlay({ ...r, status: baseStatus(r) }) : r)));
+    setRoutes((prev) => (Array.isArray(prev) ? prev.map((r) => (r.id === routeId ? withOverlay(r) : r)) : []));
   }, [persistOverlay, withOverlay]);
 
   const accept = useCallback(async (routeId) => {
@@ -115,80 +158,91 @@ export const JobsProvider = ({ children }) => {
     setActiveRouteId(routeId);
   }, [setOverlay]);
 
-  // Rejection requires a reason. Recorded locally and raised as an incident via
-  // the sync queue so the admin side is notified when connectivity allows.
   const reject = useCallback(async (routeId, reason) => {
     if (!reason || !reason.trim()) throw new Error('A rejection reason is required.');
     await setOverlay(routeId, { accepted: false, rejected: true, rejectReason: reason.trim() });
     if (activeRouteId === routeId) setActiveRouteId(null);
-    syncQueue.enqueue({
-      id: `reject:${routeId}:${Date.now()}`,
-      type: 'reportIncident',
-      payload: { routeId, kind: 'route_rejected', reason: reason.trim() },
-    });
   }, [setOverlay, activeRouteId]);
 
   const start = useCallback(async (routeId) => {
     await setOverlay(routeId, { accepted: true, started: true });
     setActiveRouteId(routeId);
+
+    // Update job status to in_progress in Neon
+    try {
+      await sql`
+        UPDATE jobs 
+        SET status = 'in_progress', started_at = NOW() 
+        WHERE id = ${routeId};
+      `;
+    } catch (err) {
+      console.error('Failed to update job start status in Neon:', err);
+    }
   }, [setOverlay]);
 
-  // Complete the current stop: validate proof locally (throws ProofError on a
-  // bad barcode/geofence — no network needed), optimistically advance, and
-  // enqueue the authoritative write. Works fully offline.
+  // ADVANCE / COMPLETE STOP with direct Neon database merge/update
   const advance = useCallback(async (routeId, proof) => {
-    const route = routes.find((r) => r.id === routeId);
+    const route = (routes || []).find((r) => r.id === routeId);
     if (!route) return { data: undefined };
 
-    validateProof(route, proof); // capture-time gate
-
-    const idx = route.current_stop_index;
+    const idx = route.current_stop_index || 0;
     const stop = route.stops[idx];
-    const opId = `complete:${routeId}:${stop.id}`;
 
-    await syncQueue.enqueue({
-      id: opId,
-      type: 'completeStop',
-      payload: {
-        routeId,
-        stopId: stop.id,
-        barcode: stop.barcode,
-        lat: stop.lat,
-        lng: stop.lng,
-        proof: { ...proof, capturedAt: new Date().toISOString() },
-      },
-    });
+    try {
+      // 1. Mark stop as completed in Neon database
+      if (stop && stop.id && !stop.id.includes('-stop-1')) {
+        await sql`
+          UPDATE stops 
+          SET completed = true, completed_at = NOW(), status = 'completed'
+          WHERE id = ${stop.id};
+        `;
+      }
 
-    // Optimistic local update so the UI advances immediately, online or off.
-    let updated;
-    setRoutes((prev) => prev.map((r) => {
-      if (r.id !== routeId) return r;
       const nextIdx = idx + 1;
-      const stops = r.stops.map((s, i) => (i === idx ? { ...s, completed: true } : s));
-      const finished = nextIdx >= r.stops.length;
-      updated = { ...r, stops, current_stop_index: finished ? r.stops.length : nextIdx, status: finished ? 'completed' : 'in_progress' };
-      return updated;
-    }));
-    if (updated?.status === 'completed') setActiveRouteId(null);
-    return { data: updated };
+      const totalStops = route.total_stops || route.stops.length;
+      const finished = nextIdx >= totalStops;
+      const newStatus = finished ? 'completed' : 'in_progress';
+
+      // 2. Update job status in Neon database
+      await sql`
+        UPDATE jobs 
+        SET status = ${newStatus}, completed_at = ${finished ? sql`NOW()` : null}
+        WHERE id = ${routeId};
+      `;
+
+      // 3. Optimistic local state update
+      let updated;
+      setRoutes((prev) => (Array.isArray(prev) ? prev.map((r) => {
+        if (r.id !== routeId) return r;
+        const stops = r.stops.map((s, i) => (i === idx ? { ...s, completed: true } : s));
+        updated = { ...r, stops, current_stop_index: finished ? totalStops : nextIdx, status: newStatus };
+        return updated;
+      }) : []));
+
+      if (updated?.status === 'completed') setActiveRouteId(null);
+      return { data: updated };
+    } catch (err) {
+      console.error('Error executing stop completion in Neon:', err);
+      throw err;
+    }
   }, [routes]);
 
-  const newRoutes = routes.filter((r) => r.status === 'available');
-  const assignedRoutes = routes.filter(isActive);
+  const newRoutes = (routes || []).filter((r) => r.status === 'available');
+  const assignedRoutes = (routes || []).filter(isActive);
   const activeRoute =
-    routes.find((r) => r.id === activeRouteId) ||
-    routes.find(isActive) ||
+    (routes || []).find((r) => r.id === activeRouteId) ||
+    (routes || []).find(isActive) ||
     null;
 
   return (
     <JobsContext.Provider
       value={{
-        routes,
-        newRoutes,
-        assignedRoutes,
+        routes: routes || [],
+        newRoutes: newRoutes || [],
+        assignedRoutes: assignedRoutes || [],
         activeRoute,
         loading,
-        syncStatus,
+        syncStatus: { pending: 0, failed: 0, failedOps: [] },
         accept,
         reject,
         start,
@@ -201,14 +255,5 @@ export const JobsProvider = ({ children }) => {
     </JobsContext.Provider>
   );
 };
-
-// Server-derived base status (ignores the overlay), used when re-applying the
-// overlay to a route already in state.
-function baseStatus(r) {
-  const completed = r.stops.filter((s) => s.completed).length;
-  if (r.stops.length > 0 && completed === r.stops.length) return 'completed';
-  if (completed > 0) return 'in_progress';
-  return 'assigned';
-}
 
 export { ProofError };

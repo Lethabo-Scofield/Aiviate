@@ -1,131 +1,104 @@
-// Authentication state for the Driver App.
-//
-// Owns the session lifecycle: restore-on-launch, sign-in, activation (from a
-// deep-link invitation), sign-out, and forced sign-out when the server rejects
-// the token (401) or the driver is suspended (403). Everything downstream
-// (navigation gating, data fetching) keys off `status`.
+// contexts/AuthContext.js
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sql } from '../services/neon';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+const SESSION_KEY = '@aiviate_driver_session';
 
-import * as backend from '../services/backend';
-import { ApiError, setUnauthorizedHandler } from '../services/http';
-import { saveSession, clearSession, getToken, getUser } from '../services/session';
+const AuthContext = createContext({
+  status: 'restoring', // 'restoring' | 'signedIn' | 'suspended' | 'signedOut'
+  user: null,
+  signIn: async () => {},
+  signOut: async () => {},
+});
 
-const AuthContext = createContext(null);
+export const useAuth = () => useContext(AuthContext);
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-};
-
-// status: 'restoring' | 'signedOut' | 'signedIn' | 'suspended'
 export const AuthProvider = ({ children }) => {
   const [status, setStatus] = useState('restoring');
   const [user, setUser] = useState(null);
-  const mounted = useRef(true);
 
-  useEffect(() => () => { mounted.current = false; }, []);
-
-  const applySignedIn = useCallback(async ({ token, user: u }) => {
-    await saveSession({ token, user: u });
-    if (!mounted.current) return;
-    setUser(u);
-    setStatus('signedIn');
-  }, []);
-
-  const signOut = useCallback(async () => {
-    await clearSession();
-    if (!mounted.current) return;
-    setUser(null);
-    setStatus('signedOut');
-  }, []);
-
-  // Wire the http client so any 401 anywhere drops us to the login screen once.
+  // Load stored session on app startup
   useEffect(() => {
-    setUnauthorizedHandler(() => { signOut(); });
-    return () => setUnauthorizedHandler(null);
-  }, [signOut]);
-
-  // Restore a persisted session on launch and re-validate it against the server.
-  useEffect(() => {
-    (async () => {
-      const token = await getToken();
-      if (!token) { if (mounted.current) setStatus('signedOut'); return; }
-      // Optimistically show the cached user while we validate.
-      const cached = await getUser();
-      if (cached && mounted.current) setUser(cached);
+    async function loadStoredSession() {
       try {
-        const { user: fresh } = await backend.fetchMe();
-        if (!mounted.current) return;
-        setUser(fresh);
-        setStatus('signedIn');
-      } catch (e) {
-        if (!mounted.current) return;
-        if (e instanceof ApiError && e.status === 403) { setStatus('suspended'); return; }
-        // 401 already handled by the unauthorized handler → signedOut.
-        if (e instanceof ApiError && e.status === 401) return;
-        // Network error at launch: keep the cached session so the app is usable
-        // offline; treat as signed-in if we had a cached user, else signed out.
-        setStatus(cached ? 'signedIn' : 'signedOut');
+        const stored = await AsyncStorage.getItem(SESSION_KEY);
+        if (stored) {
+          const session = JSON.parse(stored);
+          if (session && session.user) {
+            setUser(session.user);
+            setStatus('signedIn');
+            return;
+          }
+        }
+        setStatus('signedOut');
+      } catch (err) {
+        console.error('Failed to load session:', err);
+        setStatus('signedOut');
       }
-    })();
+    }
+    loadStoredSession();
   }, []);
 
+  // SIGN IN directly via Neon database query
   const signIn = useCallback(async (email, password) => {
     try {
-      const res = await backend.login(email, password);
-      await applySignedIn({ token: res.token, user: res.user });
-      return { ok: true };
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 403) {
+      const cleanEmail = email.trim().toLowerCase();
+
+      // Query Neon directly
+      const rows = await sql`
+        SELECT * FROM drivers 
+        WHERE LOWER(email) = ${cleanEmail} 
+        LIMIT 1;
+      `;
+
+      if (!rows || rows.length === 0) {
+        throw new Error(`No account found for "${email}" in the drivers table.`);
+      }
+
+      const record = rows[0];
+
+      // Optional check if account is suspended in database
+      if (record.is_suspended || record.status === 'suspended') {
         setStatus('suspended');
-        return { ok: false, suspended: true, error: e.message };
+        return { ok: false, suspended: true };
       }
-      return { ok: false, error: e.message || 'Sign in failed' };
-    }
-  }, [applySignedIn]);
 
-  const activate = useCallback(async ({ token, password }) => {
-    try {
-      const res = await backend.activateAccount({ token, password });
-      await applySignedIn({ token: res.token, user: res.user });
-      return { ok: true };
-    } catch (e) {
-      return {
-        ok: false,
-        error: e.message || 'Activation failed',
-        // Distinguish "endpoint not deployed yet" from a bad/expired token so
-        // the UI can message accordingly.
-        notImplemented: e instanceof ApiError && (e.status === 404 || e.status === 501),
+      const sessionData = {
+        token: `neon_session_${record.id}`,
+        user: {
+          id: record.id,
+          driver_id: record.driver_id || record.id,
+          name: record.name || '',
+          email: record.email || '',
+          company_name: record.company_name || 'Aiviate',
+        },
       };
-    }
-  }, [applySignedIn]);
 
-  const forgotPassword = useCallback(async (email) => {
-    try {
-      await backend.requestPasswordReset(email);
-    } catch (e) {
-      // Never reveal whether the account exists — succeed either way unless
-      // the endpoint itself is missing.
-      if (e instanceof ApiError && (e.status === 404 || e.status === 501)) {
-        return { ok: false, notImplemented: true };
-      }
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      setUser(sessionData.user);
+      setStatus('signedIn'); // This triggers RootNavigation to switch stacks automatically!
+      return { ok: true };
+    } catch (err) {
+      console.error('Neon Sign-in Error:', err);
+      return { ok: false, error: err.message || 'Login failed' };
     }
-    return { ok: true };
   }, []);
 
-  const value = {
-    status,
-    user,
-    isSignedIn: status === 'signedIn',
-    signIn,
-    signOut,
-    activate,
-    forgotPassword,
-  };
+  // SIGN OUT
+  const signOut = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(SESSION_KEY);
+      setUser(null);
+      setStatus('signedOut');
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+  }, []);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ status, user, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-export default AuthProvider;
