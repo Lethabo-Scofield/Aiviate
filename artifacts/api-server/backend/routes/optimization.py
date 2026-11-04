@@ -97,6 +97,21 @@ def _safe_float(val, default):
         return default
 
 
+# Uploaded orders must carry the canonical storefront prefix so they flow through
+# the STORE-* operational pipeline (optimize, jobs, drivers, stats) — matching the
+# merchant-integration convention in routes/orders.py and this module's own
+# STORE-% delete/query filters. Without it, uploaded stops are invisible to
+# /api/optimize ("No store stops available to optimize").
+ORDER_ID_PREFIX = "STORE-"
+
+
+def _store_order_id(raw):
+    raw = _safe_str(raw)
+    if not raw:
+        return raw
+    return raw if raw.startswith(ORDER_ID_PREFIX) else f"{ORDER_ID_PREFIX}{raw}"
+
+
 def _geocode_rows(rows):
     geolocator = Nominatim(user_agent="aiviate-dispatch-mvp", timeout=10)
     stops_data = []
@@ -114,9 +129,10 @@ def _geocode_rows(rows):
             failed.append({"row": idx + 2, "address": addr, "reason": "Could not geocode"})
             continue
 
+        raw_order_id = _safe_str(row.get("Order_ID", "")) or f"ORD-{idx+1:03d}"
         stop_dict = {
             "id": str(uuid.uuid4().hex[:8]),
-            "order_id": _safe_str(row.get("Order_ID", f"ORD-{idx+1:03d}")),
+            "order_id": _store_order_id(raw_order_id),
             "customer_name": _safe_str(row.get("Customer_Name", f"Customer {idx+1}")),
             "address": addr,
             "lat": lat,
