@@ -157,6 +157,8 @@ function LoadingPanel() {
 function gmailSearchQuery(text) {
   const cleaned = text.replace(/\bfrom\s+\/?gmail\b/gi, " ").replace(/\/gmail\b|\bgmail\b/gi, " ").replace(/\s+/g, " ").trim();
   if (/\b(?:unread|unopened)\b/i.test(cleaned)) return "in:inbox is:unread -label:trash";
+  const orderRef = cleaned.match(/\b[A-Za-z]{2,5}-\d{2,}\b/);
+  if (orderRef) return `in:inbox -label:trash "${orderRef[0].toUpperCase()}"`;
   const from = cleaned.match(/\bfrom\s+([^\n?]+?)(?:\s+(?:and|about|with)\b|$)/i);
   if (from && !/^\s*(?:and\b|my\b|the\b|inbox\b|messages?\b|emails?\b)/i.test(from[1])) {
     return `in:inbox -label:trash from:"${from[1].trim().replace(/"/g, "")}"`;
