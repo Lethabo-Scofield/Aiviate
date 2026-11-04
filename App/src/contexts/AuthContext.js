@@ -1,87 +1,104 @@
-// Authentication state for the Driver App (Bypassed for Testing/Development)
+// contexts/AuthContext.js
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sql } from '../services/neon';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+const SESSION_KEY = '@aiviate_driver_session';
 
-import * as backend from '../services/backend';
-import { ApiError, setUnauthorizedHandler } from '../services/http';
-import { saveSession, clearSession } from '../services/session';
+const AuthContext = createContext({
+  status: 'restoring', // 'restoring' | 'signedIn' | 'suspended' | 'signedOut'
+  user: null,
+  signIn: async () => {},
+  signOut: async () => {},
+});
 
-const AuthContext = createContext(null);
-
-// Mock user details to bypass login checks
-const MOCK_DRIVER = {
-  id: 'driver-99',
-  name: 'Test Driver',
-  email: 'driver@Aiviate.com',
-  role: 'driver',
-};
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  // BYPASS: Default immediately to 'signedIn' instead of 'restoring'
-  const [status, setStatus] = useState('signedIn');
-  const [user, setUser] = useState(MOCK_DRIVER);
-  const mounted = useRef(true);
+  const [status, setStatus] = useState('restoring');
+  const [user, setUser] = useState(null);
 
-  useEffect(() => () => { mounted.current = false; }, []);
-
-  const applySignedIn = useCallback(async ({ token, user: u }) => {
-    await saveSession({ token, user: u });
-    if (!mounted.current) return;
-    setUser(u);
-    setStatus('signedIn');
-  }, []);
-
-  const signOut = useCallback(async () => {
-    await clearSession();
-    if (!mounted.current) return;
-    setUser(null);
-    setStatus('signedOut');
-  }, []);
-
-  // Wire HTTP client (disabled 401 redirect during bypass so app stays signed in)
+  // Load stored session on app startup
   useEffect(() => {
-    // setUnauthorizedHandler(() => { signOut(); });
-    return () => setUnauthorizedHandler(null);
-  }, [signOut]);
-
-  // BYPASS: Disabled the initial server/token restore check
-  useEffect(() => {
-    // Restoring logic bypassed for instant entry to map/routes.
+    async function loadStoredSession() {
+      try {
+        const stored = await AsyncStorage.getItem(SESSION_KEY);
+        if (stored) {
+          const session = JSON.parse(stored);
+          if (session && session.user) {
+            setUser(session.user);
+            setStatus('signedIn');
+            return;
+          }
+        }
+        setStatus('signedOut');
+      } catch (err) {
+        console.error('Failed to load session:', err);
+        setStatus('signedOut');
+      }
+    }
+    loadStoredSession();
   }, []);
 
+  // SIGN IN directly via Neon database query
   const signIn = useCallback(async (email, password) => {
-    setUser(MOCK_DRIVER);
-    setStatus('signedIn');
-    return { ok: true };
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+
+      // Query Neon directly
+      const rows = await sql`
+        SELECT * FROM drivers 
+        WHERE LOWER(email) = ${cleanEmail} 
+        LIMIT 1;
+      `;
+
+      if (!rows || rows.length === 0) {
+        throw new Error(`No account found for "${email}" in the drivers table.`);
+      }
+
+      const record = rows[0];
+
+      // Optional check if account is suspended in database
+      if (record.is_suspended || record.status === 'suspended') {
+        setStatus('suspended');
+        return { ok: false, suspended: true };
+      }
+
+      const sessionData = {
+        token: `neon_session_${record.id}`,
+        user: {
+          id: record.id,
+          driver_id: record.driver_id || record.id,
+          name: record.name || '',
+          email: record.email || '',
+          company_name: record.company_name || 'Aiviate',
+        },
+      };
+
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      setUser(sessionData.user);
+      setStatus('signedIn'); // This triggers RootNavigation to switch stacks automatically!
+      return { ok: true };
+    } catch (err) {
+      console.error('Neon Sign-in Error:', err);
+      return { ok: false, error: err.message || 'Login failed' };
+    }
   }, []);
 
-  const activate = useCallback(async ({ token, password }) => {
-    setUser(MOCK_DRIVER);
-    setStatus('signedIn');
-    return { ok: true };
+  // SIGN OUT
+  const signOut = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(SESSION_KEY);
+      setUser(null);
+      setStatus('signedOut');
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
   }, []);
 
-  const forgotPassword = useCallback(async (email) => {
-    return { ok: true };
-  }, []);
-
-  const value = {
-    status,
-    user,
-    isSignedIn: true, // BYPASS: Always true
-    signIn,
-    signOut,
-    activate,
-    forgotPassword,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ status, user, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-export default AuthProvider;

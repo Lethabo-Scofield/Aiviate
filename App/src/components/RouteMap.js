@@ -4,9 +4,15 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import { COLORS } from '../theme';
 import { bearingDeg } from '../utils/geo';
 
+const PIN_COLOR = {
+  pickup: COLORS.teal,
+  dropoff: COLORS.navy,
+  done: '#9AA8B2',
+};
+
 export default function RouteMap({
-  stops = [],
-  currentIndex = 0,
+  stops,
+  currentIndex,
   polyline,
   style,
   focusActive = false,
@@ -15,92 +21,147 @@ export default function RouteMap({
 }) {
   const mapRef = useRef(null);
 
-  const safeStops = Array.isArray(stops) ? stops : [];
-  const points = safeStops.map((s) => ({ latitude: s.lat, longitude: s.lng }));
+  const points = stops.map((s) => ({ latitude: s.lat, longitude: s.lng }));
   const polyCoords = polyline || points;
-  const activeStop = safeStops[currentIndex] || null;
+  const activeStop = currentIndex >= 0 && currentIndex < stops.length ? stops[currentIndex] : null;
+  const focusCoord = focusActive && activeStop ? { lat: activeStop.lat, lng: activeStop.lng } : null;
+
+  // Camera priority: driver location during nav > active stop > overview.
+  const navTarget = focusActive
+    ? driverLocation || (activeStop && { lat: activeStop.lat, lng: activeStop.lng })
+    : null;
 
   const initialRegion = {
-    latitude: safeStops[0]?.lat || -26.2083,
-    longitude: safeStops[0]?.lng || 28.0482,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
+    latitude: navTarget ? navTarget.lat : stops[0].lat,
+    longitude: navTarget ? navTarget.lng : stops[0].lng,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
   };
 
-  // Web Render Branch with Explicit Flex & Canvas Heights
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (!mapRef.current) return;
+    const t = setTimeout(() => {
+      if (focusActive && navTarget && activeStop) {
+        const heading = bearingDeg(navTarget, { lat: activeStop.lat, lng: activeStop.lng });
+        mapRef.current?.animateCamera?.(
+          {
+            center: { latitude: navTarget.lat, longitude: navTarget.lng },
+            heading,
+            pitch: 60,
+            zoom: 16,
+          },
+          { duration: 700 },
+        );
+      } else if (navTarget) {
+        mapRef.current?.animateToRegion?.(
+          { latitude: navTarget.lat, longitude: navTarget.lng, latitudeDelta: 0.04, longitudeDelta: 0.04 },
+          800,
+        );
+      } else if (points.length >= 2) {
+        mapRef.current?.fitToCoordinates?.(points, {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [navTarget?.lat, navTarget?.lng, activeStop?.lat, activeStop?.lng, focusActive, JSON.stringify(points)]);
+
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.webWrapper, style]}>
-        <MapView
-          style={styles.webMap}
-          initialRegion={initialRegion}
-          fitToPoints={safeStops.map((s) => ({ lat: s.lat, lng: s.lng }))}
-          focusZoom={16}
-          driverLocation={driverLocation}
-        >
-          {polyCoords.length >= 2 && (
-            <Polyline coordinates={polyCoords} strokeColor={COLORS?.teal || '#008080'} strokeWidth={5} />
-          )}
-          {driverLeg && driverLeg.length >= 2 && (
-            <Polyline coordinates={driverLeg} strokeColor="#1E88FF" strokeWidth={4} />
-          )}
-          {safeStops.map((s, i) => (
-            <Marker
-              key={s.id || String(i)}
-              coordinate={{ latitude: s.lat, longitude: s.lng }}
-              label={String(i + 1)}
-              variant={s.completed ? 'done' : s.type}
-              active={i === currentIndex && !s.completed}
-            />
-          ))}
-        </MapView>
-      </View>
-    );
-  }
-
-  // Native (iOS / Android) Render Branch
-  return (
-    <View style={[styles.container, style]}>
       <MapView
-        ref={mapRef}
-        style={StyleSheet.absoluteFillObject}
+        style={style}
         initialRegion={initialRegion}
-        showsUserLocation={!driverLocation}
-        followsUserLocation={focusActive && !driverLocation}
-        showsMyLocationButton={false}
+        fitToPoints={stops.map((s) => ({ lat: s.lat, lng: s.lng }))}
+        focusCoord={focusCoord}
+        focusZoom={16}
+        driverLocation={driverLocation}
       >
-        {polyCoords.length >= 2 && (
-          <Polyline coordinates={polyCoords} strokeColor={COLORS?.teal || '#008080'} strokeWidth={5} />
+        <Polyline coordinates={polyCoords} strokeColor={COLORS.teal} strokeWidth={5} />
+        {driverLeg && driverLeg.length >= 2 && (
+          <Polyline coordinates={driverLeg} strokeColor="#1E88FF" strokeWidth={4} />
         )}
-        {safeStops.map((s, i) => (
+        {stops.map((s, i) => (
           <Marker
-            key={s.id || String(i)}
+            key={s.id}
             coordinate={{ latitude: s.lat, longitude: s.lng }}
-            title={`Stop ${i + 1}`}
-            description={s.address}
+            label={String(i + 1)}
+            variant={s.completed ? 'done' : s.type}
+            active={i === currentIndex && !s.completed}
           />
         ))}
       </MapView>
-    </View>
+    );
+  }
+
+  return (
+    <MapView
+      ref={mapRef}
+      style={style}
+      initialRegion={initialRegion}
+      showsUserLocation={!driverLocation}
+      followsUserLocation={focusActive && !driverLocation}
+      showsMyLocationButton={false}
+    >
+      <Polyline coordinates={polyCoords} strokeColor={COLORS.teal} strokeWidth={5} />
+      {driverLeg && driverLeg.length >= 2 && (
+        <Polyline
+          coordinates={driverLeg}
+          strokeColor="#1E88FF"
+          strokeWidth={4}
+          lineDashPattern={[8, 6]}
+        />
+      )}
+      {stops.map((s, i) => {
+        const variant = s.completed ? 'done' : s.type;
+        const isActive = i === currentIndex && !s.completed;
+        return (
+          <Marker
+            key={s.id}
+            coordinate={{ latitude: s.lat, longitude: s.lng }}
+            pinColor={PIN_COLOR[variant]}
+            title={`Stop ${i + 1}`}
+            description={s.address}
+          >
+            <View style={[styles.pin, { backgroundColor: PIN_COLOR[variant] }, isActive && styles.pinActive]}>
+              <Text style={styles.pinText}>{i + 1}</Text>
+            </View>
+          </Marker>
+        );
+      })}
+      {driverLocation && (
+        <Marker
+          coordinate={{ latitude: driverLocation.lat, longitude: driverLocation.lng }}
+          anchor={{ x: 0.5, y: 0.5 }}
+          flat
+          tracksViewChanges
+        >
+          <View style={styles.puckOuter}>
+            <View style={styles.puckInner} />
+          </View>
+        </Marker>
+      )}
+    </MapView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
+  pin: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#fff',
   },
-  webWrapper: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    minHeight: '400px', // Prevents Web DOM height collapse
-    position: 'relative',
+  pinActive: { transform: [{ scale: 1.15 }] },
+  pinText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  puckOuter: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(30,136,255,0.22)',
   },
-  webMap: {
-    width: '100%',
-    height: '100%',
-    flex: 1,
+  puckInner: {
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: '#1E88FF',
+    borderWidth: 2, borderColor: '#fff',
   },
 });
