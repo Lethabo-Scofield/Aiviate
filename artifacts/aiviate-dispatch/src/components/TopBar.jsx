@@ -4,6 +4,7 @@ import { ArrowUpRight, BookOpen, Cable, ChevronDown, Coins, Moon, PlayCircle, Se
 import { useNavigate } from "react-router-dom";
 import { replayTour } from "../lib/tour";
 import DemoCreditsDialog from "./DemoCreditsDialog";
+import { findPlan } from "../lib/plans";
 
 const INITIAL_CENTS = 2392;
 const rand = (cents) => `R${(cents / 100).toFixed(2)}`;
@@ -16,6 +17,15 @@ function readCredit(key) {
     return Number.isSafeInteger(cents) && cents >= 0 && cents <= 100000000 ? cents : INITIAL_CENTS;
   } catch {
     return INITIAL_CENTS;
+  }
+}
+
+function readPlan(key) {
+  try {
+    const id = localStorage.getItem(key);
+    return findPlan(id) ? id : null;
+  } catch {
+    return null;
   }
 }
 
@@ -39,10 +49,20 @@ export default function TopBar({
   const accountKey = `aiviate_demo_credit_${user?.id ?? user?.email ?? "demo"}`;
   const [creditCents, setCreditCents] = useState(() => readCredit(accountKey));
   const closeUpgrade = useCallback(() => setUpgradeOpen(false), []);
+  const planKey = `aiviate_demo_plan_${user?.id ?? user?.email ?? "demo"}`;
+  const [planId, setPlanId] = useState(() => readPlan(planKey));
+  const selectPlan = useCallback((id) => {
+    setPlanId(id);
+    try { localStorage.setItem(planKey, id); } catch { /* the choice just will not persist */ }
+  }, [planKey]);
 
   useEffect(() => {
     setCreditCents(readCredit(accountKey));
   }, [accountKey]);
+
+  useEffect(() => {
+    setPlanId(readPlan(planKey));
+  }, [planKey]);
 
   useEffect(() => {
     setProfileOpen(false);
@@ -146,7 +166,7 @@ export default function TopBar({
             <button
               type="button"
               onClick={() => setUpgradeOpen(true)}
-              aria-label={`Company agent credit ${rand(creditCents)}. Add demo credit`}
+              aria-label={`Company agent credit ${rand(creditCents)}. Choose a plan or add demo credit`}
               data-testid="button-open-credit-upgrade"
               className="flex h-11 items-center gap-1.5 rounded-2xl px-1.5 text-[#111315] transition-colors hover:bg-black/[0.04] active:bg-black/[0.07] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111315] sm:px-2"
             >
@@ -211,6 +231,8 @@ export default function TopBar({
         {upgradeOpen && (
           <DemoCreditsDialog
             balanceCents={creditCents}
+            currentPlanId={planId}
+            onSelectPlan={selectPlan}
             onClose={closeUpgrade}
             onComplete={addCredit}
           />

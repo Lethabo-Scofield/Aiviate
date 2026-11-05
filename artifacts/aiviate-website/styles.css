@@ -596,3 +596,128 @@ footer {
     padding: 72px 20px
   }
 }
+/* ===== PRICING ===== */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 56px;
+  text-align: left
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  padding: 32px 28px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid rgba(255, 255, 255, .1)
+}
+
+.plan:nth-child(2) {
+  border-color: var(--a);
+  box-shadow: 0 0 0 1px var(--a)
+}
+
+.plan .tag {
+  margin: 6px 0 0;
+  color: var(--mu)
+}
+
+.plan .price {
+  margin: 22px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px
+}
+
+.plan .price b {
+  font: 500 3rem/1 Newsreader, Georgia, serif;
+  color: var(--tx)
+}
+
+.plan .price span {
+  color: var(--mu);
+  font-size: .95rem
+}
+
+.plan .ck {
+  flex: 1
+}
+
+.plan .fit {
+  margin: 24px 0 20px;
+  color: var(--mu);
+  font-size: .95rem
+}
+
+.plan .btn {
+  text-align: center
+}
+
+.cmp {
+  margin-top: 40px;
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(0, 0, 0, .28)
+}
+
+.cmp table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  text-align: center
+}
+
+.cmp th,
+.cmp td {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08)
+}
+
+.cmp tbody tr:last-child th,
+.cmp tbody tr:last-child td {
+  border-bottom: 0
+}
+
+.cmp thead th {
+  font: 500 1.15rem Newsreader, Georgia, serif;
+  color: var(--tx)
+}
+
+.cmp tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--tx)
+}
+
+.cmp td {
+  color: var(--mu)
+}
+
+.cmp thead th:first-child {
+  text-align: left
+}
+
+.note {
+  max-width: 44em;
+  margin: 28px auto 0;
+  color: var(--mu);
+  font-size: .9rem
+}
+
+@media(max-width:860px) {
+  .plans {
+    grid-template-columns: 1fr
+  }
+}
