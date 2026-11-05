@@ -8,3 +8,4 @@ pg8000
 requests
 PyJWT
 bcrypt
+cryptography

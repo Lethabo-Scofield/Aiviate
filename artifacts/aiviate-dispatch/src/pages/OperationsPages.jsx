@@ -25,7 +25,11 @@ import {
   getExceptions,
   getJobs,
   searchGmail,
-  replyGmail,
+  askGmailAssistant,
+  createGmailDraft,
+  editGmailDraft,
+  approveGmailDraft,
+  discardGmailDraft,
   getOperationsSnapshot,
   getPolicies,
   getStoreOrders,
@@ -34,6 +38,7 @@ import {
   updatePolicies,
 } from "../services/api";
 import ResultBlock from "../components/ResultBlock";
+import { replyAddress } from "../components/IntegrationResultViews";
 import ChatActivity from "../components/ChatActivity";
 import EmptyChatOverview from "../components/EmptyChatOverview";
 import IntegrationTools, { PROVIDERS, useIntegrationCatalog } from "../components/IntegrationTools";
@@ -173,7 +178,7 @@ function resultSpeechText(result) {
   return result.summary || (result.ok ? "Done." : "Aiviate could not answer that yet.");
 }
 
-function ChatAnswer({ result, onReply, sending, animate = false, onProgress }) {
+function ChatAnswer({ result, onReply, sending, draftActions, animate = false, onProgress }) {
   const text = resultSpeechText(result);
   const characters = Array.from(text);
   const [visibleCount, setVisibleCount] = useState(() =>
@@ -210,14 +215,14 @@ function ChatAnswer({ result, onReply, sending, animate = false, onProgress }) {
       {animate && <span className="sr-only" role="status">{text}</span>}
       {hasDetails && !typing && (
         <div className="animate-fade-in border-t border-[#E9ECEF] pt-3">
-          <ResultBlock result={result} onReply={onReply} sending={sending} />
+          <ResultBlock result={result} onReply={onReply} sending={sending} draftActions={draftActions} />
         </div>
       )}
     </div>
   );
 }
 
-function ChatTurn({ turn, assistantName, onReply, sending, onProgress }) {
+function ChatTurn({ turn, assistantName, onReply, sending, draftActions, onProgress }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -237,7 +242,7 @@ function ChatTurn({ turn, assistantName, onReply, sending, onProgress }) {
           ) : (
             <div className="space-y-3">
               {turn.activity && <ChatActivity activity={turn.activity} assistantName={assistantName} result={turn.result} />}
-              <ChatAnswer result={turn.result} onReply={onReply} sending={sending} animate={turn.animate} onProgress={onProgress} />
+              <ChatAnswer result={turn.result} onReply={onReply} sending={sending} draftActions={draftActions} animate={turn.animate} onProgress={onProgress} />
             </div>
           )}
         </div>
@@ -416,12 +421,12 @@ export function OperationsCommand() {
     ) ? PROVIDERS.find((entry) => entry.provider === selectedTool) : null;
     const contextProvider = explicitProvider || selectedProvider;
     const latestResult = [...thread].reverse().find((item) => item.result)?.result;
-    const gmailFollowUp = latestResult?.type === "gmail_search" && /\b(?:reply|respond|that|those|them|their|sender|messages?|e-?mails?|inbox)\b/i.test(text);
-    const gmailRequest = options.gmailQuery !== undefined || contextProvider?.provider === "gmail" || /\b(?:gmail|e-?mail)\b/i.test(text) || (!explicitProvider && gmailFollowUp);
+    const gmailFollowUp = ["gmail_search", "gmail_agent"].includes(latestResult?.type) && /\b(?:reply|respond|that|those|them|their|sender|messages?|e-?mails?|inbox)\b/i.test(text);
+    const gmailRequest = options.gmailQuery !== undefined || contextProvider?.provider === "gmail" || /\b(?:gmail|e-?mails?|inbox|mailbox)\b/i.test(text) || (!explicitProvider && gmailFollowUp);
     const sampleProvider = !gmailRequest && contextProvider && (catalog.demos || []).some((entry) => entry.provider === contextProvider.provider) ? contextProvider : null;
     const commandText = selectedProvider && !explicitProvider && !gmailRequest ? `${text} ${selectedProvider.name}` : text;
     const activity = gmailRequest
-      ? { kind: "gmail", provider: "gmail", label: "Searching connected Gmail" }
+      ? { kind: "gmail", provider: "gmail", label: /\b(?:reply|respond|draft)\b/i.test(text) ? "Reading your email and preparing drafts" : "Searching connected Gmail" }
       : sampleProvider
         ? { kind: "integration", provider: sampleProvider.provider, sample: true, label: `Reviewing ${sampleProvider.name} sample records` }
         : { kind: "operations", label: "Checking operational data" };
@@ -436,7 +441,7 @@ export function OperationsCommand() {
         if (!gmailConnected) {
           result = { ok: false, type: "gmail_unconnected", summary: "Gmail is not connected to this workspace. Connect Gmail to search messages and review replies." };
         } else {
-          const previous = [...thread].reverse().find((item) => item.result?.type === "gmail_search")?.result;
+          const previous = [...thread].reverse().find((item) => ["gmail_search", "gmail_agent"].includes(item.result?.type))?.result;
           const numberedReply = text.match(/\b(?:reply|respond)\s+to\s+(?:message\s*)?#?(\d+)(?:\s+(?:saying|with|:)\s*(.+))?/i);
           const addressedReply = text.match(/\b(?:reply|respond)\s+to\s+([\w.+-]+@[\w.-]+\.[a-z]{2,})(?:\s+(?:saying|with|:)\s*(.+))?/i);
           const target = numberedReply ? previous?.items?.[Number(numberedReply[1]) - 1]
@@ -451,6 +456,9 @@ export function OperationsCommand() {
             };
           } else if (numberedReply || addressedReply) {
             result = { ok: false, summary: "I couldn't identify that message in the latest Gmail results. Search again, then use Reply on the exact message or refer to its number." };
+          } else if (options.gmailQuery === undefined) {
+            // Free text: the email assistant finds, summarises and (when asked) drafts replies. It never sends.
+            result = await askGmailAssistant(text);
           } else {
             const query = (options.gmailQuery || gmailSearchQuery(text)).trim().slice(0, 300);
             const response = await searchGmail({ query, max_results: 10 });
@@ -482,6 +490,17 @@ export function OperationsCommand() {
     setChatBusy(false);
   }, [conversationId, chatBusy, catalog.connections, catalog.demos, selectedTool, thread]);
 
+  // Actions on replies the assistant drafted. Each one is an explicit click on a draft card.
+  const draftActions = {
+    onEdit: async (draft, body) => (await editGmailDraft(draft.id, body, draft.revision)).draft,
+    onApprove: async (draft) => {
+      const receipt = await approveGmailDraft(draft.id, draft.revision);
+      if (receipt?.ok !== true) throw new Error("Gmail did not confirm the send. Check Sent before trying again, to avoid a duplicate.");
+      return receipt;
+    },
+    onDiscard: async (draft) => (await discardGmailDraft(draft.id)).draft,
+  };
+
   const handleGmailReply = async (message, body) => {
     if (chatBusy || replyInFlightRef.current) throw new Error("Wait for the current request to finish.");
     if (!message?.id || !body?.trim()) throw new Error("Select a message and write a reply first.");
@@ -493,7 +512,16 @@ export function OperationsCommand() {
     setThread((items) => [...items, { id, input: `Reply to ${message.reply_to || message.from} · ${message.subject}`, toolContext: { name: "Gmail" }, busy: true, result: null, activity: { kind: "gmail", provider: "gmail", label: "Sending your confirmed reply through Gmail" } }]);
     setChatBusy(true);
     try {
-      const response = await replyGmail(message.id, body.trim());
+      // The person previewed this text and pressed Confirm send; that click is the approval.
+      // It still goes through a server-side draft, so the recipient is fixed by the original
+      // email and the send is recorded and can't happen twice.
+      const { draft } = await createGmailDraft(message.id, body.trim());
+      const previewed = replyAddress(message);
+      if (previewed && draft.recipient.toLowerCase() !== previewed.toLowerCase()) {
+        await discardGmailDraft(draft.id).catch(() => {});
+        throw new Error(`Gmail would address this reply to ${draft.recipient}, not ${previewed}. Nothing was sent.`);
+      }
+      const response = await approveGmailDraft(draft.id, draft.revision);
       if (response?.ok !== true || !response.id || !response.recipient || !response.subject) {
         throw new Error("Gmail returned an incomplete send receipt. Check Sent before trying again, to avoid a duplicate.");
       }
@@ -614,6 +642,7 @@ export function OperationsCommand() {
                 turn={turn}
                 assistantName={agentPrefs.assistant_name || "Aiviate"}
                 onReply={catalog.connections.some((entry) => entry.provider === "gmail" && entry.is_active !== false) ? handleGmailReply : undefined}
+                draftActions={draftActions}
                 sending={chatBusy}
                 onProgress={() => {
                   const container = chatScrollRef.current;

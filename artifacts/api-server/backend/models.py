@@ -4,7 +4,7 @@ import tempfile
 from decimal import Decimal
 import secrets
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Numeric
+from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, ForeignKey, Index, JSON, Numeric
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.pool import NullPool
 
@@ -62,6 +62,14 @@ Base = declarative_base()
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+def naive_utcnow():
+    """UTC wall-clock as a naive datetime, matching our DateTime (no tz) columns.
+
+    Anything compared in SQL (draft expiry, rate windows) uses this one convention.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Company(Base):
@@ -414,30 +422,79 @@ class IntegrationSettings(Base):
         return f"aiv_live_{secrets.token_urlsafe(32)}"
 
 
+class IntegrationTokenError(RuntimeError):
+    """A stored integration token can't be read (wrong key, or damaged)."""
+
+
+_TOKEN_PREFIX = "enc1:"
+
+
 def _integration_secret():
+    """The secret that protects stored integration tokens.
+
+    AIVIATE_INTEGRATION_SECRET if set, otherwise JWT_SECRET. Production refuses to
+    guess: with neither set, tokens would be protected by a value anyone can read in
+    the source. The fixed fallback is for local development only.
+    """
+    from runtime_env import is_production
+
+    secret = os.environ.get("AIVIATE_INTEGRATION_SECRET") or os.environ.get("JWT_SECRET")
+    if secret:
+        return secret.encode("utf-8")
+    if is_production():
+        raise IntegrationTokenError(
+            "Set AIVIATE_INTEGRATION_SECRET (or JWT_SECRET) so Gmail tokens can be encrypted."
+        )
+    return b"aiviate-dev-secret"
+
+
+def _legacy_secret():
+    # The key the old XOR masking used, kept only so existing rows can still be read.
     return (os.environ.get("AIVIATE_INTEGRATION_SECRET") or os.environ.get("JWT_SECRET") or "aiviate-dev-secret").encode("utf-8")
 
 
-def obfuscate_integration_token(value):
+def _fernet():
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+    key = HKDF(
+        algorithm=hashes.SHA256(), length=32, salt=None, info=b"aiviate integration tokens v1"
+    ).derive(_integration_secret())
+    return Fernet(base64.urlsafe_b64encode(key))
+
+
+def is_legacy_integration_token(value):
+    """True for a value stored with the old reversible masking rather than encryption."""
+    return bool(value) and not value.startswith(_TOKEN_PREFIX)
+
+
+def protect_integration_token(value):
+    """Encrypt (AES-128-CBC + HMAC, via Fernet) a token for storage."""
     if value in (None, ""):
         return None
-    key = _integration_secret()
-    raw = value.encode("utf-8")
-    masked = bytearray()
-    for i, byte in enumerate(raw):
-        masked.append(byte ^ key[i % len(key)])
-    return base64.b64encode(bytes(masked)).decode("ascii")
+    return _TOKEN_PREFIX + _fernet().encrypt(value.encode("utf-8")).decode("ascii")
 
 
 def reveal_integration_token(value):
+    """The plaintext token, or None for an empty value. Raises IntegrationTokenError if unreadable."""
     if value in (None, ""):
         return None
-    key = _integration_secret()
-    raw = base64.b64decode(value.encode("ascii"))
-    revealed = bytearray()
-    for i, byte in enumerate(raw):
-        revealed.append(byte ^ key[i % len(key)])
-    return bytes(revealed).decode("utf-8")
+    try:
+        if value.startswith(_TOKEN_PREFIX):
+            return _fernet().decrypt(value[len(_TOKEN_PREFIX):].encode("ascii")).decode("utf-8")
+        key = _legacy_secret()
+        raw = base64.b64decode(value.encode("ascii"))
+        return bytes(b ^ key[i % len(key)] for i, b in enumerate(raw)).decode("utf-8")
+    except IntegrationTokenError:
+        raise
+    except Exception as exc:  # wrong key, truncated value, bad encoding ...
+        raise IntegrationTokenError("The stored Gmail authorization can't be read. Reconnect Gmail.") from exc
+
+
+# Kept so older imports keep working; new code should call protect_integration_token.
+def obfuscate_integration_token(value):
+    return protect_integration_token(value)
 
 
 class IntegrationConnection(Base):
@@ -560,6 +617,64 @@ class WellnessCheckin(Base):
             "risk_level": self.risk_level,
             "reasons": self.reasons or [],
             "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class EmailDraft(Base):
+    """A reply waiting for a person's approval. Nothing is emailed until it is approved.
+
+    Whoever wrote the text (the AI agent or a person), the server fixes the recipient,
+    subject and thread from the original message's headers when the draft is created;
+    the text is the only thing that can change, and every change bumps `revision`. An
+    approval names the revision it saw, so it can't be applied to different text.
+    """
+    __tablename__ = "email_drafts"
+    __table_args__ = (Index("ix_email_drafts_company_status", "company_id", "status"),)
+
+    id = Column(String, primary_key=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    connection_id = Column(String, nullable=True)
+    source_message_id = Column(String, nullable=False)
+    thread_id = Column(String, nullable=True)
+    recipient = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+    revision = Column(Integer, nullable=False, default=1)
+    # pending -> sending -> sent | pending (definite failure) | unknown (outcome uncertain);
+    # pending -> discarded | expired (by time); failed (can never be sent as drafted)
+    status = Column(String, nullable=False, default="pending")
+    author = Column(String, nullable=False, default="user")  # "agent" | "user"
+    created_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    source_from = Column(String, nullable=True)
+    source_subject = Column(String, nullable=True)
+    source_snippet = Column(String, nullable=True)
+    last_error = Column(String, nullable=True)
+    sent_message_id = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=naive_utcnow)
+    updated_at = Column(DateTime, nullable=False, default=naive_utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    approved_at = Column(DateTime, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
+
+    def to_dict(self):
+        def iso(value):
+            return value.isoformat() + "Z" if value else None
+
+        return {
+            "id": self.id,
+            "status": self.status,
+            "author": self.author,
+            "source_message_id": self.source_message_id,
+            "recipient": self.recipient,
+            "subject": self.subject,
+            "body": self.body,
+            "revision": self.revision,
+            "source": {"from": self.source_from, "subject": self.source_subject, "snippet": self.source_snippet},
+            "error": self.last_error,
+            "created_at": iso(self.created_at),
+            "expires_at": iso(self.expires_at),
+            "sent_at": iso(self.sent_at),
         }
 
 

@@ -8,3 +8,4 @@ pg8000
 PyJWT
 requests
 sqlalchemy
+cryptography

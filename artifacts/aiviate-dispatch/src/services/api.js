@@ -235,11 +235,50 @@ export async function searchGmail(payload = {}) {
   return handleResponse(res);
 }
 
-export async function replyGmail(messageId, body) {
-  const res = await fetch(`${API_BASE}/integrations/gmail/reply`, {
+// The chat's email skill: finds emails, summarises them and, when asked, drafts replies.
+// It never sends. Drafts wait for approveGmailDraft.
+export async function askGmailAssistant(text) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/assistant`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ text }),
+  });
+  return handleResponse(res);
+}
+
+// Replies are never sent directly: they are written to a draft first (the server fixes the
+// recipient from the original email), then a person approves that exact revision.
+export async function createGmailDraft(messageId, body) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/drafts`, {
     method: "POST",
     headers: getAuthHeaders("application/json"),
     body: JSON.stringify({ message_id: messageId, body }),
+  });
+  return handleResponse(res);
+}
+
+export async function editGmailDraft(draftId, body, revision) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/drafts/${encodeURIComponent(draftId)}`, {
+    method: "PATCH",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ body, revision }),
+  });
+  return handleResponse(res);
+}
+
+export async function approveGmailDraft(draftId, revision) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/drafts/${encodeURIComponent(draftId)}/approve`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
+    body: JSON.stringify({ revision }),
+  });
+  return handleResponse(res);
+}
+
+export async function discardGmailDraft(draftId) {
+  const res = await fetch(`${API_BASE}/integrations/gmail/drafts/${encodeURIComponent(draftId)}/discard`, {
+    method: "POST",
+    headers: getAuthHeaders("application/json"),
   });
   return handleResponse(res);
 }

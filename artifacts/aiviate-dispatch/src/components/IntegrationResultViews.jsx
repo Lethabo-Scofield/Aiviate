@@ -12,7 +12,7 @@ function displayDate(value) {
 
 // Only the structured From header may supply a reply recipient; never use the
 // search query, snippet, body, or the user's draft to determine an address.
-function replyAddress(message) {
+export function replyAddress(message) {
   const source = message?.reply_to || message?.from;
   if (typeof source !== "string") return "";
   const enclosed = source.match(/<([^<>]+)>/);

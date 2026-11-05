@@ -14,18 +14,20 @@ from flask import g, jsonify, request
 
 from config import JWT_SECRET
 from intelligence.audit_logger import log_action
+from integrations import drafts as drafts_service
+from intelligence import email_agent
+from integrations.connection import active_gmail_connection, load_tokens, save_access_token
 from integrations.gmail_service import (
-    GMAIL_SEND_SCOPE,
     GmailReauthorizationRequired,
     build_google_oauth_url,
     build_search_query,
     fetch_gmail_messages_with_refresh,
     gmail_api_error_summary,
-    send_gmail_reply_with_refresh,
+    google_token_url,
 )
 from integrations.demo_catalog import DEMO_INTEGRATIONS
 from middleware import require_admin, require_auth
-from models import IntegrationConnection, obfuscate_integration_token, reveal_integration_token
+from models import IntegrationConnection, protect_integration_token, reveal_integration_token
 from routes import integrations_bp
 from utils import get_db_session
 
@@ -157,7 +159,7 @@ def gmail_callback():
         return jsonify({"error": "Google OAuth is not configured on this backend"}), 400
 
     token_res = requests.post(
-        "https://oauth2.googleapis.com/token",
+        google_token_url(),
         data={
             "code": code,
             "client_id": client_id,
@@ -168,7 +170,7 @@ def gmail_callback():
         timeout=30,
     )
     if token_res.status_code >= 400:
-        return jsonify({"error": "Failed to exchange Google OAuth code", "detail": token_res.text}), 400
+        return jsonify({"error": "Google did not accept the sign-in. Start the connection again."}), 400
 
     token_data = token_res.json() or {}
     access_token = token_data.get("access_token")
@@ -195,8 +197,8 @@ def gmail_callback():
         if existing:
             existing.display_name = user_info.get("name") or existing.display_name
             existing.provider_user_email = user_info.get("email")
-            existing.access_token = obfuscate_integration_token(access_token)
-            existing.refresh_token = obfuscate_integration_token(refresh_token) if refresh_token else existing.refresh_token
+            existing.access_token = protect_integration_token(access_token)
+            existing.refresh_token = protect_integration_token(refresh_token) if refresh_token else existing.refresh_token
             existing.connection_metadata = {"gmail_user_id": user_info.get("id")}
             existing.scopes = token_data.get("scope", "").split(" ") if token_data.get("scope") else []
             existing.updated_at = datetime.now(timezone.utc)
@@ -208,8 +210,8 @@ def gmail_callback():
                 provider="gmail",
                 provider_user_email=user_info.get("email"),
                 display_name=user_info.get("name") or "Gmail",
-                access_token=obfuscate_integration_token(access_token),
-                refresh_token=obfuscate_integration_token(refresh_token) if refresh_token else None,
+                access_token=protect_integration_token(access_token),
+                refresh_token=protect_integration_token(refresh_token) if refresh_token else None,
                 scopes=(token_data.get("scope", "").split(" ") if token_data.get("scope") else []),
                 connection_metadata={"gmail_user_id": user_info.get("id")},
             )
@@ -248,25 +250,17 @@ def gmail_search():
     )
     db = get_db_session()
     try:
-        conn = (
-            db.query(IntegrationConnection)
-            .filter(
-                IntegrationConnection.company_id == company_id,
-                IntegrationConnection.provider == "gmail",
-                IntegrationConnection.is_active.is_(True),
-            )
-            .first()
-        )
+        conn = active_gmail_connection(db, company_id)
         if not conn:
             return jsonify({"error": "No Gmail connection is active for this workspace"}), 404
-        token = reveal_integration_token(conn.access_token)
-        refresh_token = reveal_integration_token(conn.refresh_token)
-        messages, refreshed_token = fetch_gmail_messages_with_refresh(
-            token, refresh_token, query, max_results=body.get("max_results", 10)
-        )
+        token, refresh_token = load_tokens(db, conn)
+        try:
+            limit = max(1, min(int(body.get("max_results", 10)), 25))
+        except (TypeError, ValueError):
+            limit = 10
+        messages, refreshed_token = fetch_gmail_messages_with_refresh(token, refresh_token, query, max_results=limit)
         if refreshed_token != token:
-            conn.access_token = obfuscate_integration_token(refreshed_token)
-            db.commit()
+            save_access_token(db, conn, refreshed_token)
         log_action(
             db,
             company_id=company_id,
@@ -296,114 +290,158 @@ def gmail_search():
         db.close()
 
 
-@integrations_bp.route("/api/integrations/gmail/reply", methods=["POST"])
-@require_auth
-@require_admin
-def gmail_reply():
-    payload = request.get_json(silent=True)
-    if not isinstance(payload, dict):
-        return jsonify({"error": "JSON object with message_id and body is required"}), 400
-    message_id = payload.get("message_id")
-    reply_body = payload.get("body")
-    if not isinstance(message_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", message_id):
-        return jsonify({"error": "message_id must be a valid Gmail message ID"}), 400
-    if (
-        not isinstance(reply_body, str)
-        or not reply_body.strip()
-        or len(reply_body) > 10000
-        or any(ord(char) < 32 and char not in "\t\n\r" for char in reply_body)
-    ):
-        return jsonify({"error": "body must be non-empty plain text of at most 10000 characters"}), 400
-
-    company_id = _current_workspace()
-    db = get_db_session()
+def _draft_response(db, action):
+    """Run a draft action and turn every failure into a clear, non-leaky JSON error."""
     try:
-        conn = (
-            db.query(IntegrationConnection)
-            .filter(
-                IntegrationConnection.company_id == company_id,
-                IntegrationConnection.provider == "gmail",
-                IntegrationConnection.is_active.is_(True),
-            )
-            .first()
-        )
-        if not conn:
-            return jsonify({"error": "No Gmail connection is active for this workspace"}), 404
-
-        scopes = conn.scopes or []
-        if isinstance(scopes, str):
-            scopes = scopes.split()
-        if GMAIL_SEND_SCOPE not in scopes:
-            return jsonify({
-                "error": (
-                    "This Gmail connection is read-only and cannot send replies. "
-                    "Disconnect and reconnect Gmail, then approve the gmail.send permission."
-                )
-            }), 403
-
-        token = reveal_integration_token(conn.access_token)
-        refresh_token = reveal_integration_token(conn.refresh_token)
-        result, refreshed_token = send_gmail_reply_with_refresh(
-            token,
-            refresh_token,
-            message_id,
-            reply_body,
-            conn.provider_user_email,
-        )
-        if refreshed_token != token:
-            conn.access_token = obfuscate_integration_token(refreshed_token)
-        warning = None
-        try:
-            log_action(
-                db,
-                company_id=company_id,
-                action_type="integration_email_reply",
-                summary=f"Sent Gmail reply to {result['recipient']}",
-                actor=getattr(g, "user_email", "admin"),
-                confidence=1.0,
-                requires_approval=False,
-                related_id=conn.id,
-                details={
-                    "provider": "gmail",
-                    "message_id": message_id,
-                    "recipient": result["recipient"],
-                    "subject": result["subject"],
-                },
-            )
-        except Exception:
-            db.rollback()
-            traceback.print_exc()
-            warning = "Gmail sent the reply, but its activity log could not be saved."
-        return jsonify({
-            "ok": True,
-            "id": result["id"],
-            "thread_id": result["thread_id"],
-            "recipient": result["recipient"],
-            "subject": result["subject"],
-            "warning": warning,
-        })
+        return action()
+    except drafts_service.DraftError as exc:
+        db.rollback()
+        return jsonify({"error": str(exc)}), exc.status
     except GmailReauthorizationRequired as exc:
         db.rollback()
         return jsonify({"error": str(exc)}), 401
-    except ValueError as exc:
-        db.rollback()
-        return jsonify({"error": str(exc)}), 400
     except requests.HTTPError as exc:
         db.rollback()
         traceback.print_exc()
-        if exc.response is not None and exc.response.status_code == 403:
+        code = exc.response.status_code if exc.response is not None else 0
+        if code == 403:
             return jsonify({"error": gmail_api_error_summary(exc)}), 403
-        if exc.response is not None and exc.response.status_code == 404:
-            return jsonify({"error": "The source Gmail message could not be found"}), 404
-        return jsonify({"error": "Gmail did not confirm the reply. Check Sent before trying again, to avoid a duplicate."}), 502
+        if code == 404:
+            return jsonify({"error": "The original Gmail message could not be found."}), 404
+        return jsonify({"error": "Gmail could not be reached right now. Please try again shortly."}), 502
     except requests.RequestException:
         db.rollback()
         traceback.print_exc()
-        return jsonify({"error": "Gmail did not confirm the reply. Check Sent before trying again, to avoid a duplicate."}), 502
+        return jsonify({"error": "Gmail could not be reached right now. Please try again shortly."}), 502
     except Exception:
         db.rollback()
         traceback.print_exc()
-        return jsonify({"error": "The reply status is uncertain. Check Gmail Sent before trying again."}), 500
+        return jsonify({"error": "Something went wrong with that draft."}), 500
+
+
+def _revision_from(payload):
+    try:
+        return int(payload.get("revision"))
+    except (TypeError, ValueError):
+        raise drafts_service.DraftInvalid("revision is required: send the revision you reviewed.")
+
+
+def _json_object():
+    payload = request.get_json(silent=True)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _actor():
+    return getattr(g, "user_email", None) or getattr(g, "user_id", None) or "admin"
+
+
+@integrations_bp.route("/api/integrations/gmail/assistant", methods=["POST"])
+@require_auth
+@require_admin
+def gmail_assistant():
+    """The chat's email skill: find emails, summarise them, and (when asked) draft replies.
+
+    Always safe to call: it never sends. It returns an AI result with drafts waiting for
+    approval, or, when no AI key is configured, a plain searchable result.
+    """
+    text = str(_json_object().get("text") or "").strip()[:1000]
+    if not text:
+        return jsonify({"error": "Tell me what to look for or reply to."}), 400
+    db = get_db_session()
+    try:
+        return jsonify(email_agent.run(db, _current_workspace(), _actor(), text))
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        return jsonify({"ok": False, "summary": "I couldn't read your email just now. Please try again shortly."}), 500
+    finally:
+        db.close()
+
+
+@integrations_bp.route("/api/integrations/gmail/drafts", methods=["POST"])
+@require_auth
+@require_admin
+def gmail_create_draft():
+    """Write a reply to a draft. Nothing is emailed; the recipient comes from the original message."""
+    payload = _json_object()
+    db = get_db_session()
+    try:
+        def action():
+            draft = drafts_service.create_draft(
+                db, company_id=_current_workspace(), message_id=payload.get("message_id"),
+                body=payload.get("body"), author="user", created_by=_actor(),
+            )
+            return jsonify({"draft": draft.to_dict()}), 201
+        return _draft_response(db, action)
+    finally:
+        db.close()
+
+
+@integrations_bp.route("/api/integrations/gmail/drafts", methods=["GET"])
+@require_auth
+@require_admin
+def gmail_list_drafts():
+    status = request.args.get("status", drafts_service.PENDING)
+    db = get_db_session()
+    try:
+        def action():
+            drafts = drafts_service.list_drafts(db, _current_workspace(), status=status or None)
+            return jsonify({"drafts": [d.to_dict() for d in drafts]})
+        return _draft_response(db, action)
+    finally:
+        db.close()
+
+
+@integrations_bp.route("/api/integrations/gmail/drafts/<draft_id>", methods=["PATCH"])
+@require_auth
+@require_admin
+def gmail_edit_draft(draft_id):
+    payload = _json_object()
+    db = get_db_session()
+    try:
+        def action():
+            draft = drafts_service.update_body(
+                db, company_id=_current_workspace(), draft_id=draft_id, body=payload.get("body"),
+                revision=_revision_from(payload), editor=_actor(),
+            )
+            return jsonify({"draft": draft.to_dict()})
+        return _draft_response(db, action)
+    finally:
+        db.close()
+
+
+@integrations_bp.route("/api/integrations/gmail/drafts/<draft_id>/approve", methods=["POST"])
+@require_auth
+@require_admin
+def gmail_approve_draft(draft_id):
+    """The permission step: send this exact revision of this draft, once."""
+    payload = _json_object()
+    db = get_db_session()
+    try:
+        def action():
+            draft = drafts_service.approve_and_send(
+                db, company_id=_current_workspace(), draft_id=draft_id,
+                revision=_revision_from(payload), approver=_actor(),
+            )
+            return jsonify({
+                "ok": True, "draft": draft.to_dict(), "id": draft.sent_message_id,
+                "recipient": draft.recipient, "subject": draft.subject,
+            })
+        return _draft_response(db, action)
+    finally:
+        db.close()
+
+
+@integrations_bp.route("/api/integrations/gmail/drafts/<draft_id>/discard", methods=["POST"])
+@require_auth
+@require_admin
+def gmail_discard_draft(draft_id):
+    db = get_db_session()
+    try:
+        def action():
+            draft = drafts_service.discard(db, company_id=_current_workspace(), draft_id=draft_id, actor=_actor())
+            return jsonify({"draft": draft.to_dict()})
+        return _draft_response(db, action)
     finally:
         db.close()
 

@@ -937,7 +937,8 @@ def _extract_order_ref(text):
 
 
 def _is_gmail_request(text):
-    return bool(re.search(r"\b(?:gmail|e-?mail)\b", text or "", flags=re.I))
+    # "email", "emails", "e-mail", "gmail", "inbox", "mailbox": people say all of these.
+    return bool(re.search(r"\b(?:gmail|e-?mails?|inbox|mailbox)\b", text or "", flags=re.I))
 
 
 def _generic_gmail_query(text):
@@ -984,29 +985,24 @@ def _gmail_confirmation_answer(db, company_id, text):
     if not _is_gmail_request(text):
         return None
 
-    from models import (
-        IntegrationConnection,
-        obfuscate_integration_token,
-        reveal_integration_token,
-    )
+    from integrations.connection import active_gmail_connection, load_tokens, save_access_token
     from integrations.gmail_service import (
         GmailReauthorizationRequired,
         build_search_query,
         fetch_gmail_messages_with_refresh,
         gmail_api_error_summary,
     )
+    from intelligence import email_agent, structured_llm
+
+    # With an AI key configured, the email agent summarises and drafts replies for approval.
+    # Without one, the keyword search below still works.
+    if structured_llm.is_configured():
+        actor = getattr(g, "user_email", None) or getattr(g, "user_id", None) or "operator"
+        return email_agent.run(db, company_id, actor, text)
 
     order_ref = _extract_order_ref(text)
 
-    conn = (
-        db.query(IntegrationConnection)
-        .filter(
-            IntegrationConnection.company_id == company_id,
-            IntegrationConnection.provider == "gmail",
-            IntegrationConnection.is_active.is_(True),
-        )
-        .first()
-    )
+    conn = active_gmail_connection(db, company_id)
     if not conn:
         return {
             "ok": False,
@@ -1016,15 +1012,13 @@ def _gmail_confirmation_answer(db, company_id, text):
         }
 
     try:
-        token = reveal_integration_token(conn.access_token)
-        refresh_token = reveal_integration_token(conn.refresh_token)
+        token, refresh_token = load_tokens(db, conn)
         query = build_search_query(order_ref=order_ref, limit=10) if order_ref else _generic_gmail_query(text)
         messages, refreshed_token = fetch_gmail_messages_with_refresh(
             token, refresh_token, query, max_results=10
         )
         if refreshed_token != token:
-            conn.access_token = obfuscate_integration_token(refreshed_token)
-            db.commit()
+            save_access_token(db, conn, refreshed_token)
     except GmailReauthorizationRequired as exc:
         return {
             "ok": False,

@@ -9,6 +9,20 @@ from urllib.parse import urlencode, urlunparse
 
 import requests
 
+from runtime_env import dev_override
+
+GMAIL_API_DEFAULT = "https://gmail.googleapis.com/gmail/v1/users/me"
+GOOGLE_TOKEN_URL_DEFAULT = "https://oauth2.googleapis.com/token"
+
+
+def gmail_api_base():
+    """Gmail API root. GMAIL_API_BASE only points tests/local demos at a fake; ignored in production."""
+    return dev_override("GMAIL_API_BASE", GMAIL_API_DEFAULT)
+
+
+def google_token_url():
+    return dev_override("GOOGLE_TOKEN_URL", GOOGLE_TOKEN_URL_DEFAULT)
+
 
 GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
@@ -124,7 +138,7 @@ def extract_message_summary(message):
 
 def get_message_details(access_token, message_id):
     """Fetch a single Gmail message by ID using a workspace-scoped access token."""
-    url = f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message_id}"
+    url = f"{gmail_api_base()}/messages/{message_id}"
     headers = {"Authorization": f"Bearer {access_token}"}
     res = requests.get(url, headers=headers, timeout=20)
     res.raise_for_status()
@@ -145,7 +159,7 @@ def _refresh_gmail_access_token(refresh_token):
         )
 
     response = requests.post(
-        "https://oauth2.googleapis.com/token",
+        google_token_url(),
         data={
             "client_id": client_id,
             "client_secret": client_secret,
@@ -256,18 +270,40 @@ def build_gmail_reply(source_message, body, sender_email):
     }
 
 
-def send_gmail_reply_with_refresh(access_token, refresh_token, message_id, body, sender_email):
+def get_message_with_refresh(access_token, refresh_token, message_id):
+    """Fetch one message, refreshing an expired access token once. Returns (message, token)."""
+    try:
+        return get_message_details(access_token, message_id), access_token
+    except requests.HTTPError as exc:
+        if exc.response is None or exc.response.status_code != 401:
+            raise
+    token = _refresh_gmail_access_token(refresh_token)
+    try:
+        return get_message_details(token, message_id), token
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 401:
+            raise GmailReauthorizationRequired(
+                "Google rejected the refreshed Gmail authorization. Disconnect and reconnect Gmail."
+            ) from exc
+        raise
+
+
+def send_gmail_reply_with_refresh(access_token, refresh_token, message_id, body, sender_email, expected_recipient=None):
     """Fetch the source and send a threaded reply, refreshing an expired token once."""
     token = access_token
     for attempt in range(2):
         try:
             source = get_message_details(token, message_id)
             reply = build_gmail_reply(source, body, sender_email)
+            if expected_recipient and reply["recipient"].casefold() != expected_recipient.casefold():
+                # Headers are read again at send time; if they now point somewhere else than the
+                # person who approved this draft saw, do not send.
+                raise ValueError("The reply address changed since this draft was created. Create a new draft.")
             request_body = {"raw": reply["raw"]}
             if reply["thread_id"]:
                 request_body["threadId"] = reply["thread_id"]
             response = requests.post(
-                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                f"{gmail_api_base()}/messages/send",
                 headers={"Authorization": f"Bearer {token}"},
                 json=request_body,
                 timeout=30,
@@ -295,7 +331,7 @@ def fetch_gmail_messages(access_token, query, max_results=10):
     """Search Gmail and return a compact summary list of matching messages."""
     if not access_token:
         raise ValueError("access_token is required")
-    url = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+    url = f"{gmail_api_base()}/messages"
     headers = {"Authorization": f"Bearer {access_token}"}
     params = {"q": query, "maxResults": int(max_results)}
     res = requests.get(url, headers=headers, params=params, timeout=20)
