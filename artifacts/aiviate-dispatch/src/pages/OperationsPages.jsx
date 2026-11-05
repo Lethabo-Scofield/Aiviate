@@ -39,6 +39,7 @@ import {
 } from "../services/api";
 import ResultBlock from "../components/ResultBlock";
 import { replyAddress } from "../components/IntegrationResultViews";
+import { buildSupplierCall, isRestockRequest, isSupplierCallRequest } from "../lib/supplierCallScenario";
 import ChatActivity from "../components/ChatActivity";
 import EmptyChatOverview from "../components/EmptyChatOverview";
 import IntegrationTools, { PROVIDERS, useIntegrationCatalog } from "../components/IntegrationTools";
@@ -215,7 +216,7 @@ function ChatAnswer({ result, onReply, sending, draftActions, animate = false, o
       {animate && <span className="sr-only" role="status">{text}</span>}
       {hasDetails && !typing && (
         <div className="animate-fade-in border-t border-[#E9ECEF] pt-3">
-          <ResultBlock result={result} onReply={onReply} sending={sending} draftActions={draftActions} />
+          <ResultBlock result={result} onReply={onReply} sending={sending} draftActions={draftActions} onProgress={onProgress} />
         </div>
       )}
     </div>
@@ -422,22 +423,34 @@ export function OperationsCommand() {
     const contextProvider = explicitProvider || selectedProvider;
     const latestResult = [...thread].reverse().find((item) => item.result)?.result;
     const gmailFollowUp = ["gmail_search", "gmail_agent"].includes(latestResult?.type) && /\b(?:reply|respond|that|those|them|their|sender|messages?|e-?mails?|inbox)\b/i.test(text);
-    const gmailRequest = options.gmailQuery !== undefined || contextProvider?.provider === "gmail" || /\b(?:gmail|e-?mails?|inbox|mailbox)\b/i.test(text) || (!explicitProvider && gmailFollowUp);
-    const sampleProvider = !gmailRequest && contextProvider && (catalog.demos || []).some((entry) => entry.provider === contextProvider.provider) ? contextProvider : null;
+    // "Restock" or "call the supplier" plays the scripted Retell AI call + fallback email (simulation).
+    const supplierCall = options.gmailQuery === undefined && isSupplierCallRequest(text);
+    const gmailRequest = !supplierCall && (options.gmailQuery !== undefined || contextProvider?.provider === "gmail" || /\b(?:gmail|e-?mails?|inbox|mailbox)\b/i.test(text) || (!explicitProvider && gmailFollowUp));
+    const sampleProvider = !gmailRequest && !supplierCall && contextProvider && (catalog.demos || []).some((entry) => entry.provider === contextProvider.provider) ? contextProvider : null;
     const commandText = selectedProvider && !explicitProvider && !gmailRequest ? `${text} ${selectedProvider.name}` : text;
-    const activity = gmailRequest
+    const activity = supplierCall
+      ? { kind: "operations", label: isRestockRequest(text) ? "Checking stock levels and preparing a supplier call" : "Preparing a supplier call" }
+      : gmailRequest
       ? { kind: "gmail", provider: "gmail", label: /\b(?:reply|respond|draft)\b/i.test(text) ? "Reading your email and preparing drafts" : "Searching connected Gmail" }
       : sampleProvider
         ? { kind: "integration", provider: sampleProvider.provider, sample: true, label: `Reviewing ${sampleProvider.name} sample records` }
         : { kind: "operations", label: "Checking operational data" };
-    const toolContext = gmailRequest ? { name: "Gmail" } : sampleProvider ? { name: sampleProvider.name, demo: true } : null;
+    const toolContext = supplierCall ? { name: "Retell AI", demo: true } : gmailRequest ? { name: "Gmail" } : sampleProvider ? { name: sampleProvider.name, demo: true } : null;
     followLatestRef.current = true;
     setThread((items) => [...items, { id, input: text, toolContext, busy: true, result: null, activity }]);
     setChatBusy(true);
     const startedAt = performance.now();
     let result;
     try {
-      if (gmailRequest) {
+      if (supplierCall) {
+        const call = buildSupplierCall(text);
+        result = {
+          ok: true, type: "simulated_supplier_call", provider: "retell", ...call,
+          summary: call.purpose === "restock"
+            ? `Restocking now. I'm calling ${call.supplier.name} through Retell AI.`
+            : `Calling ${call.supplier.name} through Retell AI now.`,
+        };
+      } else if (gmailRequest) {
         if (!gmailConnected) {
           result = { ok: false, type: "gmail_unconnected", summary: "Gmail is not connected to this workspace. Connect Gmail to search messages and review replies." };
         } else {
@@ -479,7 +492,7 @@ export function OperationsCommand() {
     } catch (e) {
       result = { ok: false, requestFailed: true, summary: e?.message || "Aiviate could not answer that yet." };
     }
-    const remaining = Math.max(0, 6000 - (performance.now() - startedAt));
+    const remaining = Math.max(0, (supplierCall ? 2500 : 6000) - (performance.now() - startedAt));
     if (remaining > 0) {
       setThread((items) => items.map((item) => item.id === id
         ? { ...item, activity: { ...activity, phase: "preparing", label: "Preparing response" } }

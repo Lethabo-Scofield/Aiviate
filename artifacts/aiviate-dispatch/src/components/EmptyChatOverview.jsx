@@ -3,7 +3,7 @@ import { Bot, Download, FileCheck2, Search } from "lucide-react";
 import { SAMPLE_DOCUMENTS, createReportPdf, createSamplePdf } from "../lib/simulatedDocuments";
 import PdfIcon from "./PdfIcon";
 
-const PROMPTS = ["show jobs", "show drivers", "show alerts"];
+const PROMPTS = ["show jobs", "show drivers", "show alerts", "restock"];
 const AGENT_ICONS = {
   "Operations Agent": Bot,
   "Document Research Agent": Search,

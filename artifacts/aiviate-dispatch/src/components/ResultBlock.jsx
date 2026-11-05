@@ -4,6 +4,7 @@ import MiniRouteMap from "./MiniRouteMap";
 import ChatMetricsChart from "./ChatMetricsChart";
 import { GmailResults, SampleResult } from "./IntegrationResultViews";
 import GmailAgentResults from "./GmailAgentResults";
+import SimulatedSupplierCall from "./SimulatedSupplierCall";
 
 function ActionReceipt({ action }) {
   const details = action.details || {};
@@ -93,8 +94,9 @@ function ActionReceipt({ action }) {
  * Renders a single backend command result inside the Home chat surface
  * (or anywhere else). Pure presentation; no side effects.
  */
-export default function ResultBlock({ result, onReply, sending, draftActions }) {
+export default function ResultBlock({ result, onReply, sending, draftActions, onProgress }) {
   if (!result) return null;
+  if (result.type === "simulated_supplier_call" && result.ok) return <SimulatedSupplierCall result={result} onProgress={onProgress} />;
   if (result.type === "gmail_unconnected") return <Link to="/integrations" className="text-[12px] font-semibold text-[#343A40] underline underline-offset-4">Connect Gmail in Integrations</Link>;
   if (!result.ok) {
     return (
